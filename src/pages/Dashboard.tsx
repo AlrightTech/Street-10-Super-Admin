@@ -1,192 +1,298 @@
-import { useState, useEffect } from 'react'
-import StatCard from '../components/dashboard/StatCard'
-import UserGrowthChart from '../components/dashboard/UserGrowthChart'
-import RevenueChart from '../components/dashboard/RevenueChart'
-import RecentActivityTable from '../components/dashboard/RecentActivityTable'
-import MarketingPerformanceTable from '../components/dashboard/MarketingPerformanceTable'
-import { dashboardApi } from '../services/dashboard.api'
-import type { StatCard as StatCardType, ActivityItem, UserGrowthData, RevenueSegment } from '../types/dashboard'
+import { useState, useEffect } from "react";
+import StatCard from "../components/dashboard/StatCard";
+import UserGrowthChart from "../components/dashboard/UserGrowthChart";
+import RevenueChart from "../components/dashboard/RevenueChart";
+import RecentActivityTable from "../components/dashboard/RecentActivityTable";
+import MarketingPerformanceTable from "../components/dashboard/MarketingPerformanceTable";
+import { dashboardApi } from "../services/dashboard.api";
+import type {
+  StatCard as StatCardType,
+  ActivityItem,
+  UserGrowthData,
+  RevenueSegment,
+} from "../types/dashboard";
 import {
   mockUserGrowthData,
   mockRevenueSegments,
   mockCampaigns,
-} from '../data/mockData'
+  mockActivities,
+} from "../data/mockData";
 
 /**
  * Dashboard page component
  */
 export default function Dashboard() {
-  const [loading, setLoading] = useState(true)
-  const [statCards, setStatCards] = useState<StatCardType[]>([])
-  const [activities, setActivities] = useState<ActivityItem[]>([])
-  const [userGrowthData, setUserGrowthData] = useState<UserGrowthData[]>([])
-  const [revenueSegments, setRevenueSegments] = useState<RevenueSegment[]>([])
-  const [userName, setUserName] = useState('Admin')
+  const [loading, setLoading] = useState(true);
+  const [statCards, setStatCards] = useState<StatCardType[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [userGrowthData, setUserGrowthData] = useState<UserGrowthData[]>([]);
+  const [revenueSegments, setRevenueSegments] = useState<RevenueSegment[]>([]);
+  const [userName, setUserName] = useState("Admin");
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        setLoading(true)
-        
+        setLoading(true);
+
         // Get current user for welcome message
-        const currentUser = dashboardApi.getCurrentUser()
+        const currentUser = dashboardApi.getCurrentUser();
         if (currentUser?.email) {
-          setUserName(currentUser.email.split('@')[0])
+          setUserName(currentUser.email.split("@")[0]);
         }
 
         // Fetch dashboard stats and audit logs in parallel
         const [dashboardStats, auditLogs] = await Promise.all([
           dashboardApi.getDashboard(),
           dashboardApi.getAuditLogs({ page: 1, limit: 10 }),
-        ])
+        ]);
 
         // Transform dashboard stats to stat cards
-        const revenueTotal = typeof dashboardStats.revenue.totalMinor === 'bigint' 
-          ? Number(dashboardStats.revenue.totalMinor) / 100 
-          : parseFloat(dashboardStats.revenue.totalMinor.toString()) / 100
+        const revenueTotal =
+          typeof dashboardStats.revenue.totalMinor === "bigint"
+            ? Number(dashboardStats.revenue.totalMinor) / 100
+            : parseFloat(dashboardStats.revenue.totalMinor.toString()) / 100;
 
         const cards: StatCardType[] = [
           {
-            id: '1',
-            title: 'Total Users',
+            id: "1",
+            title: "Total Users",
             value: dashboardStats.users.total,
             change: 2.6, // TODO: Calculate from historical data
-            changeLabel: 'last 7 days',
-            trend: 'up',
-            color: 'blue',
-            icon: 'users',
-            iconColor: 'blue',
+            changeLabel: "last 7 days",
+            trend: "up",
+            color: "blue",
+            icon: "users",
+            iconColor: "blue",
             barChartData: [45, 52, 48, 61, 55, 67], // TODO: Get from historical data
           },
           {
-            id: '2',
-            title: 'Total Orders',
+            id: "2",
+            title: "Total Orders",
             value: dashboardStats.orders.total,
             change: 2.6, // TODO: Calculate from historical data
-            changeLabel: 'last 7 days',
-            trend: 'up',
-            color: 'cyan',
-            icon: 'booking',
-            iconColor: 'blue',
+            changeLabel: "last 7 days",
+            trend: "up",
+            color: "cyan",
+            icon: "booking",
+            iconColor: "blue",
             barChartData: [12, 15, 18, 14, 20, 16], // TODO: Get from historical data
           },
           {
-            id: '3',
-            title: 'Total Revenue (This Month)',
-            value: `${dashboardStats.revenue.currency} ${revenueTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            id: "3",
+            title: "Total Revenue (This Month)",
+            value: `${
+              dashboardStats.revenue.currency
+            } ${revenueTotal.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`,
             change: 2.6, // TODO: Calculate from historical data
-            changeLabel: 'last 7 days',
-            trend: 'up',
-            color: 'red',
-            icon: 'revenue',
-            iconColor: 'blue',
+            changeLabel: "last 7 days",
+            trend: "up",
+            color: "red",
+            icon: "revenue",
+            iconColor: "blue",
             barChartData: [35, 42, 38, 48, 45, 52], // TODO: Get from historical data
           },
           {
-            id: '4',
-            title: 'User Verification Requests',
+            id: "4",
+            title: "User Verification Requests",
             value: dashboardStats.kyc.pending,
             change: 2.6, // TODO: Calculate from historical data
-            changeLabel: 'last 7 days',
-            trend: 'up',
-            color: 'lightGreen',
-            icon: 'approvals',
-            iconColor: 'orange',
+            changeLabel: "last 7 days",
+            trend: "up",
+            color: "lightGreen",
+            icon: "approvals",
+            iconColor: "orange",
             barChartData: [20, 25, 22, 28, 24, 30], // TODO: Get from historical data
           },
           {
-            id: '5',
-            title: 'Bidding Pending Payment',
+            id: "5",
+            title: "Bidding Pending Payment",
             value: 0, // TODO: Get from backend API - bids that won but payment not completed
             change: 2.6, // TODO: Calculate from historical data
-            changeLabel: 'last 7 days',
-            trend: 'up',
-            color: 'orange',
-            trendColor: 'orange',
-            icon: 'booking',
-            iconColor: 'orange',
+            changeLabel: "last 7 days",
+            trend: "up",
+            color: "orange",
+            trendColor: "orange",
+            icon: "booking",
+            iconColor: "orange",
             barChartData: [30, 35, 32, 40, 38, 45], // TODO: Get from historical data
           },
           {
-            id: '6',
-            title: 'User Refund Request',
+            id: "6",
+            title: "User Refund Request",
             value: 0, // TODO: Get from backend API - refund requests count
             change: 2.6, // TODO: Calculate from historical data
-            changeLabel: 'last 7 days',
-            trend: 'up',
-            color: 'purple',
-            icon: 'dispute',
-            iconColor: 'blue',
+            changeLabel: "last 7 days",
+            trend: "up",
+            color: "purple",
+            icon: "dispute",
+            iconColor: "blue",
             barChartData: [55, 62, 58, 68, 65, 72], // TODO: Get from historical data
           },
           {
-            id: '7',
-            title: 'Total Vendors',
+            id: "7",
+            title: "Total Vendors",
             value: dashboardStats.vendors.total,
             change: 2.6, // TODO: Calculate from historical data
-            changeLabel: 'last 7 days',
-            trend: 'up',
-            color: 'red',
-            icon: 'vendors',
-            iconColor: 'blue',
+            changeLabel: "last 7 days",
+            trend: "up",
+            color: "red",
+            icon: "vendors",
+            iconColor: "blue",
             barChartData: [8, 10, 12, 9, 14, 11], // TODO: Get from historical data
           },
           {
-            id: '8',
-            title: 'Uncompleted Orders',
+            id: "8",
+            title: "Uncompleted Orders",
             value: 0, // TODO: Get from backend API - orders not in delivered/closed status
             change: 2.6, // TODO: Calculate from historical data
-            changeLabel: 'last 7 days',
-            trend: 'up',
-            color: 'lightGreen',
-            icon: 'booking',
-            iconColor: 'blue',
+            changeLabel: "last 7 days",
+            trend: "up",
+            color: "lightGreen",
+            icon: "booking",
+            iconColor: "blue",
             barChartData: [18, 22, 20, 25, 23, 28], // TODO: Get from historical data
           },
-        ]
+        ];
 
-        setStatCards(cards)
+        setStatCards(cards);
 
         // Transform audit logs to activities
-        const transformedActivities: ActivityItem[] = auditLogs.logs.map((log) => ({
-          id: log.id,
-          activity: `${log.action} ${log.resourceType}`,
-          user: log.user?.email || 'System',
-          date: new Date(log.createdAt).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-        }))
+        const transformedActivities: ActivityItem[] = auditLogs.logs.map(
+          (log) => ({
+            id: log.id,
+            activity: `${log.action} ${log.resourceType}`,
+            user: log.user?.email || "System",
+            date: new Date(log.createdAt).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          })
+        );
 
-        setActivities(transformedActivities.length > 0 ? transformedActivities : [])
+        setActivities(
+          transformedActivities.length > 0 ? transformedActivities : []
+        );
 
         // For now, use mock data for charts (will be replaced with real time-series data later)
-        setUserGrowthData(mockUserGrowthData)
-        setRevenueSegments(mockRevenueSegments)
+        setUserGrowthData(mockUserGrowthData);
+        setRevenueSegments(mockRevenueSegments);
       } catch (error) {
-        console.error('Error fetching dashboard data:', error)
+        console.error("Error fetching dashboard data:", error);
         // On error, still show stat cards with zero values so UI doesn't break
         const fallbackCards: StatCardType[] = [
-          { id: '1', title: 'Total Users', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'blue', icon: 'users', iconColor: 'blue', barChartData: [] },
-          { id: '2', title: 'Total Orders', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'cyan', icon: 'booking', iconColor: 'blue', barChartData: [] },
-          { id: '3', title: 'Total Revenue (This Month)', value: 'QAR 0.00', change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'red', icon: 'revenue', iconColor: 'blue', barChartData: [] },
-          { id: '4', title: 'User Verification Requests', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'lightGreen', icon: 'approvals', iconColor: 'orange', barChartData: [] },
-          { id: '5', title: 'Bidding Pending Payment', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'orange', icon: 'booking', iconColor: 'orange', barChartData: [] },
-          { id: '6', title: 'User Refund Request', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'purple', icon: 'dispute', iconColor: 'blue', barChartData: [] },
-          { id: '7', title: 'Total Vendors', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'red', icon: 'vendors', iconColor: 'blue', barChartData: [] },
-          { id: '8', title: 'Uncompleted Orders', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'lightGreen', icon: 'booking', iconColor: 'blue', barChartData: [] },
-        ]
-        setStatCards(fallbackCards)
+          {
+            id: "1",
+            title: "Total Users",
+            value: 0,
+            change: 0,
+            changeLabel: "last 7 days",
+            trend: "neutral",
+            color: "blue",
+            icon: "users",
+            iconColor: "blue",
+            barChartData: [],
+          },
+          {
+            id: "2",
+            title: "Total Orders",
+            value: 0,
+            change: 0,
+            changeLabel: "last 7 days",
+            trend: "neutral",
+            color: "cyan",
+            icon: "booking",
+            iconColor: "blue",
+            barChartData: [],
+          },
+          {
+            id: "3",
+            title: "Total Revenue (This Month)",
+            value: "QAR 0.00",
+            change: 0,
+            changeLabel: "last 7 days",
+            trend: "neutral",
+            color: "red",
+            icon: "revenue",
+            iconColor: "blue",
+            barChartData: [],
+          },
+          {
+            id: "4",
+            title: "User Verification Requests",
+            value: 0,
+            change: 0,
+            changeLabel: "last 7 days",
+            trend: "neutral",
+            color: "lightGreen",
+            icon: "approvals",
+            iconColor: "orange",
+            barChartData: [],
+          },
+          {
+            id: "5",
+            title: "Bidding Pending Payment",
+            value: 0,
+            change: 0,
+            changeLabel: "last 7 days",
+            trend: "neutral",
+            color: "orange",
+            icon: "booking",
+            iconColor: "orange",
+            barChartData: [],
+          },
+          {
+            id: "6",
+            title: "User Refund Request",
+            value: 0,
+            change: 0,
+            changeLabel: "last 7 days",
+            trend: "neutral",
+            color: "purple",
+            icon: "dispute",
+            iconColor: "blue",
+            barChartData: [],
+          },
+          {
+            id: "7",
+            title: "Total Vendors",
+            value: 0,
+            change: 0,
+            changeLabel: "last 7 days",
+            trend: "neutral",
+            color: "red",
+            icon: "vendors",
+            iconColor: "blue",
+            barChartData: [],
+          },
+          {
+            id: "8",
+            title: "Uncompleted Orders",
+            value: 0,
+            change: 0,
+            changeLabel: "last 7 days",
+            trend: "neutral",
+            color: "lightGreen",
+            icon: "booking",
+            iconColor: "blue",
+            barChartData: [],
+          },
+        ];
+        setStatCards(fallbackCards);
+        // Use mock activities as fallback if API fails
+        setActivities(mockActivities);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchDashboardData()
-  }, [])
+    fetchDashboardData();
+  }, []);
 
   if (loading) {
     return (
@@ -196,7 +302,7 @@ export default function Dashboard() {
           <p className="mt-4 text-sm text-gray-600">Loading dashboard...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -236,5 +342,5 @@ export default function Dashboard() {
         <MarketingPerformanceTable campaigns={mockCampaigns} />
       </div>
     </div>
-  )
+  );
 }
