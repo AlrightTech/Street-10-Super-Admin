@@ -1,0 +1,128 @@
+import { Suspense, lazy } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { LanguageProvider } from './contexts/LanguageContext'
+import Layout from './components/layout/Layout'
+import LoginPage from './pages/LoginPage'
+import ResetPassword from './pages/ResetPassword'
+
+// Lazy load dashboard pages for code splitting
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Users = lazy(() => import('./pages/Users'))
+const UserDetails = lazy(() => import('./pages/UserDetails'))
+const EditUser = lazy(() => import('./pages/EditUser'))
+const Vendors = lazy(() => import('./pages/Vendors'))
+const Orders = lazy(() => import('./pages/Orders'))
+const OrderDetails = lazy(() => import('./pages/OrderDetails'))
+const BidDetailPage = lazy(() => import('./pages/BidDetailPage'))
+const ViewKYC = lazy(() => import('./pages/ViewKYC'))
+const RefundRequest = lazy(() => import('./pages/RefundRequest'))
+const EditVendor = lazy(() => import('./pages/EditVendor'))
+const VendorDetail = lazy(() => import('./pages/VendorDetail'))
+const AllVendorProducts = lazy(() => import('./pages/AllVendorProducts'))
+const EditUserDetail = lazy(() => import('./pages/EditUserDetail'))
+const ProductDetail = lazy(() => import('./pages/ProductDetail'))
+const VendorRequestDetail = lazy(() => import('./pages/VendorRequestDetail'))
+const Finance = lazy(() => import('./pages/Finance'))
+const Marketing = lazy(() => import('./pages/Marketing'))
+const AddStoryHighlight = lazy(() => import('./pages/AddStoryHighlight'))
+const AddBanner = lazy(() => import('./pages/AddBanner'))
+const BannerDetail = lazy(() => import('./pages/BannerDetail'))
+const PushNotificationSendDetail = lazy(() => import('./pages/PushNotificationSendDetail'))
+const PushNotificationPendingDetail = lazy(() => import('./pages/PushNotificationPendingDetail'))
+const PushNotificationScheduledDetail = lazy(() => import('./pages/PushNotificationScheduledDetail'))
+const AddPushNotification = lazy(() => import('./pages/AddPushNotification'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+const TopPerformerDetail = lazy(() => import('./pages/TopPerformerDetail'))
+const AnalyticsOrderDetail = lazy(() => import('./pages/AnalyticsOrderDetail'))
+const MainControl = lazy(() => import('./pages/MainControl'))
+const Categories = lazy(() => import('./pages/Categories'))
+const AddCategory = lazy(() => import('./pages/AddCategory'))
+const Products = lazy(() => import('./pages/Products'))
+const BiddingProducts = lazy(() => import('./pages/BiddingProducts'))
+const EcommerceProducts = lazy(() => import('./pages/EcommerceProducts'))
+const Wallet = lazy(() => import('./pages/Wallet'))
+const AllTransactions = lazy(() => import('./pages/AllTransactions'))
+const TransactionDetails = lazy(() => import('./pages/TransactionDetails'))
+const UserWallets = lazy(() => import('./pages/UserWallets'))
+const Withdrawals = lazy(() => import('./pages/Withdrawals'))
+const WalletSettings = lazy(() => import('./pages/WalletSettings'))
+const Settings = lazy(() => import('./pages/Settings'))
+
+/**
+ * Loading fallback component
+ */
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="text-center">
+      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#F7941D] border-r-transparent"></div>
+      <p className="mt-4 text-sm text-gray-600">Loading...</p>
+    </div>
+  </div>
+)
+
+/**
+ * Main App component with routes and language context
+ */
+function App() {
+  return (
+    <LanguageProvider>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/" element={<Layout />}>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="users" element={<Users />} />
+            <Route path="users/:id" element={<UserDetails />} />
+            <Route path="users/:id/edit" element={<EditUser />} />
+            <Route path="vendors" element={<Vendors />} />
+            <Route path="vendors/:id/edit" element={<EditVendor />} />
+            <Route path="vendors/:id/detail" element={<VendorDetail />} />
+            <Route path="vendors/:id/products" element={<AllVendorProducts />} />
+            <Route path="vendors/:id/edit-user-detail" element={<EditUserDetail />} />
+            <Route path="vendor/product/:productId" element={<ProductDetail />} />
+            <Route path="vendor-request-detail/:id" element={<VendorRequestDetail />} />
+            <Route path="orders" element={<Orders />} />
+            <Route path="orders/:orderId" element={<OrderDetails />} />
+            <Route path="biddings/:bidId" element={<BidDetailPage />} />
+            <Route path="view-kyc/:id" element={<ViewKYC />} />
+            <Route path="refund-request/:id" element={<RefundRequest />} />
+            <Route path="finance" element={<Finance />} />
+            <Route path="marketing" element={<Marketing />} />
+            <Route path="marketing/add-story" element={<AddStoryHighlight />} />
+            <Route path="marketing/edit-story/:id" element={<AddStoryHighlight />} />
+            <Route path="marketing/add-banner" element={<AddBanner />} />
+            <Route path="marketing/edit-banner/:id" element={<AddBanner />} />
+            <Route path="marketing/banner/:id" element={<BannerDetail />} />
+            <Route path="marketing/push-notification/send/:id" element={<PushNotificationSendDetail />} />
+            <Route path="marketing/push-notification/pending/:id" element={<PushNotificationPendingDetail />} />
+            <Route path="marketing/push-notification/scheduled/:id" element={<PushNotificationScheduledDetail />} />
+            <Route path="marketing/add-push-notification" element={<AddPushNotification />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="analytics/top-performer-detail" element={<TopPerformerDetail />} />
+            <Route path="analytics/order-detail/:userId" element={<AnalyticsOrderDetail />} />
+            <Route path="main-control" element={<MainControl />} />
+            <Route path="categories" element={<Categories />} />
+            <Route path="categories/add" element={<AddCategory />} />
+            <Route path="products" element={<Products />} />
+            <Route path="products/bidding" element={<BiddingProducts />} />
+            <Route path="products/ecommerce" element={<EcommerceProducts />} />
+            <Route path="building-products" element={<BiddingProducts />} />
+            <Route path="ecommerce-products" element={<EcommerceProducts />} />
+            <Route path="wallet" element={<Wallet />} />
+            <Route path="wallet/all-transactions" element={<AllTransactions />} />
+            <Route path="wallet/user-wallets" element={<UserWallets />} />
+            <Route path="wallet/withdrawals" element={<Withdrawals />} />
+            <Route path="wallet/settings" element={<WalletSettings />} />
+            <Route path="transactions/detail/:id" element={<TransactionDetails />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </LanguageProvider>
+  )
+}
+
+export default App
