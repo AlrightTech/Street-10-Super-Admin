@@ -1,13 +1,10 @@
-<<<<<<< HEAD
-import { useState, useMemo } from 'react'
-=======
-import { useState, useEffect } from 'react'
->>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import UsersTable from '../components/users/UsersTable'
 import FilterDropdown from '../components/users/FilterDropdown'
 import ConfirmModal from '../components/ui/ConfirmModal'
 import { usersApi, type User as ApiUser } from '../services/users.api'
+import { mockUsers } from '../data/mockUsers'
 import type { User } from '../types/users'
 
 /**
@@ -29,8 +26,8 @@ const FilterIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
  */
 export default function Users() {
   const navigate = useNavigate()
-<<<<<<< HEAD
-  const [allUsers, setAllUsers] = useState<User[]>(mockUsers)
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<number | null>(null)
   
@@ -38,15 +35,10 @@ export default function Users() {
   const [totalPurchaseFilter, setTotalPurchaseFilter] = useState<string>('All')
   const [biddingWinFilter, setBiddingWinFilter] = useState<string>('All')
   const [dateJoinFilter, setDateJoinFilter] = useState<string>('All')
-=======
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [userToDelete, setUserToDelete] = useState<string | null>(null)
   const [filters] = useState<any>({})
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 })
 
-  // Fetch users from API
+  // Fetch users from API with fallback to mock data
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -62,14 +54,15 @@ export default function Users() {
           totalPurchase: user.stats?.totalSpent ? parseFloat(user.stats.totalSpent) / 100 : 0, // Convert minor units
           status: user.status === 'active' ? 'active' : user.status === 'blocked' ? 'blocked' : 'pending',
           joinDate: new Date(user.createdAt).toLocaleDateString(),
+          biddingWins: 0, // Default value
         }))
         
         setUsers(transformedUsers)
         setPagination(result.pagination)
       } catch (error) {
         console.error('Error fetching users:', error)
-        // Fallback to empty array on error
-        setUsers([])
+        // Fallback to mock data on error
+        setUsers(mockUsers)
       } finally {
         setLoading(false)
       }
@@ -77,7 +70,6 @@ export default function Users() {
 
     fetchUsers()
   }, [filters, pagination.page])
->>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
 
   /**
    * Handle edit user
@@ -90,15 +82,9 @@ export default function Users() {
   /**
    * Handle view user
    */
-<<<<<<< HEAD
   const handleView = (userId: number) => {
     // Navigate to user details page
     navigate(`/users/${userId}`)
-=======
-  const handleDelete = (userId: number) => {
-    setUserToDelete(String(userId))
-    setDeleteModalOpen(true)
->>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
   }
 
   /**
@@ -120,7 +106,7 @@ export default function Users() {
    * Filter and sort users based on selected filters
    */
   const filteredUsers = useMemo(() => {
-    let result = [...allUsers]
+    let result = [...users]
 
     // Filter by bidding wins
     if (biddingWinFilter === 'Yes') {
@@ -152,32 +138,23 @@ export default function Users() {
     }
 
     return result
-  }, [allUsers, totalPurchaseFilter, biddingWinFilter, dateJoinFilter])
+  }, [users, totalPurchaseFilter, biddingWinFilter, dateJoinFilter])
 
   /**
    * Confirm delete user
    */
   const confirmDelete = async () => {
     if (userToDelete !== null) {
-<<<<<<< HEAD
-      setAllUsers((prevUsers) => prevUsers.filter((user) => user.id !== userToDelete))
-      setDeleteModalOpen(false)
-      setUserToDelete(null)
-=======
       try {
         // TODO: Implement delete user API endpoint
         // For now, just remove from local state
-        setUsers((prevUsers) => prevUsers.filter((user) => {
-          const userIdStr = String(user.id)
-          return userIdStr !== userToDelete
-        }))
+        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userToDelete))
         setDeleteModalOpen(false)
         setUserToDelete(null)
       } catch (error) {
         console.error('Error deleting user:', error)
         alert('Failed to delete user')
       }
->>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
     }
   }
 
@@ -192,19 +169,6 @@ export default function Users() {
   /**
    * Handle toggle block/unblock user
    */
-<<<<<<< HEAD
-  const handleToggleBlock = (userId: number) => {
-    setAllUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.id === userId
-          ? {
-              ...user,
-              status: user.status === 'active' ? 'blocked' : user.status === 'blocked' ? 'active' : user.status,
-            }
-          : user
-      )
-    )
-=======
   const handleToggleBlock = async (userId: number) => {
     try {
       // Find user in current list to get their status
@@ -229,14 +193,36 @@ export default function Users() {
           totalPurchase: user.stats?.totalSpent ? parseFloat(user.stats.totalSpent) / 100 : 0,
           status: user.status === 'active' ? 'active' : user.status === 'blocked' ? 'blocked' : 'pending',
           joinDate: new Date(user.createdAt).toLocaleDateString(),
+          biddingWins: 0,
         }))
         setUsers(transformedUsers)
+      } else {
+        // Fallback: update local state if API call fails
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
+            user.id === userId
+              ? {
+                  ...user,
+                  status: user.status === 'active' ? 'blocked' : user.status === 'blocked' ? 'active' : user.status,
+                }
+              : user
+          )
+        )
       }
     } catch (error) {
       console.error('Error toggling block status:', error)
-      alert('Failed to update user status')
+      // Fallback: update local state if API call fails
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === userId
+            ? {
+                ...user,
+                status: user.status === 'active' ? 'blocked' : user.status === 'blocked' ? 'active' : user.status,
+              }
+            : user
+        )
+      )
     }
->>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
   }
 
   /**
@@ -261,7 +247,14 @@ export default function Users() {
       </div>
 
       {/* Filter Section */}
-      <div className="mb-4 flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-3">
+      <div className="mb-4 flex flex-col sm:flex-row justify-start sm:justify-end items-stretch sm:items-center gap-3">
+        <button
+          type="button"
+          className="flex items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap sm:order-last"
+          aria-label="Filter"
+        >
+          <FilterIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+        </button>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
           <FilterDropdown
             label="Total Purchase"
@@ -282,38 +275,22 @@ export default function Users() {
             className="w-full sm:w-auto"
           />
         </div>
-        <button
-          type="button"
-          className="flex items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap w-full sm:w-auto"
-          aria-label="Filter"
-        >
-          <FilterIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-        </button>
       </div>
 
       {/* Users Table */}
       <div className="mt-5">
-<<<<<<< HEAD
-        <UsersTable
-          users={filteredUsers}
-          onEdit={handleEdit}
-          onView={handleView}
-          onToggleBlock={handleToggleBlock}
-        />
-=======
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <p className="text-gray-600">Loading users...</p>
           </div>
         ) : (
           <UsersTable
-            users={users}
+            users={filteredUsers}
             onEdit={handleEdit}
-            onDelete={handleDelete}
+            onView={handleView}
             onToggleBlock={handleToggleBlock}
           />
         )}
->>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
       </div>
 
       {/* Delete Confirmation Modal */}

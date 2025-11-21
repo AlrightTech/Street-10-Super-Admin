@@ -103,16 +103,11 @@ export default function OrderDetails() {
     console.log('Update status for order:', order?.orderId)
   }
 
-<<<<<<< HEAD
   const handleVendorInformation = () => {
     // Handle vendor information logic
     console.log('View vendor information for order:', order?.orderId)
   }
 
-  const handleDownloadInvoice = () => {
-    // Handle download invoice logic
-    console.log('Download invoice for order:', order?.orderId)
-=======
   const handleDownloadInvoice = async () => {
     if (!orderId || !order) return
     
@@ -136,7 +131,6 @@ export default function OrderDetails() {
       console.error('Error downloading invoice:', error)
       alert('Failed to download invoice. Please try again.')
     }
->>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
   }
 
   const handleCancelOrder = () => {
