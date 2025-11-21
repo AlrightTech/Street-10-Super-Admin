@@ -31,11 +31,11 @@ export default function UserDetails() {
     const loadUser = async () => {
       setLoading(true);
       let userIdToFetch: string | null = null; // Declare in broader scope for error handling
-      
+
       if (id) {
         try {
-        // Check if user data is passed from navigation state (e.g., after edit)
-        if (location.state?.user) {
+          // Check if user data is passed from navigation state (e.g., after edit)
+          if (location.state?.user) {
             setUser(location.state.user as UserDetailsType);
             setUserUuid(id); // Store the ID from URL as UUID
             setLoading(false);
@@ -45,12 +45,12 @@ export default function UserDetails() {
           // Check if id is a numeric ID (not a UUID)
           // UUIDs contain hyphens, numeric IDs don't
           userIdToFetch = id;
-          
+
           // Check if it's numeric (no hyphens and all digits)
           const isNumericId = !id.includes("-") && /^\d+$/.test(id);
-          
+
           console.log("Processing user ID:", { id, isNumericId });
-          
+
           if (isNumericId) {
             // This is a numeric ID, we need to convert it to UUID
             // Fetch users list to build the mapping
@@ -58,19 +58,25 @@ export default function UserDetails() {
               "Numeric ID detected, fetching users list to find UUID...",
               id
             );
-            
+
             try {
-              const usersResult = await usersApi.getAll({ page: 1, limit: 1000 });
-              console.log("Fetched users for mapping:", usersResult.data?.length || 0);
-              
+              const usersResult = await usersApi.getAll({
+                page: 1,
+                limit: 1000,
+              });
+              console.log(
+                "Fetched users for mapping:",
+                usersResult.data?.length || 0
+              );
+
               if (!usersResult.data || usersResult.data.length === 0) {
                 throw new Error("No users found in the system");
               }
-              
+
               const userIdMap = new Map<number, string>();
               usersResult.data.forEach((user: any) => {
                 try {
-                  if (user.id && typeof user.id === 'string') {
+                  if (user.id && typeof user.id === "string") {
                     const numericId =
                       parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
                       1000000;
@@ -80,26 +86,42 @@ export default function UserDetails() {
                   console.error("Error converting user ID:", user.id, e);
                 }
               });
-              
+
               console.log("User ID map built with", userIdMap.size, "entries");
-              console.log("Sample mapping entries:", Array.from(userIdMap.entries()).slice(0, 5));
-              
+              console.log(
+                "Sample mapping entries:",
+                Array.from(userIdMap.entries()).slice(0, 5)
+              );
+
               const numericId = parseInt(id);
               const uuid = userIdMap.get(numericId);
-              
+
               if (!uuid) {
-                console.error(`User with numeric ID ${id} not found in mapping.`);
-                console.error("Available numeric IDs:", Array.from(userIdMap.keys()));
-                throw new Error(`User with ID ${id} not found. The user may not exist or the ID mapping failed.`);
+                console.error(
+                  `User with numeric ID ${id} not found in mapping.`
+                );
+                console.error(
+                  "Available numeric IDs:",
+                  Array.from(userIdMap.keys())
+                );
+                throw new Error(
+                  `User with ID ${id} not found. The user may not exist or the ID mapping failed.`
+                );
               }
-              
+
               userIdToFetch = uuid;
-              console.log(`Successfully converted numeric ID ${id} to UUID: ${uuid}`);
+              console.log(
+                `Successfully converted numeric ID ${id} to UUID: ${uuid}`
+              );
             } catch (error: any) {
               console.error("Error converting numeric ID to UUID:", error);
-              throw new Error(`Failed to convert user ID: ${error?.message || "Unknown error"}`);
+              throw new Error(
+                `Failed to convert user ID: ${
+                  error?.message || "Unknown error"
+                }`
+              );
             }
-        } else {
+          } else {
             // It's already a UUID, use it directly
             console.log("Using UUID directly:", userIdToFetch);
           }
@@ -189,14 +211,20 @@ export default function UserDetails() {
             id,
             userIdToFetch,
           });
-          
+
           // Show user-friendly error message
           if (error?.response?.status === 404) {
-            alert(`User with ID ${id} not found. Please check if the user exists.`);
+            alert(
+              `User with ID ${id} not found. Please check if the user exists.`
+            );
           } else {
-            alert(`Failed to load user details: ${error?.message || "Unknown error"}`);
+            alert(
+              `Failed to load user details: ${
+                error?.message || "Unknown error"
+              }`
+            );
           }
-          
+
           navigate("/users");
         }
       } else {
