@@ -47,7 +47,11 @@ export default function Dashboard() {
         ]);
 
         // Debug: Log the dashboard stats to see what we're receiving
-        console.log("Dashboard Stats from API:", dashboardStats);
+        console.log("Dashboard Stats from API:", JSON.stringify(dashboardStats, null, 2));
+        console.log("Users total:", dashboardStats?.users?.total);
+        console.log("Orders total:", dashboardStats?.orders?.total);
+        console.log("Vendors total:", dashboardStats?.vendors?.total);
+        console.log("KYC pending:", dashboardStats?.kyc?.pending);
 
         // Transform dashboard stats to stat cards
         // Handle revenue - it should be a string from the API (already converted from BigInt)
