@@ -42,33 +42,60 @@ export default function UserDetails() {
           // Check if id is a numeric ID (not a UUID)
           // UUIDs contain hyphens, numeric IDs don't
           let userIdToFetch = id;
-          if (!id.includes("-")) {
+          
+          // Check if it's numeric (no hyphens and all digits or starts with digits)
+          const isNumericId = !id.includes("-") && /^\d+$/.test(id);
+          
+          if (isNumericId) {
             // This is a numeric ID, we need to convert it to UUID
             // Fetch users list to build the mapping
             console.log(
-              "Numeric ID detected, fetching users list to find UUID..."
+              "Numeric ID detected, fetching users list to find UUID...",
+              id
             );
-            const usersResult = await usersApi.getAll({ page: 1, limit: 1000 });
-            const userIdMap = new Map<number, string>();
-            usersResult.data.forEach((user: any) => {
-              const numericId =
-                parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
-                1000000;
-              userIdMap.set(numericId, user.id);
-            });
-            const numericId = parseInt(id);
-            const uuid = userIdMap.get(numericId);
-            if (!uuid) {
-              throw new Error(`User with ID ${id} not found`);
+            
+            try {
+              const usersResult = await usersApi.getAll({ page: 1, limit: 1000 });
+              console.log("Fetched users for mapping:", usersResult.data.length);
+              
+              const userIdMap = new Map<number, string>();
+              usersResult.data.forEach((user: any) => {
+                try {
+                  const numericId =
+                    parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
+                    1000000;
+                  userIdMap.set(numericId, user.id);
+                } catch (e) {
+                  console.error("Error converting user ID:", user.id, e);
+                }
+              });
+              
+              console.log("User ID map built with", userIdMap.size, "entries");
+              
+              const numericId = parseInt(id);
+              const uuid = userIdMap.get(numericId);
+              
+              if (!uuid) {
+                console.error(`User with numeric ID ${id} not found in mapping. Available IDs:`, Array.from(userIdMap.keys()));
+                throw new Error(`User with ID ${id} not found`);
+              }
+              
+              userIdToFetch = uuid;
+              console.log(`Converted numeric ID ${id} to UUID: ${uuid}`);
+            } catch (error) {
+              console.error("Error converting numeric ID to UUID:", error);
+              throw error;
             }
-            userIdToFetch = uuid;
-            console.log(`Converted numeric ID ${id} to UUID: ${uuid}`);
+          } else {
+            // It's already a UUID, use it directly
+            console.log("Using UUID directly:", userIdToFetch);
           }
 
           // Store the UUID for later use (for edit, block, etc.)
           setUserUuid(userIdToFetch);
 
           // Fetch from API using UUID
+          console.log("Fetching user with UUID:", userIdToFetch);
           const apiUser = await usersApi.getById(userIdToFetch);
 
           // Transform API response to frontend format
