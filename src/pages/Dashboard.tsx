@@ -96,19 +96,31 @@ export default function Dashboard() {
           },
           {
             id: '5',
-            title: 'Pending Vendor Approvals',
-            value: dashboardStats.vendors.pending,
+            title: 'Bidding Pending Payment',
+            value: 0, // TODO: Get from backend API - bids that won but payment not completed
             change: 2.6, // TODO: Calculate from historical data
             changeLabel: 'last 7 days',
             trend: 'up',
             color: 'orange',
             trendColor: 'orange',
-            icon: 'approvals',
+            icon: 'booking',
             iconColor: 'orange',
             barChartData: [30, 35, 32, 40, 38, 45], // TODO: Get from historical data
           },
           {
             id: '6',
+            title: 'User Refund Request',
+            value: 0, // TODO: Get from backend API - refund requests count
+            change: 2.6, // TODO: Calculate from historical data
+            changeLabel: 'last 7 days',
+            trend: 'up',
+            color: 'purple',
+            icon: 'dispute',
+            iconColor: 'blue',
+            barChartData: [55, 62, 58, 68, 65, 72], // TODO: Get from historical data
+          },
+          {
+            id: '7',
             title: 'Total Vendors',
             value: dashboardStats.vendors.total,
             change: 2.6, // TODO: Calculate from historical data
@@ -120,16 +132,16 @@ export default function Dashboard() {
             barChartData: [8, 10, 12, 9, 14, 11], // TODO: Get from historical data
           },
           {
-            id: '7',
-            title: 'Total Products',
-            value: dashboardStats.products.total,
+            id: '8',
+            title: 'Uncompleted Orders',
+            value: 0, // TODO: Get from backend API - orders not in delivered/closed status
             change: 2.6, // TODO: Calculate from historical data
             changeLabel: 'last 7 days',
             trend: 'up',
-            color: 'purple',
+            color: 'lightGreen',
             icon: 'booking',
             iconColor: 'blue',
-            barChartData: [55, 62, 58, 68, 65, 72], // TODO: Get from historical data
+            barChartData: [18, 22, 20, 25, 23, 28], // TODO: Get from historical data
           },
         ]
 
@@ -156,7 +168,18 @@ export default function Dashboard() {
         setRevenueSegments(mockRevenueSegments)
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
-        // Keep empty arrays on error, UI will show empty states
+        // On error, still show stat cards with zero values so UI doesn't break
+        const fallbackCards: StatCardType[] = [
+          { id: '1', title: 'Total Users', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'blue', icon: 'users', iconColor: 'blue', barChartData: [] },
+          { id: '2', title: 'Total Orders', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'cyan', icon: 'booking', iconColor: 'blue', barChartData: [] },
+          { id: '3', title: 'Total Revenue (This Month)', value: 'QAR 0.00', change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'red', icon: 'revenue', iconColor: 'blue', barChartData: [] },
+          { id: '4', title: 'User Verification Requests', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'lightGreen', icon: 'approvals', iconColor: 'orange', barChartData: [] },
+          { id: '5', title: 'Bidding Pending Payment', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'orange', icon: 'booking', iconColor: 'orange', barChartData: [] },
+          { id: '6', title: 'User Refund Request', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'purple', icon: 'dispute', iconColor: 'blue', barChartData: [] },
+          { id: '7', title: 'Total Vendors', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'red', icon: 'vendors', iconColor: 'blue', barChartData: [] },
+          { id: '8', title: 'Uncompleted Orders', value: 0, change: 0, changeLabel: 'last 7 days', trend: 'neutral', color: 'lightGreen', icon: 'booking', iconColor: 'blue', barChartData: [] },
+        ]
+        setStatCards(fallbackCards)
       } finally {
         setLoading(false)
       }
