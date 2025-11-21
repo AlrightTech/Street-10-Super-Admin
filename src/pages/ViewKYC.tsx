@@ -1,7 +1,7 @@
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { getUserDetails } from '../data/mockUserDetails'
-import { getKYCData, updateKYCStatus, updateKYCNotes } from '../data/mockKYC'
+import { usersApi } from '../services/users.api'
+import { kycApi } from '../services/kyc.api'
 import type { UserDetails } from '../types/userDetails'
 import type { KYCData } from '../types/kyc'
 import UserProfileCard from '../components/kyc/UserProfileCard'
@@ -15,6 +15,7 @@ import ActivityHistoryCard from '../components/kyc/ActivityHistoryCard'
  */
 export default function ViewKYC() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [user, setUser] = useState<UserDetails | null>(null)
   const [kycData, setKycData] = useState<KYCData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -23,69 +24,155 @@ export default function ViewKYC() {
     const loadData = async () => {
       setLoading(true)
       if (id) {
-        const userId = Number(id)
-        const userData = getUserDetails(userId)
-        const kyc = getKYCData(userId)
-        
-        if (userData && kyc) {
-          setUser(userData)
-          setKycData(kyc)
+        try {
+          // Fetch user details and KYC data from API
+          const [apiUserData, apiKycData] = await Promise.all([
+            usersApi.getById(id),
+            kycApi.getByUserId(id),
+          ])
+          
+          // Transform user to frontend format
+          const transformedUser: UserDetails = {
+            id: parseInt(apiUserData.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+            name: apiUserData.user.email.split('@')[0],
+            email: apiUserData.user.email,
+            phone: apiUserData.user.phone || '',
+            avatar: '',
+            role: apiUserData.user.role,
+            accountStatus: apiUserData.user.status === 'active' ? 'verified' : 'unverified',
+            status: apiUserData.user.status === 'active' ? 'active' : 'blocked',
+            ordersMade: apiUserData.stats?.ordersCount || 0,
+            biddingWins: apiUserData.stats?.bidsWon || 0,
+            totalSpent: parseFloat(apiUserData.stats?.totalSpent?.toString() || '0') / 100,
+            totalRefunds: 0,
+            pendingRefunds: 0,
+            netSpending: parseFloat(apiUserData.stats?.totalSpent?.toString() || '0') / 100,
+            walletBalance: parseFloat(apiUserData.user.wallet?.availableMinor?.toString() || '0') / 100,
+            walletLimit: 10000,
+            interests: [],
+            interestsImage: '',
+            biddings: [],
+            orders: [],
+          }
+          
+          // Transform KYC data
+          const docsUrls = Array.isArray(apiKycData.kyc.docsUrls) ? apiKycData.kyc.docsUrls : 
+                          typeof apiKycData.kyc.docsUrls === 'object' && apiKycData.kyc.docsUrls !== null ? Object.values(apiKycData.kyc.docsUrls) : []
+          
+          const transformedKyc: KYCData = {
+            userId: parseInt(apiUserData.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+            kycId: apiKycData.kyc.id,
+            kycType: 'individual',
+            status: apiKycData.kyc.status === 'approved' ? 'approved' : apiKycData.kyc.status === 'rejected' ? 'rejected' : 'pending',
+            submissionDate: new Date(apiKycData.kyc.createdAt).toLocaleDateString(),
+            submissionTime: new Date(apiKycData.kyc.createdAt).toLocaleTimeString(),
+            referenceNumber: apiKycData.kyc.id.substring(0, 8).toUpperCase(),
+            documents: docsUrls.map((url: string, index: number) => ({
+              id: String(index),
+              name: `Document ${index + 1}`,
+              title: `Document ${index + 1}`,
+              type: 'kyc-document' as const,
+              fileUrl: url,
+              uploadedDate: new Date(apiKycData.kyc.createdAt).toLocaleDateString(),
+            })),
+            bankInfo: {
+              iban: '',
+              swiftCode: '',
+              bankName: '',
+              accountNumber: '',
+              nameOnCard: '',
+              bankCountry: '',
+            },
+            adminNotes: apiKycData.kyc.reason || '',
+            activityHistory: (apiKycData.auditLogs || []).map((log: any, index: number) => ({
+              id: log.id || String(index),
+              event: log.action,
+              description: log.details?.reason || log.action,
+              date: new Date(log.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              time: new Date(log.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+              icon: (log.action?.toLowerCase().includes('approve') ? 'check' : log.action?.toLowerCase().includes('reject') ? 'x' : 'note') as any,
+              isCurrent: index === 0,
+            })),
+          }
+          
+          setUser(transformedUser)
+          setKycData(transformedKyc)
+        } catch (error) {
+          console.error('Error loading KYC data:', error)
+          navigate('/users')
         }
       }
       setLoading(false)
     }
 
     loadData()
-  }, [id])
+  }, [id, navigate])
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!kycData || !id) return
     
-    updateKYCStatus(Number(id), 'approved')
-    setKycData({
-      ...kycData,
-      status: 'approved',
-      activityHistory: [
-        ...kycData.activityHistory.filter(item => !item.isCurrent),
-        {
-          id: String(Date.now()),
-          event: 'Status: Approved',
-          description: 'KYC has been approved by admin',
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          icon: 'check',
-          isCurrent: true,
-        },
-      ],
-    })
+    try {
+      await kycApi.approve(id)
+      // Reload KYC data
+      setKycData({
+        ...kycData,
+        status: 'approved',
+        activityHistory: [
+          ...kycData.activityHistory.filter(item => !item.isCurrent),
+          {
+            id: String(Date.now()),
+            event: 'Status: Approved',
+            description: 'KYC has been approved by admin',
+            date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            icon: 'check',
+            isCurrent: true,
+          },
+        ],
+      })
+    } catch (error) {
+      console.error('Error approving KYC:', error)
+      alert('Failed to approve KYC. Please try again.')
+    }
   }
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!kycData || !id) return
     
-    updateKYCStatus(Number(id), 'rejected')
-    setKycData({
-      ...kycData,
-      status: 'rejected',
-      activityHistory: [
-        ...kycData.activityHistory.filter(item => !item.isCurrent),
-        {
-          id: String(Date.now()),
-          event: 'Status: Rejected',
-          description: 'KYC has been rejected by admin',
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          icon: 'x',
-          isCurrent: true,
-        },
-      ],
-    })
+    const reason = prompt('Please enter rejection reason:')
+    if (!reason) return
+    
+    try {
+      await kycApi.reject(id, reason)
+      // Reload KYC data
+      setKycData({
+        ...kycData,
+        status: 'rejected',
+        adminNotes: reason,
+        activityHistory: [
+          ...kycData.activityHistory.filter(item => !item.isCurrent),
+          {
+            id: String(Date.now()),
+            event: 'Status: Rejected',
+            description: `KYC has been rejected by admin: ${reason}`,
+            date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            icon: 'x',
+            isCurrent: true,
+          },
+        ],
+      })
+    } catch (error) {
+      console.error('Error rejecting KYC:', error)
+      alert('Failed to reject KYC. Please try again.')
+    }
   }
 
-  const handleSaveNote = (notes: string) => {
+  const handleSaveNote = async (notes: string) => {
     if (!kycData || !id) return
     
-    updateKYCNotes(Number(id), notes)
+    // Note: API doesn't have a separate endpoint for notes, they're saved with reject
+    // For now, we'll just update local state
     setKycData({
       ...kycData,
       adminNotes: notes,
@@ -94,7 +181,7 @@ export default function ViewKYC() {
         {
           id: String(Date.now()),
           event: 'Admin Note Added',
-          description: 'Admin added verification notes for document quality review',
+          description: 'Admin added verification notes',
           date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
           icon: 'note',

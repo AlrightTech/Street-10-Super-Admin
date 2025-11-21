@@ -6,6 +6,7 @@ import PaymentInformationCard from '../components/orders/PaymentInformationCard'
 import ShippingInformationCard from '../components/orders/ShippingInformationCard'
 import OrderTimelineCard from '../components/orders/OrderTimelineCard'
 import { getOrderDetails } from '../data/mockOrderDetails'
+import { ordersApi } from '../services/orders.api'
 import type { OrderDetails as OrderDetailsType } from '../types/orderDetails'
 import { ChevronDownIcon } from '../components/icons/Icons'
 
@@ -22,12 +23,73 @@ export default function OrderDetails() {
     const loadOrder = async () => {
       setLoading(true)
       if (orderId) {
-        const orderData = getOrderDetails(orderId)
-        if (orderData) {
-          setOrder(orderData)
-        } else {
-          // Fallback: redirect to orders list if not found
-          navigate('/orders')
+        try {
+          // Try to fetch from API first
+          const apiOrder = await ordersApi.getById(orderId)
+          
+          // Transform API order to frontend format
+          const transformedOrder: OrderDetailsType = {
+            id: apiOrder.id,
+            orderId: apiOrder.orderNumber,
+            date: new Date(apiOrder.createdAt).toLocaleDateString(),
+            time: new Date(apiOrder.createdAt).toLocaleTimeString(),
+            status: apiOrder.status as any,
+            customer: {
+              id: parseInt(apiOrder.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+              name: apiOrder.user.email.split('@')[0],
+              email: apiOrder.user.email,
+              phone: '',
+              avatar: '',
+            },
+            products: apiOrder.items.map((item: any) => ({
+              id: item.id,
+              name: item.product.title,
+              image: item.product.media?.[0]?.url || '',
+              category: '',
+              quantity: item.quantity,
+              price: parseFloat(item.priceMinor) / 100,
+              total: (parseFloat(item.priceMinor) / 100) * item.quantity,
+            })),
+            payment: {
+              method: apiOrder.paymentMethod as any,
+              transactionId: apiOrder.id,
+              status: apiOrder.status === 'paid' ? 'completed' : 'pending',
+              subtotal: parseFloat(apiOrder.totalMinor) / 100,
+              discount: parseFloat(apiOrder.discountMinor || '0') / 100,
+              tax: 0,
+              shipping: 0,
+              total: parseFloat(apiOrder.totalMinor) / 100,
+            },
+            shipping: {
+              address: (apiOrder.shippingAddress as any)?.address || '',
+              city: (apiOrder.shippingAddress as any)?.city || '',
+              state: (apiOrder.shippingAddress as any)?.state || '',
+              postalCode: (apiOrder.shippingAddress as any)?.postalCode || '',
+              country: (apiOrder.shippingAddress as any)?.country || '',
+              method: 'Standard',
+              trackingNumber: '',
+              estimatedDelivery: '',
+            },
+            timeline: [
+              {
+                id: '1',
+                status: 'Order Created',
+                date: new Date(apiOrder.createdAt).toLocaleDateString(),
+                time: new Date(apiOrder.createdAt).toLocaleTimeString(),
+              },
+            ],
+          }
+          
+          setOrder(transformedOrder)
+        } catch (error) {
+          console.error('Error fetching order:', error)
+          // Fallback to mock data if API fails
+          const orderData = getOrderDetails(orderId)
+          if (orderData) {
+            setOrder(orderData)
+          } else {
+            navigate('/orders')
+          }
         }
       }
       setLoading(false)
@@ -41,6 +103,7 @@ export default function OrderDetails() {
     console.log('Update status for order:', order?.orderId)
   }
 
+<<<<<<< HEAD
   const handleVendorInformation = () => {
     // Handle vendor information logic
     console.log('View vendor information for order:', order?.orderId)
@@ -49,6 +112,31 @@ export default function OrderDetails() {
   const handleDownloadInvoice = () => {
     // Handle download invoice logic
     console.log('Download invoice for order:', order?.orderId)
+=======
+  const handleDownloadInvoice = async () => {
+    if (!orderId || !order) return
+    
+    try {
+      const invoiceData = await ordersApi.getInvoice(orderId)
+      // Convert invoice data to JSON and download as file
+      const blob = new Blob([JSON.stringify(invoiceData, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `invoice-${invoiceData.invoiceNumber}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      
+      // TODO: If PDF generation is added, download PDF instead
+      // For now, JSON download is available
+      console.log('Invoice downloaded:', invoiceData.invoiceNumber)
+    } catch (error) {
+      console.error('Error downloading invoice:', error)
+      alert('Failed to download invoice. Please try again.')
+    }
+>>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
   }
 
   const handleCancelOrder = () => {

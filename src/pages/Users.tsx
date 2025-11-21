@@ -1,9 +1,13 @@
+<<<<<<< HEAD
 import { useState, useMemo } from 'react'
+=======
+import { useState, useEffect } from 'react'
+>>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
 import { useNavigate } from 'react-router-dom'
 import UsersTable from '../components/users/UsersTable'
 import FilterDropdown from '../components/users/FilterDropdown'
 import ConfirmModal from '../components/ui/ConfirmModal'
-import { mockUsers } from '../data/mockUsers'
+import { usersApi, type User as ApiUser } from '../services/users.api'
 import type { User } from '../types/users'
 
 /**
@@ -25,6 +29,7 @@ const FilterIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
  */
 export default function Users() {
   const navigate = useNavigate()
+<<<<<<< HEAD
   const [allUsers, setAllUsers] = useState<User[]>(mockUsers)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<number | null>(null)
@@ -33,6 +38,46 @@ export default function Users() {
   const [totalPurchaseFilter, setTotalPurchaseFilter] = useState<string>('All')
   const [biddingWinFilter, setBiddingWinFilter] = useState<string>('All')
   const [dateJoinFilter, setDateJoinFilter] = useState<string>('All')
+=======
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<string | null>(null)
+  const [filters] = useState<any>({})
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 })
+
+  // Fetch users from API
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true)
+        const result = await usersApi.getAll({ ...filters, page: pagination.page, limit: pagination.limit })
+        
+        // Transform API users to frontend User format
+        const transformedUsers: User[] = result.data.map((user: ApiUser) => ({
+          id: parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000, // Convert UUID to number for compatibility
+          name: user.email.split('@')[0], // Use email prefix as name
+          email: user.email,
+          role: user.role,
+          totalPurchase: user.stats?.totalSpent ? parseFloat(user.stats.totalSpent) / 100 : 0, // Convert minor units
+          status: user.status === 'active' ? 'active' : user.status === 'blocked' ? 'blocked' : 'pending',
+          joinDate: new Date(user.createdAt).toLocaleDateString(),
+        }))
+        
+        setUsers(transformedUsers)
+        setPagination(result.pagination)
+      } catch (error) {
+        console.error('Error fetching users:', error)
+        // Fallback to empty array on error
+        setUsers([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUsers()
+  }, [filters, pagination.page])
+>>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
 
   /**
    * Handle edit user
@@ -45,9 +90,15 @@ export default function Users() {
   /**
    * Handle view user
    */
+<<<<<<< HEAD
   const handleView = (userId: number) => {
     // Navigate to user details page
     navigate(`/users/${userId}`)
+=======
+  const handleDelete = (userId: number) => {
+    setUserToDelete(String(userId))
+    setDeleteModalOpen(true)
+>>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
   }
 
   /**
@@ -106,11 +157,27 @@ export default function Users() {
   /**
    * Confirm delete user
    */
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (userToDelete !== null) {
+<<<<<<< HEAD
       setAllUsers((prevUsers) => prevUsers.filter((user) => user.id !== userToDelete))
       setDeleteModalOpen(false)
       setUserToDelete(null)
+=======
+      try {
+        // TODO: Implement delete user API endpoint
+        // For now, just remove from local state
+        setUsers((prevUsers) => prevUsers.filter((user) => {
+          const userIdStr = String(user.id)
+          return userIdStr !== userToDelete
+        }))
+        setDeleteModalOpen(false)
+        setUserToDelete(null)
+      } catch (error) {
+        console.error('Error deleting user:', error)
+        alert('Failed to delete user')
+      }
+>>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
     }
   }
 
@@ -125,6 +192,7 @@ export default function Users() {
   /**
    * Handle toggle block/unblock user
    */
+<<<<<<< HEAD
   const handleToggleBlock = (userId: number) => {
     setAllUsers((prevUsers) =>
       prevUsers.map((user) =>
@@ -136,6 +204,39 @@ export default function Users() {
           : user
       )
     )
+=======
+  const handleToggleBlock = async (userId: number) => {
+    try {
+      // Find user in current list to get their status
+      const user = users.find((u) => u.id === userId)
+      if (!user) return
+
+      const isCurrentlyBlocked = user.status === 'blocked'
+      // Find the API user ID (we need to store mapping or refetch)
+      // For now, we'll need to handle this differently
+      // This is a simplified version - in production, maintain a proper mapping
+      const apiUserId = users.find((u) => u.id === userId)?.email
+      
+      if (apiUserId) {
+        await usersApi.toggleBlock(apiUserId, !isCurrentlyBlocked)
+        // Refresh users list
+        const result = await usersApi.getAll({ ...filters, page: pagination.page, limit: pagination.limit })
+        const transformedUsers: User[] = result.data.map((user: ApiUser) => ({
+          id: parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+          name: user.email.split('@')[0],
+          email: user.email,
+          role: user.role,
+          totalPurchase: user.stats?.totalSpent ? parseFloat(user.stats.totalSpent) / 100 : 0,
+          status: user.status === 'active' ? 'active' : user.status === 'blocked' ? 'blocked' : 'pending',
+          joinDate: new Date(user.createdAt).toLocaleDateString(),
+        }))
+        setUsers(transformedUsers)
+      }
+    } catch (error) {
+      console.error('Error toggling block status:', error)
+      alert('Failed to update user status')
+    }
+>>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
   }
 
   /**
@@ -192,12 +293,27 @@ export default function Users() {
 
       {/* Users Table */}
       <div className="mt-5">
+<<<<<<< HEAD
         <UsersTable
           users={filteredUsers}
           onEdit={handleEdit}
           onView={handleView}
           onToggleBlock={handleToggleBlock}
         />
+=======
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-gray-600">Loading users...</p>
+          </div>
+        ) : (
+          <UsersTable
+            users={users}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggleBlock={handleToggleBlock}
+          />
+        )}
+>>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
       </div>
 
       {/* Delete Confirmation Modal */}

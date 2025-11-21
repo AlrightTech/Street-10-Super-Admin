@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { mockNotifications } from '../../data/mockData'
+import { useState, useEffect } from 'react'
+import { notificationsApi, type Notification as ApiNotification } from '../../services/notifications.api'
 import type { Notification } from '../../types/dashboard'
 
 /**
@@ -22,14 +22,69 @@ export interface NotificationsPopupProps {
  * Notifications popup component
  */
 export default function NotificationsPopup({ onClose }: NotificationsPopupProps) {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const handleDismiss = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  // Fetch notifications from API
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        setLoading(true)
+        const result = await notificationsApi.getAll({ 
+          user_id: null, // Admin notifications
+          read: false,
+          limit: 20 
+        })
+        
+        // Transform API notifications to frontend format
+        const transformedNotifications: Notification[] = result.data.map((notif: ApiNotification) => ({
+          id: notif.id,
+          title: notif.title,
+          user: notif.user?.email || 'System',
+          userId: notif.userId || '',
+          timestamp: notif.createdAt,
+          timeAgo: formatTimeAgo(new Date(notif.createdAt)),
+        }))
+        
+        setNotifications(transformedNotifications)
+      } catch (error) {
+        console.error('Error fetching notifications:', error)
+        setNotifications([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchNotifications()
+  }, [])
+
+  const formatTimeAgo = (date: Date): string => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+    if (seconds < 60) return 'just now'
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    return `${days}d ago`
   }
 
-  const handleClearAll = () => {
-    setNotifications([])
+  const handleDismiss = async (id: string) => {
+    try {
+      await notificationsApi.delete(id)
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+    } catch (error) {
+      console.error('Error dismissing notification:', error)
+    }
+  }
+
+  const handleClearAll = async () => {
+    try {
+      await notificationsApi.clearAll(null) // Clear admin notifications
+      setNotifications([])
+    } catch (error) {
+      console.error('Error clearing notifications:', error)
+    }
   }
 
   return (
@@ -54,7 +109,9 @@ export default function NotificationsPopup({ onClose }: NotificationsPopupProps)
 
         {/* Notifications List */}
         <div className="max-h-96 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {loading ? (
+            <div className="p-4 text-center text-white/70">Loading...</div>
+          ) : notifications.length === 0 ? (
             <div className="p-4 text-center text-white/70">No notifications</div>
           ) : (
             notifications.map((notification) => (

@@ -1,6 +1,6 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { getUserDetails, updateUserDetails } from '../data/mockUserDetails'
+import { usersApi } from '../services/users.api'
 import type { UserDetails } from '../types/userDetails'
 
 /**
@@ -27,56 +27,57 @@ export default function EditUser() {
   useEffect(() => {
     const loadUser = async () => {
       setLoading(true)
-      // Try to get user from location state first
-      if (location.state?.user) {
-        // If it's UserDetails, use it directly
-        if ('phone' in location.state.user && 'interests' in location.state.user) {
-          const user = location.state.user as UserDetails
-          setUserDetails(user)
-          setFormData({
-            name: user.name,
-            email: user.email,
-            interests: user.interests.join(', ') || '',
-            password: '******',
-            phone: user.phone,
-            address: 'Street #12, Kohat, Qatar', // Default or from user data
-          })
-          setIsActive(user.status === 'active')
-        } else {
-          // If it's User type, fetch UserDetails
-          const userId = location.state.user.id
-          const userData = getUserDetails(userId)
-          if (userData) {
-            setUserDetails(userData)
-            setFormData({
-              name: userData.name,
-              email: userData.email,
-              interests: userData.interests.join(', ') || '',
-              password: '******',
-              phone: userData.phone,
-              address: 'Street #12, Kohat, Qatar',
-            })
-            setIsActive(userData.status === 'active')
+      try {
+        let userData: UserDetails | null = null
+        
+        // Try to get user from location state first
+        if (location.state?.user) {
+          userData = location.state.user as UserDetails
+        } else if (id) {
+          // Fetch from API
+          const apiUser = await usersApi.getById(id)
+          // Transform to frontend format
+          userData = {
+            id: parseInt(apiUser.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+            name: apiUser.user.email.split('@')[0],
+            email: apiUser.user.email,
+            phone: apiUser.user.phone || '',
+            avatar: '',
+            role: apiUser.user.role,
+            accountStatus: apiUser.user.status === 'active' ? 'verified' : 'unverified',
+            status: apiUser.user.status === 'active' ? 'active' : 'blocked',
+            ordersMade: apiUser.stats?.ordersCount || 0,
+            biddingWins: apiUser.stats?.bidsWon || 0,
+            totalSpent: parseFloat(apiUser.stats?.totalSpent?.toString() || '0') / 100,
+            totalRefunds: 0,
+            pendingRefunds: 0,
+            netSpending: parseFloat(apiUser.stats?.totalSpent?.toString() || '0') / 100,
+            walletBalance: parseFloat(apiUser.user.wallet?.availableMinor?.toString() || '0') / 100,
+            walletLimit: 10000,
+            interests: [],
+            interestsImage: '',
+            biddings: [],
+            orders: [],
           }
         }
-      } else if (id) {
-        // If not in state, fetch by ID from mock data
-        const userId = parseInt(id, 10)
-        const userData = getUserDetails(userId)
+
         if (userData) {
           setUserDetails(userData)
           setFormData({
             name: userData.name,
             email: userData.email,
-            interests: userData.interests.join(', ') || '',
+            interests: userData.interests?.join(', ') || '',
             password: '******',
             phone: userData.phone,
             address: 'Street #12, Kohat, Qatar',
           })
           setIsActive(userData.status === 'active')
         }
+      } catch (error) {
+        console.error('Error loading user:', error)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     loadUser()
@@ -86,61 +87,39 @@ export default function EditUser() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSave = () => {
-    if (!userDetails) return
+  const handleSave = async () => {
+    if (!userDetails || !id) return
     
-    // Parse interests from comma-separated string
-    const interestsArray = formData.interests.split(',').map((i) => i.trim()).filter(Boolean)
-    
-    // Update user data in mock store
-    updateUserDetails(userDetails.id, {
-      name: formData.name,
-      email: formData.email,
-      interests: interestsArray.length > 0 ? interestsArray : ['Cars'],
-      phone: formData.phone,
-      status: isActive ? 'active' : 'blocked',
-      accountStatus: isActive ? 'verified' : 'unverified',
-    })
-    
-    // Navigate back to user details with updated data
-    navigate(`/users/${userDetails.id}`, { 
-      state: { 
-        user: {
-          ...userDetails,
-          name: formData.name,
-          email: formData.email,
-          interests: interestsArray.length > 0 ? interestsArray : ['Cars'],
-          phone: formData.phone,
-          status: isActive ? 'active' : 'blocked',
-          accountStatus: isActive ? 'verified' : 'unverified',
-        }
-      } 
-    })
+    try {
+      // Update user via API
+      await usersApi.update(id, {
+        email: formData.email,
+        phone: formData.phone,
+        status: isActive ? 'active' : 'blocked',
+      })
+      
+      // Navigate back to user details
+      navigate(`/users/${id}`)
+    } catch (error) {
+      console.error('Error updating user:', error)
+      alert('Failed to update user. Please try again.')
+    }
   }
 
   const handleCancel = () => {
     navigate(`/users/${userDetails?.id || id}`)
   }
 
-  const handleBlock = () => {
-    if (!userDetails) return
+  const handleBlock = async () => {
+    if (!userDetails || !id) return
     
-    // Update user status to blocked in mock store
-    updateUserDetails(userDetails.id, {
-      status: 'blocked',
-      accountStatus: 'unverified',
-    })
-    
-    // Navigate back to user details with updated data
-    navigate(`/users/${userDetails.id}`, {
-      state: {
-        user: {
-          ...userDetails,
-          status: 'blocked',
-          accountStatus: 'unverified',
-        }
-      }
-    })
+    try {
+      await usersApi.toggleBlock(id, true)
+      navigate(`/users/${id}`)
+    } catch (error) {
+      console.error('Error blocking user:', error)
+      alert('Failed to block user. Please try again.')
+    }
   }
 
   if (loading) {
