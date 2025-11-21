@@ -32,8 +32,30 @@ export default function UserDetails() {
             return
           }
 
-          // Fetch from API
-          const apiUser = await usersApi.getById(id)
+          // Check if id is a numeric ID (not a UUID)
+          // UUIDs contain hyphens, numeric IDs don't
+          let userIdToFetch = id
+          if (!id.includes('-')) {
+            // This is a numeric ID, we need to convert it to UUID
+            // Fetch users list to build the mapping
+            console.log('Numeric ID detected, fetching users list to find UUID...')
+            const usersResult = await usersApi.getAll({ page: 1, limit: 1000 })
+            const userIdMap = new Map<number, string>()
+            usersResult.data.forEach((user: any) => {
+              const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+              userIdMap.set(numericId, user.id)
+            })
+            const numericId = parseInt(id)
+            const uuid = userIdMap.get(numericId)
+            if (!uuid) {
+              throw new Error(`User with ID ${id} not found`)
+            }
+            userIdToFetch = uuid
+            console.log(`Converted numeric ID ${id} to UUID: ${uuid}`)
+          }
+
+          // Fetch from API using UUID
+          const apiUser = await usersApi.getById(userIdToFetch)
           
           // Transform API response to frontend format
           const transformedUser: UserDetailsType = {

@@ -1,4 +1,4 @@
-import api, { type ApiResponse, type PaginatedResponse } from '../utils/api';
+import api, { type ApiResponse, type PaginatedResponse } from "../utils/api";
 
 export interface User {
   id: string;
@@ -67,7 +67,7 @@ export interface UpdateUserData {
 export const usersApi = {
   // Get all users with filters
   getAll: async (filters?: UserFilters): Promise<PaginatedResponse<User>> => {
-    const response = await api.get<ApiResponse<User[]>>('/admin/users', {
+    const response = await api.get<ApiResponse<User[]>>("/admin/users", {
       params: filters,
     });
     // Backend uses sendPaginated which returns data as array with pagination in response
@@ -75,19 +75,29 @@ export const usersApi = {
     // Type assertion needed because ApiResponse<T[]> doesn't include pagination in type but backend sends it
     return {
       data: Array.isArray(response.data.data) ? response.data.data : [],
-      pagination: (response.data as any).pagination || { page: 1, limit: 20, total: 0, totalPages: 0 },
+      pagination: (response.data as any).pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+      },
     };
   },
 
   // Get user by ID
   getById: async (id: string): Promise<UserDetailsResponse> => {
-    const response = await api.get<ApiResponse<UserDetailsResponse>>(`/admin/users/${id}`);
+    const response = await api.get<ApiResponse<UserDetailsResponse>>(
+      `/admin/users/${id}`
+    );
     return response.data.data;
   },
 
   // Update user
   update: async (id: string, data: UpdateUserData): Promise<User> => {
-    const response = await api.patch<ApiResponse<{ user: User }>>(`/admin/users/${id}`, data);
+    const response = await api.patch<ApiResponse<{ user: User }>>(
+      `/admin/users/${id}`,
+      data
+    );
     return response.data.data.user;
   },
 
@@ -126,8 +136,9 @@ export const usersApi = {
 
   // Get user wallet
   getWallet: async (id: string) => {
-    const response = await api.get<ApiResponse<any>>(`/admin/users/${id}/wallet`);
+    const response = await api.get<ApiResponse<any>>(
+      `/admin/users/${id}/wallet`
+    );
     return response.data.data;
   },
 };
-
