@@ -14,12 +14,19 @@ export interface DashboardStats {
   };
   orders: {
     total: number;
+    uncompleted?: number;
   };
   revenue: {
     totalMinor: bigint | string;
     currency: string;
   };
   kyc: {
+    pending: number;
+  };
+  bidding?: {
+    pendingPayment: number;
+  };
+  refunds?: {
     pending: number;
   };
 }

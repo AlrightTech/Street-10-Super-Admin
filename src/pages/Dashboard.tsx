@@ -46,17 +46,22 @@ export default function Dashboard() {
           dashboardApi.getAuditLogs({ page: 1, limit: 10 }),
         ]);
 
+        // Debug: Log the dashboard stats to see what we're receiving
+        console.log("Dashboard Stats from API:", dashboardStats);
+
         // Transform dashboard stats to stat cards
-        const revenueTotal =
-          typeof dashboardStats.revenue.totalMinor === "bigint"
-            ? Number(dashboardStats.revenue.totalMinor) / 100
-            : parseFloat(dashboardStats.revenue.totalMinor.toString()) / 100;
+        // Handle revenue - it should be a string from the API (already converted from BigInt)
+        const revenueTotal = typeof dashboardStats.revenue.totalMinor === "string"
+          ? parseFloat(dashboardStats.revenue.totalMinor) / 100
+          : typeof dashboardStats.revenue.totalMinor === "bigint"
+          ? Number(dashboardStats.revenue.totalMinor) / 100
+          : 0;
 
         const cards: StatCardType[] = [
           {
             id: "1",
             title: "Total Users",
-            value: dashboardStats.users.total,
+            value: dashboardStats.users?.total ?? 0,
             change: 2.6, // TODO: Calculate from historical data
             changeLabel: "last 7 days",
             trend: "up",
@@ -68,7 +73,7 @@ export default function Dashboard() {
           {
             id: "2",
             title: "Total Orders",
-            value: dashboardStats.orders.total,
+            value: dashboardStats.orders?.total ?? 0,
             change: 2.6, // TODO: Calculate from historical data
             changeLabel: "last 7 days",
             trend: "up",
@@ -81,7 +86,7 @@ export default function Dashboard() {
             id: "3",
             title: "Total Revenue (This Month)",
             value: `${
-              dashboardStats.revenue.currency
+              dashboardStats.revenue?.currency || "QAR"
             } ${revenueTotal.toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
@@ -97,7 +102,7 @@ export default function Dashboard() {
           {
             id: "4",
             title: "User Verification Requests",
-            value: dashboardStats.kyc.pending,
+            value: dashboardStats.kyc?.pending ?? 0,
             change: 2.6, // TODO: Calculate from historical data
             changeLabel: "last 7 days",
             trend: "up",
@@ -109,7 +114,7 @@ export default function Dashboard() {
           {
             id: "5",
             title: "Bidding Pending Payment",
-            value: 0, // TODO: Get from backend API - bids that won but payment not completed
+            value: dashboardStats.bidding?.pendingPayment || 0,
             change: 2.6, // TODO: Calculate from historical data
             changeLabel: "last 7 days",
             trend: "up",
@@ -122,7 +127,7 @@ export default function Dashboard() {
           {
             id: "6",
             title: "User Refund Request",
-            value: 0, // TODO: Get from backend API - refund requests count
+            value: dashboardStats.refunds?.pending || 0,
             change: 2.6, // TODO: Calculate from historical data
             changeLabel: "last 7 days",
             trend: "up",
@@ -134,7 +139,7 @@ export default function Dashboard() {
           {
             id: "7",
             title: "Total Vendors",
-            value: dashboardStats.vendors.total,
+            value: dashboardStats.vendors?.total ?? 0,
             change: 2.6, // TODO: Calculate from historical data
             changeLabel: "last 7 days",
             trend: "up",
@@ -146,7 +151,7 @@ export default function Dashboard() {
           {
             id: "8",
             title: "Uncompleted Orders",
-            value: 0, // TODO: Get from backend API - orders not in delivered/closed status
+            value: dashboardStats.orders.uncompleted || 0,
             change: 2.6, // TODO: Calculate from historical data
             changeLabel: "last 7 days",
             trend: "up",
