@@ -72,9 +72,10 @@ export const usersApi = {
     });
     // Backend uses sendPaginated which returns data as array with pagination in response
     // So response.data.data is the array, and response.data.pagination is the pagination
+    // Type assertion needed because ApiResponse<T[]> doesn't include pagination in type but backend sends it
     return {
       data: Array.isArray(response.data.data) ? response.data.data : [],
-      pagination: response.data.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 },
+      pagination: (response.data as any).pagination || { page: 1, limit: 20, total: 0, totalPages: 0 },
     };
   },
 

@@ -129,9 +129,10 @@ export const dashboardApi = {
     );
     // Backend uses sendPaginated which returns data as an array with pagination in the response
     // So response.data.data is the array of logs, and response.data.pagination is the pagination
+    // Type assertion needed because ApiResponse<T[]> doesn't include pagination in type but backend sends it
     return {
       logs: Array.isArray(response.data.data) ? response.data.data : [],
-      pagination: response.data.pagination || {},
+      pagination: (response.data as any).pagination || {},
     };
   },
 
