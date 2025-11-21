@@ -42,8 +42,21 @@ export default function Users() {
         setLoading(true)
         const result = await usersApi.getAll({ ...filters, page: pagination.page, limit: pagination.limit })
         
+        // Debug: Log the result to see what we're receiving
+        console.log("Users API result:", result);
+        console.log("Users data:", result?.data);
+        console.log("Users pagination:", result?.pagination);
+        
+        // Handle case where result.data might be undefined
+        const usersArray = result?.data || [];
+        if (!Array.isArray(usersArray)) {
+          console.error("Users data is not an array:", usersArray);
+          setUsers([])
+          return
+        }
+        
         // Transform API users to frontend User format and create mapping
-        const transformedUsers: User[] = result.data.map((user: ApiUser) => {
+        const transformedUsers: User[] = usersArray.map((user: ApiUser) => {
           const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
           return {
             id: numericId,
@@ -58,14 +71,14 @@ export default function Users() {
         
         // Create mapping of numeric ID to API UUID
         const newMap = new Map<number, string>()
-        result.data.forEach((user: ApiUser) => {
+        usersArray.forEach((user: ApiUser) => {
           const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
           newMap.set(numericId, user.id)
         })
         setUserIdMap(newMap)
         
         setUsers(transformedUsers)
-        setPagination(result.pagination)
+        setPagination(result?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 })
       } catch (error) {
         console.error('Error fetching users:', error)
         setUsers([])

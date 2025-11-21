@@ -67,10 +67,15 @@ export interface UpdateUserData {
 export const usersApi = {
   // Get all users with filters
   getAll: async (filters?: UserFilters): Promise<PaginatedResponse<User>> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<User>>>('/admin/users', {
+    const response = await api.get<ApiResponse<User[]>>('/admin/users', {
       params: filters,
     });
-    return response.data.data;
+    // Backend uses sendPaginated which returns data as array with pagination in response
+    // So response.data.data is the array, and response.data.pagination is the pagination
+    return {
+      data: Array.isArray(response.data.data) ? response.data.data : [],
+      pagination: response.data.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 },
+    };
   },
 
   // Get user by ID

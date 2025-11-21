@@ -177,10 +177,10 @@ export default function Dashboard() {
         const auditLogsArray = auditLogs?.logs || [];
         console.log("Audit logs from API:", auditLogs);
         console.log("Audit logs array:", auditLogsArray);
-        
-        const transformedActivities: ActivityItem[] = Array.isArray(auditLogsArray) && auditLogsArray.length > 0
-          ? auditLogsArray.map(
-              (log: any) => ({
+
+        const transformedActivities: ActivityItem[] =
+          Array.isArray(auditLogsArray) && auditLogsArray.length > 0
+            ? auditLogsArray.map((log: any) => ({
                 id: log.id,
                 activity: `${log.action} ${log.resourceType}`,
                 user: log.user?.email || "System",
@@ -191,9 +191,8 @@ export default function Dashboard() {
                   hour: "2-digit",
                   minute: "2-digit",
                 }),
-              })
-            )
-          : [];
+              }))
+            : [];
 
         setActivities(transformedActivities);
 
