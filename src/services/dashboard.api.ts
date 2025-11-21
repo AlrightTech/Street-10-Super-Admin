@@ -1,5 +1,5 @@
-import api, { type ApiResponse } from '../utils/api';
-import { authApiService } from './auth.api';
+import api, { type ApiResponse } from "../utils/api";
+import { authApiService } from "./auth.api";
 
 export interface DashboardStats {
   users: {
@@ -76,7 +76,9 @@ export interface AuditLog {
 export const dashboardApi = {
   // Get dashboard statistics
   getDashboard: async (): Promise<DashboardStats> => {
-    const response = await api.get<ApiResponse<{ stats: DashboardStats }>>('/admin/dashboard');
+    const response = await api.get<ApiResponse<{ stats: DashboardStats }>>(
+      "/admin/dashboard"
+    );
     return response.data.data.stats;
   },
 
@@ -86,9 +88,12 @@ export const dashboardApi = {
     start_date?: string;
     end_date?: string;
   }): Promise<UserStats> => {
-    const response = await api.get<ApiResponse<{ stats: UserStats }>>('/admin/stats/users', {
-      params: filters,
-    });
+    const response = await api.get<ApiResponse<{ stats: UserStats }>>(
+      "/admin/stats/users",
+      {
+        params: filters,
+      }
+    );
     return response.data.data.stats;
   },
 
@@ -98,9 +103,12 @@ export const dashboardApi = {
     start_date?: string;
     end_date?: string;
   }): Promise<SalesStats> => {
-    const response = await api.get<ApiResponse<{ stats: SalesStats }>>('/admin/stats/sales', {
-      params: filters,
-    });
+    const response = await api.get<ApiResponse<{ stats: SalesStats }>>(
+      "/admin/stats/sales",
+      {
+        params: filters,
+      }
+    );
     return response.data.data.stats;
   },
 
@@ -113,10 +121,18 @@ export const dashboardApi = {
     start_date?: string;
     end_date?: string;
   }): Promise<{ logs: AuditLog[]; pagination: any }> => {
-    const response = await api.get<ApiResponse<{ logs: AuditLog[]; pagination: any }>>('/admin/audit-logs', {
-      params,
-    });
-    return response.data.data;
+    const response = await api.get<ApiResponse<AuditLog[]>>(
+      "/admin/audit-logs",
+      {
+        params,
+      }
+    );
+    // Backend uses sendPaginated which returns data as an array with pagination in the response
+    // So response.data.data is the array of logs, and response.data.pagination is the pagination
+    return {
+      logs: Array.isArray(response.data.data) ? response.data.data : [],
+      pagination: response.data.pagination || {},
+    };
   },
 
   // Get current user info for welcome message
@@ -124,4 +140,3 @@ export const dashboardApi = {
     return authApiService.getStoredUser();
   },
 };
-
