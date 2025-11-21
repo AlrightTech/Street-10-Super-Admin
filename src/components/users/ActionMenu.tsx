@@ -9,7 +9,7 @@ export interface ActionMenuProps {
   userId: number
   currentStatus: UserStatus
   onEdit: () => void
-  onDelete: (userId: number) => void
+  onView: (userId: number) => void
   onToggleBlock: (userId: number) => void
 }
 
@@ -20,7 +20,7 @@ export default function ActionMenu({
   userId,
   currentStatus,
   onEdit,
-  onDelete,
+  onView,
   onToggleBlock,
 }: ActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -48,8 +48,8 @@ export default function ActionMenu({
     setIsOpen(false)
   }
 
-  const handleDelete = () => {
-    onDelete(userId)
+  const handleView = () => {
+    onView(userId)
     setIsOpen(false)
   }
 
@@ -76,23 +76,23 @@ export default function ActionMenu({
             <button
               type="button"
               onClick={handleEdit}
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
               role="menuitem"
             >
               Edit
             </button>
             <button
               type="button"
-              onClick={handleDelete}
-              className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50 transition-colors"
+              onClick={handleView}
+              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
               role="menuitem"
             >
-              Delete
+              View
             </button>
             <button
               type="button"
               onClick={handleToggleBlock}
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
               role="menuitem"
             >
               {currentStatus === 'active' ? 'Block' : currentStatus === 'blocked' ? 'Unblock' : 'Block'}

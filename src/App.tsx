@@ -47,6 +47,7 @@ const UserWallets = lazy(() => import('./pages/UserWallets'))
 const Withdrawals = lazy(() => import('./pages/Withdrawals'))
 const WalletSettings = lazy(() => import('./pages/WalletSettings'))
 const Settings = lazy(() => import('./pages/Settings'))
+const AllUsers = lazy(() => import('./pages/AllUsers'))
 
 /**
  * Loading fallback component
@@ -73,6 +74,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/" element={<Layout />}>
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="all-users" element={<AllUsers />} />
             <Route path="users" element={<Users />} />
             <Route path="users/:id" element={<UserDetails />} />
             <Route path="users/:id/edit" element={<EditUser />} />

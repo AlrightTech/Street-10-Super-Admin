@@ -9,7 +9,7 @@ import type { User } from '../../types/users'
 export interface UsersTableProps {
   users: User[]
   onEdit: (userId: number, user: User) => void
-  onDelete: (userId: number) => void
+  onView: (userId: number) => void
   onToggleBlock: (userId: number) => void
 }
 
@@ -19,7 +19,7 @@ export interface UsersTableProps {
 export default function UsersTable({
   users,
   onEdit,
-  onDelete,
+  onView,
   onToggleBlock,
 }: UsersTableProps) {
 
@@ -36,8 +36,7 @@ export default function UsersTable({
   return (
     <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-          <table className="w-full min-w-[800px]">
+        <table className="w-full min-w-[800px]">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b border-gray-200">
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 bg-white">ID</th>
@@ -94,7 +93,7 @@ export default function UsersTable({
                       userId={user.id}
                       currentStatus={user.status}
                       onEdit={() => onEdit(user.id, user)}
-                      onDelete={onDelete}
+                      onView={onView}
                       onToggleBlock={onToggleBlock}
                     />
                   </td>
@@ -102,7 +101,6 @@ export default function UsersTable({
               ))}
             </tbody>
           </table>
-        </div>
       </div>
     </div>
   )

@@ -16,7 +16,7 @@ export default function ShippingInformationCard({ shipping }: ShippingInformatio
       <h3 className="mb-4 text-base font-semibold text-gray-900">Shipping Information</h3>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Delivery Address */}
-        <div className="space-y-3">
+        <div className="space-y-3 lg:pr-6 lg:border-r lg:border-gray-200">
           <div>
             <p className="mb-2 text-sm font-semibold text-gray-900">Delivery Address</p>
             <div className="space-y-1">
@@ -30,7 +30,7 @@ export default function ShippingInformationCard({ shipping }: ShippingInformatio
         </div>
 
         {/* Right Column - Shipping Details */}
-        <div className="space-y-3">
+        <div className="space-y-3 lg:pl-6">
           <div>
             <p className="mb-2 text-sm font-semibold text-gray-900">Shipping Details</p>
             <div className="space-y-3">

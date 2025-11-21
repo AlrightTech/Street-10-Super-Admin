@@ -18,6 +18,7 @@ export interface User {
   totalPurchase: number
   status: UserStatus
   joinDate: string
+  biddingWins?: number // Optional bidding wins count
   avatar?: string // Optional profile image URL
 }
 

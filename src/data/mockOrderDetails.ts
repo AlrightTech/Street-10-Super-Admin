@@ -44,10 +44,10 @@ export const mockOrderDetails: Record<string, OrderDetails> = {
       transactionId: 'TXN-2024-001',
       status: 'completed',
       subtotal: 449.97,
-      discount: 45.0,
-      tax: 36.0,
+      discount: 4.0,
+      tax: 5.0,
       shipping: 12.99,
-      total: 453.96,
+      total: 463.96,
     },
     shipping: {
       address: '123 Main Street, Apt 4B',

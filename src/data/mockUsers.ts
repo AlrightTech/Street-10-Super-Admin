@@ -12,6 +12,7 @@ export const mockUsers: User[] = [
     totalPurchase: 12,
     status: 'active',
     joinDate: '12 Aug 2025',
+    biddingWins: 5,
   },
   {
     id: 2,
@@ -21,6 +22,7 @@ export const mockUsers: User[] = [
     totalPurchase: 32,
     status: 'active',
     joinDate: '15 Jul 2025',
+    biddingWins: 0,
   },
   {
     id: 3,
@@ -30,6 +32,7 @@ export const mockUsers: User[] = [
     totalPurchase: 54,
     status: 'pending',
     joinDate: '20 Jun 2025',
+    biddingWins: 8,
   },
   {
     id: 4,
@@ -39,6 +42,7 @@ export const mockUsers: User[] = [
     totalPurchase: 23,
     status: 'active',
     joinDate: '05 Aug 2025',
+    biddingWins: 0,
   },
   {
     id: 5,
@@ -48,6 +52,7 @@ export const mockUsers: User[] = [
     totalPurchase: 45,
     status: 'active',
     joinDate: '18 Jul 2025',
+    biddingWins: 12,
   },
   {
     id: 6,
@@ -57,6 +62,7 @@ export const mockUsers: User[] = [
     totalPurchase: 67,
     status: 'blocked',
     joinDate: '10 Jun 2025',
+    biddingWins: 0,
   },
   {
     id: 7,
@@ -66,6 +72,7 @@ export const mockUsers: User[] = [
     totalPurchase: 89,
     status: 'active',
     joinDate: '22 Aug 2025',
+    biddingWins: 15,
   },
   {
     id: 8,
@@ -75,6 +82,7 @@ export const mockUsers: User[] = [
     totalPurchase: 34,
     status: 'pending',
     joinDate: '14 Jul 2025',
+    biddingWins: 3,
   },
   {
     id: 9,
@@ -84,6 +92,7 @@ export const mockUsers: User[] = [
     totalPurchase: 56,
     status: 'active',
     joinDate: '08 Aug 2025',
+    biddingWins: 0,
   },
   {
     id: 10,
@@ -93,6 +102,7 @@ export const mockUsers: User[] = [
     totalPurchase: 78,
     status: 'active',
     joinDate: '25 Jun 2025',
+    biddingWins: 7,
   },
   {
     id: 11,
@@ -102,6 +112,7 @@ export const mockUsers: User[] = [
     totalPurchase: 91,
     status: 'blocked',
     joinDate: '30 Jul 2025',
+    biddingWins: 20,
   },
   {
     id: 12,
@@ -111,6 +122,7 @@ export const mockUsers: User[] = [
     totalPurchase: 43,
     status: 'active',
     joinDate: '12 Aug 2025',
+    biddingWins: 0,
   },
   {
     id: 13,
@@ -120,6 +132,7 @@ export const mockUsers: User[] = [
     totalPurchase: 65,
     status: 'pending',
     joinDate: '19 Jul 2025',
+    biddingWins: 9,
   },
   {
     id: 14,
@@ -129,6 +142,7 @@ export const mockUsers: User[] = [
     totalPurchase: 87,
     status: 'active',
     joinDate: '03 Aug 2025',
+    biddingWins: 4,
   },
   {
     id: 15,
@@ -138,6 +152,7 @@ export const mockUsers: User[] = [
     totalPurchase: 29,
     status: 'active',
     joinDate: '16 Jun 2025',
+    biddingWins: 0,
   },
   {
     id: 16,
@@ -147,6 +162,7 @@ export const mockUsers: User[] = [
     totalPurchase: 52,
     status: 'blocked',
     joinDate: '28 Jul 2025',
+    biddingWins: 6,
   },
   {
     id: 17,
@@ -156,6 +172,7 @@ export const mockUsers: User[] = [
     totalPurchase: 74,
     status: 'active',
     joinDate: '07 Aug 2025',
+    biddingWins: 11,
   },
   {
     id: 18,
@@ -165,6 +182,7 @@ export const mockUsers: User[] = [
     totalPurchase: 96,
     status: 'pending',
     joinDate: '21 Jun 2025',
+    biddingWins: 0,
   },
 ]
 

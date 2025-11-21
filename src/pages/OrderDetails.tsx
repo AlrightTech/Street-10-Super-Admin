@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import CustomerInformationCard from '../components/orders/CustomerInformationCard'
 import ProductDetailsCard from '../components/orders/ProductDetailsCard'
+import PaymentInformationCard from '../components/orders/PaymentInformationCard'
 import ShippingInformationCard from '../components/orders/ShippingInformationCard'
 import OrderTimelineCard from '../components/orders/OrderTimelineCard'
 import { getOrderDetails } from '../data/mockOrderDetails'
@@ -38,6 +39,11 @@ export default function OrderDetails() {
   const handleUpdateStatus = () => {
     // Handle update status logic
     console.log('Update status for order:', order?.orderId)
+  }
+
+  const handleVendorInformation = () => {
+    // Handle vendor information logic
+    console.log('View vendor information for order:', order?.orderId)
   }
 
   const handleDownloadInvoice = () => {
@@ -95,19 +101,18 @@ export default function OrderDetails() {
           <div className="flex flex-wrap gap-2 sm:gap-3">
             <button
               type="button"
-              onClick={handleUpdateStatus}
-              className="flex items-center gap-1 sm:gap-2 rounded-lg bg-[#F39C12] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white hover:bg-[#E67E22] transition-colors whitespace-nowrap"
+              onClick={handleVendorInformation}
+              className="flex items-center gap-2 sm:gap-3 rounded-lg bg-[#F39C12] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white hover:bg-[#E67E22] transition-colors whitespace-nowrap"
             >
-              <svg className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-              <span className="hidden sm:inline">Update Status</span>
-              <span className="sm:hidden">Update</span>
+              <img
+                src={order.customer.avatar}
+                alt={order.customer.name}
+                className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0"
+              />
+              <div className="flex flex-col items-start">
+                <span className="text-xs sm:text-sm font-semibold leading-tight">{order.customer.name}</span>
+                <span className="text-xs font-normal leading-tight opacity-90">Vendor Information</span>
+              </div>
             </button>
             <button
               type="button"
@@ -133,6 +138,9 @@ export default function OrderDetails() {
 
         {/* Product Details Card */}
         <ProductDetailsCard products={order.products} />
+
+        {/* Payment Information Card */}
+        <PaymentInformationCard payment={order.payment} />
 
         {/* Shipping Information Card */}
         <ShippingInformationCard shipping={order.shipping} />
@@ -175,7 +183,7 @@ export default function OrderDetails() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
               />
             </svg>
             Send Invoice

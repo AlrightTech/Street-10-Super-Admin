@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import type { StatCard as StatCardType } from '../../types/dashboard'
 
 /**
@@ -109,6 +110,14 @@ const MiniBarChart = ({ data, color }: { data: number[]; color: string }) => {
  * Reusable stat card component
  */
 export default function StatCard({ stat }: StatCardProps) {
+  const navigate = useNavigate()
+
+  const handleCardClick = () => {
+    // Navigate to All Users page when "Total Users" card is clicked
+    if (stat.title === 'Total Users') {
+      navigate('/all-users')
+    }
+  }
   // Get bar chart color based on card color
   const getBarChartColor = () => {
     switch (stat.color) {
@@ -171,8 +180,15 @@ export default function StatCard({ stat }: StatCardProps) {
     }
   }
 
+  const isClickable = stat.title === 'Total Users'
+
   return (
-    <div className="w-full min-w-0 rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-100">
+    <div
+      className={`w-full min-w-0 rounded-2xl border border-gray-200 bg-white p-4 transition-colors ${
+        isClickable ? 'cursor-pointer hover:bg-gray-100' : ''
+      }`}
+      onClick={isClickable ? handleCardClick : undefined}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           {/* Title */}

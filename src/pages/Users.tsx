@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import UsersTable from '../components/users/UsersTable'
 import FilterDropdown from '../components/users/FilterDropdown'
@@ -25,9 +25,14 @@ const FilterIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
  */
 export default function Users() {
   const navigate = useNavigate()
-  const [users, setUsers] = useState<User[]>(mockUsers)
+  const [allUsers, setAllUsers] = useState<User[]>(mockUsers)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<number | null>(null)
+  
+  // Filter states
+  const [totalPurchaseFilter, setTotalPurchaseFilter] = useState<string>('All')
+  const [biddingWinFilter, setBiddingWinFilter] = useState<string>('All')
+  const [dateJoinFilter, setDateJoinFilter] = useState<string>('All')
 
   /**
    * Handle edit user
@@ -38,19 +43,72 @@ export default function Users() {
   }
 
   /**
-   * Handle delete user
+   * Handle view user
    */
-  const handleDelete = (userId: number) => {
-    setUserToDelete(userId)
-    setDeleteModalOpen(true)
+  const handleView = (userId: number) => {
+    // Navigate to user details page
+    navigate(`/users/${userId}`)
   }
+
+  /**
+   * Parse date string in format "DD MMM YYYY" to Date object
+   */
+  const parseDate = (dateString: string): Date => {
+    const months: Record<string, number> = {
+      'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+      'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+    }
+    const parts = dateString.split(' ')
+    const day = parseInt(parts[0], 10)
+    const month = months[parts[1]]
+    const year = parseInt(parts[2], 10)
+    return new Date(year, month, day)
+  }
+
+  /**
+   * Filter and sort users based on selected filters
+   */
+  const filteredUsers = useMemo(() => {
+    let result = [...allUsers]
+
+    // Filter by bidding wins
+    if (biddingWinFilter === 'Yes') {
+      result = result.filter((user) => (user.biddingWins ?? 0) > 0)
+    } else if (biddingWinFilter === 'No') {
+      result = result.filter((user) => (user.biddingWins ?? 0) === 0)
+    }
+
+    // Sort by total purchase
+    if (totalPurchaseFilter === 'Ascending') {
+      result.sort((a, b) => a.totalPurchase - b.totalPurchase)
+    } else if (totalPurchaseFilter === 'Descending') {
+      result.sort((a, b) => b.totalPurchase - a.totalPurchase)
+    }
+
+    // Sort by join date
+    if (dateJoinFilter === 'Newest') {
+      result.sort((a, b) => {
+        const dateA = parseDate(a.joinDate)
+        const dateB = parseDate(b.joinDate)
+        return dateB.getTime() - dateA.getTime()
+      })
+    } else if (dateJoinFilter === 'Oldest') {
+      result.sort((a, b) => {
+        const dateA = parseDate(a.joinDate)
+        const dateB = parseDate(b.joinDate)
+        return dateA.getTime() - dateB.getTime()
+      })
+    }
+
+    return result
+  }, [allUsers, totalPurchaseFilter, biddingWinFilter, dateJoinFilter])
 
   /**
    * Confirm delete user
    */
   const confirmDelete = () => {
     if (userToDelete !== null) {
-      setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userToDelete))
+      setAllUsers((prevUsers) => prevUsers.filter((user) => user.id !== userToDelete))
       setDeleteModalOpen(false)
       setUserToDelete(null)
     }
@@ -68,7 +126,7 @@ export default function Users() {
    * Handle toggle block/unblock user
    */
   const handleToggleBlock = (userId: number) => {
-    setUsers((prevUsers) =>
+    setAllUsers((prevUsers) =>
       prevUsers.map((user) =>
         user.id === userId
           ? {
@@ -84,8 +142,13 @@ export default function Users() {
    * Handle filter selection
    */
   const handleFilterSelect = (filterType: string, value: string) => {
-    // Filter logic can be implemented here
-    console.log(`Filter ${filterType}: ${value}`)
+    if (filterType === 'totalPurchase') {
+      setTotalPurchaseFilter(value)
+    } else if (filterType === 'biddingWin') {
+      setBiddingWinFilter(value)
+    } else if (filterType === 'dateJoin') {
+      setDateJoinFilter(value)
+    }
   }
 
   return (
@@ -98,26 +161,29 @@ export default function Users() {
 
       {/* Filter Section */}
       <div className="mb-4 flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-3">
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
           <FilterDropdown
             label="Total Purchase"
             options={['Ascending', 'Descending', 'All']}
             onSelect={(value) => handleFilterSelect('totalPurchase', value)}
+            className="w-full sm:w-auto"
           />
           <FilterDropdown
             label="bidding win"
             options={['Yes', 'No', 'All']}
             onSelect={(value) => handleFilterSelect('biddingWin', value)}
+            className="w-full sm:w-auto"
           />
           <FilterDropdown
             label="Date Join"
             options={['Newest', 'Oldest', 'All']}
             onSelect={(value) => handleFilterSelect('dateJoin', value)}
+            className="w-full sm:w-auto"
           />
         </div>
         <button
           type="button"
-          className="flex items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
+          className="flex items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap w-full sm:w-auto"
           aria-label="Filter"
         >
           <FilterIcon className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -127,9 +193,9 @@ export default function Users() {
       {/* Users Table */}
       <div className="mt-5">
         <UsersTable
-          users={users}
+          users={filteredUsers}
           onEdit={handleEdit}
-          onDelete={handleDelete}
+          onView={handleView}
           onToggleBlock={handleToggleBlock}
         />
       </div>
