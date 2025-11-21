@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import OrdersFilterTabs from '../components/orders/OrdersFilterTabs'
 import OrdersTable from '../components/orders/OrdersTable'
 import type { OrderActionType } from '../components/orders/OrdersActionMenu'
@@ -6,6 +7,7 @@ import SearchBar from '../components/ui/SearchBar'
 import Pagination from '../components/ui/Pagination'
 import OrderDetailsView from '../components/orders/OrderDetailsView'
 import OrderDetailView from '../components/orders/OrderDetailView'
+import { ordersApi } from '../services/orders.api'
 
 export type OrderStatus = 'completed' | 'pending' | 'cancelled'
 
@@ -19,26 +21,7 @@ export interface OrderRecord {
   orderDate: string
 }
 
-const ORDERS_DATA: OrderRecord[] = [
-  { id: '#001', customerName: 'Tauseef Ahmed', product: 'Abstract Painting', amount: 343, paymentMethod: 'Credit Card', status: 'completed', orderDate: '12 Aug 2025' },
-  { id: '#002', customerName: 'Qasim Munawar', product: 'Abstract Painting', amount: 343, paymentMethod: 'PayPal', status: 'cancelled', orderDate: '12 Aug 2025' },
-  { id: '#003', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 343, paymentMethod: 'Bank Transfer', status: 'cancelled', orderDate: '12 Aug 2025' },
-  { id: '#004', customerName: 'Junaid Akhtar Butt', product: 'Abstract Painting', amount: 768, paymentMethod: 'Bank Transfer', status: 'pending', orderDate: '19 Aug 2025' },
-  { id: '#005', customerName: 'Tariq Iqbal', product: 'Abstract Painting', amount: 768, paymentMethod: 'PayPal', status: 'completed', orderDate: '12 Aug 2025' },
-  { id: '#006', customerName: 'Muhammed Saeed', product: 'Abstract Painting', amount: 768, paymentMethod: 'PayPal', status: 'cancelled', orderDate: '12 Aug 2025' },
-  { id: '#007', customerName: 'Qasim Munawar', product: 'Abstract Painting', amount: 768, paymentMethod: 'Credit Card', status: 'pending', orderDate: '13 Aug 2025' },
-  { id: '#008', customerName: 'Abdul Rehman', product: 'Abstract Painting', amount: 768, paymentMethod: 'Bank Transfer', status: 'completed', orderDate: '12 Aug 2025' },
-  { id: '#009', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 768, paymentMethod: 'Credit Card', status: 'cancelled', orderDate: '12 Aug 2025' },
-  { id: '#010', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 768, paymentMethod: 'Credit Card', status: 'cancelled', orderDate: '12 Aug 2025' },
-  { id: '#011', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 768, paymentMethod: 'Credit Card', status: 'completed', orderDate: '12 Aug 2025' },
-  { id: '#012', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 768, paymentMethod: 'PayPal', status: 'completed', orderDate: '12 Aug 2025' },
-  { id: '#013', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 768, paymentMethod: 'Bank Transfer', status: 'pending', orderDate: '12 Aug 2025' },
-  { id: '#014', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 768, paymentMethod: 'Bank Transfer', status: 'completed', orderDate: '12 Aug 2025' },
-  { id: '#015', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 768, paymentMethod: 'Credit Card', status: 'completed', orderDate: '12 Aug 2025' },
-  { id: '#016', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 768, paymentMethod: 'PayPal', status: 'cancelled', orderDate: '12 Aug 2025' },
-  { id: '#017', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 768, paymentMethod: 'PayPal', status: 'completed', orderDate: '12 Aug 2025' },
-  { id: '#018', customerName: 'Yasir Hafeez', product: 'Abstract Painting', amount: 768, paymentMethod: 'Bank Transfer', status: 'pending', orderDate: '12 Aug 2025' },
-]
+// Removed mock data - using API now
 
 const TAB_OPTIONS: { key: 'all' | OrderStatus; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -69,31 +52,89 @@ const STATUS_BADGE_CLASS: Record<'all' | OrderStatus, { active: string; inactive
 const PAGE_SIZE = 6
 
 export default function Orders() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<(typeof TAB_OPTIONS)[number]['key']>('all')
   const [searchValue, setSearchValue] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [viewingOrder, setViewingOrder] = useState<OrderRecord | null>(null)
   const [viewingOrderDetail, setViewingOrderDetail] = useState<OrderRecord | null>(null)
+  const [orders, setOrders] = useState<OrderRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
+  const [orderCounts, setOrderCounts] = useState({ all: 0, pending: 0, completed: 0, cancelled: 0 })
+
+  // Fetch orders from API
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true)
+        const statusMap: Record<string, string> = {
+          'all': '',
+          'pending': 'created',
+          'completed': 'closed',
+          'cancelled': 'cancelled',
+        }
+        
+        const filters: any = {
+          page: currentPage,
+          limit: PAGE_SIZE,
+        }
+        
+        if (activeTab !== 'all') {
+          filters.status = statusMap[activeTab]
+        }
+        
+        const result = await ordersApi.getAll(filters)
+        
+        // Transform API orders to frontend format
+        const transformedOrders: OrderRecord[] = result.data.map((order: any) => ({
+          id: order.orderNumber,
+          customerName: order.user?.email?.split('@')[0] || 'Customer',
+          product: order.items?.[0]?.product?.title || 'Product',
+          amount: parseFloat(order.totalMinor?.toString() || '0') / 100,
+          paymentMethod: order.paymentMethod === 'card' ? 'Credit Card' : 
+                        order.paymentMethod === 'wallet' ? 'Wallet' : 
+                        order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Unknown',
+          status: order.status === 'closed' || order.status === 'delivered' ? 'completed' :
+                 order.status === 'cancelled' ? 'cancelled' : 'pending',
+          orderDate: new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        }))
+        
+        setOrders(transformedOrders)
+        setTotalPages(result.pagination.totalPages)
+        
+        // Update counts for tabs
+        const allResult = await ordersApi.getAll({ limit: 1000 })
+        const counts = {
+          all: allResult.pagination.total,
+          pending: allResult.data.filter((o: any) => !['closed', 'delivered', 'cancelled'].includes(o.status)).length,
+          completed: allResult.data.filter((o: any) => ['closed', 'delivered'].includes(o.status)).length,
+          cancelled: allResult.data.filter((o: any) => o.status === 'cancelled').length,
+        }
+        setOrderCounts(counts)
+      } catch (error) {
+        console.error('Error fetching orders:', error)
+        setOrders([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOrders()
+  }, [activeTab, currentPage])
 
   const tabOptionsWithCounts = useMemo(
     () =>
       TAB_OPTIONS.map((tab) => ({
         ...tab,
-        count:
-          tab.key === 'all'
-            ? ORDERS_DATA.length
-            : ORDERS_DATA.filter((order) => order.status === tab.key).length,
+        count: orderCounts[tab.key] || 0,
         badgeClassName: STATUS_BADGE_CLASS[tab.key],
       })),
-    [],
+    [orderCounts],
   )
 
   const filteredOrders = useMemo(() => {
-    let result = [...ORDERS_DATA]
-
-    if (activeTab !== 'all') {
-      result = result.filter((order) => order.status === activeTab)
-    }
+    let result = [...orders]
 
     if (searchValue.trim()) {
       const query = searchValue.toLowerCase()
@@ -106,14 +147,11 @@ export default function Orders() {
     }
 
     return result
-  }, [activeTab, searchValue])
-
-  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))
+  }, [orders, searchValue])
 
   const paginatedOrders = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return filteredOrders.slice(start, start + PAGE_SIZE)
-  }, [filteredOrders, currentPage])
+    return filteredOrders
+  }, [filteredOrders])
 
   const handleTabChange = (tabKey: string) => {
     setActiveTab(tabKey as (typeof TAB_OPTIONS)[number]['key'])
@@ -134,7 +172,8 @@ export default function Orders() {
     if (action === 'view') {
       setViewingOrder(order)
     } else if (action === 'view-order') {
-      setViewingOrderDetail(order)
+      // Navigate to order details page
+      navigate(`/orders/${order.id.replace('#', '')}`)
     } else {
       // Placeholder callback for other actions
       // eslint-disable-next-line no-console
@@ -143,8 +182,8 @@ export default function Orders() {
   }
 
   const handleNameClick = (order: OrderRecord) => {
-    // eslint-disable-next-line no-console
-    console.log(`Open detail view for ${order.customerName} (${order.id})`)
+    // Navigate to order details page
+    navigate(`/orders/${order.id.replace('#', '')}`)
   }
 
   // If viewing order detail, show order detail view instead of the table
@@ -234,14 +273,20 @@ export default function Orders() {
         </header>
 
         <div className="p-0">
-          <div className="overflow-x-auto">
-            <OrdersTable
-              orders={paginatedOrders}
-              startIndex={(currentPage - 1) * PAGE_SIZE}
-              onActionSelect={handleOrderAction}
-              onNameClick={handleNameClick}
-            />
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <p className="text-gray-600">Loading orders...</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <OrdersTable
+                orders={paginatedOrders}
+                startIndex={(currentPage - 1) * PAGE_SIZE}
+                onActionSelect={handleOrderAction}
+                onNameClick={handleNameClick}
+              />
+            </div>
+          )}
         </div>
 
         <footer className="flex justify-end items-center gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">

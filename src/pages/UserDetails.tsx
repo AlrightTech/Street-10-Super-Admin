@@ -5,7 +5,7 @@ import UserStatsCard from '../components/users/UserStatsCard'
 import SpendingSummary from '../components/users/SpendingSummary'
 import OrderHistoryTable from '../components/users/OrderHistoryTable'
 import ConfirmModal from '../components/ui/ConfirmModal'
-import { getUserDetails } from '../data/mockUserDetails'
+import { usersApi } from '../services/users.api'
 import type { UserDetails as UserDetailsType, BiddingItem, OrderItem } from '../types/userDetails'
 
 /**
@@ -24,18 +24,64 @@ export default function UserDetails() {
     const loadUser = async () => {
       setLoading(true)
       if (id) {
-        // Check if user data is passed from navigation state (e.g., after edit)
-        if (location.state?.user) {
-          setUser(location.state.user as UserDetailsType)
-        } else {
-          // Otherwise, fetch from mock data
-          const userData = getUserDetails(Number(id))
-          if (userData) {
-            setUser(userData)
-          } else {
-            // Fallback: redirect to users list if not found
-            navigate('/users')
+        try {
+          // Check if user data is passed from navigation state (e.g., after edit)
+          if (location.state?.user) {
+            setUser(location.state.user as UserDetailsType)
+            setLoading(false)
+            return
           }
+
+          // Fetch from API
+          const apiUser = await usersApi.getById(id)
+          
+          // Transform API response to frontend format
+          const transformedUser: UserDetailsType = {
+            id: parseInt(apiUser.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+            name: apiUser.user.email.split('@')[0],
+            email: apiUser.user.email,
+            phone: apiUser.user.phone || '',
+            avatar: '',
+            role: apiUser.user.role,
+            accountStatus: apiUser.user.status === 'active' ? 'verified' : apiUser.user.status === 'blocked' ? 'unverified' : 'pending',
+            status: apiUser.user.status === 'active' ? 'active' : apiUser.user.status === 'blocked' ? 'blocked' : 'pending',
+            ordersMade: apiUser.stats?.ordersCount || 0,
+            biddingWins: apiUser.stats?.bidsWon || 0,
+            totalSpent: parseFloat(apiUser.stats?.totalSpent?.toString() || '0') / 100,
+            totalRefunds: 0,
+            pendingRefunds: 0,
+            netSpending: parseFloat(apiUser.stats?.totalSpent?.toString() || '0') / 100,
+            walletBalance: parseFloat(apiUser.user.wallet?.availableMinor?.toString() || '0') / 100,
+            walletLimit: 10000,
+            interests: [],
+            interestsImage: '',
+            biddings: (apiUser.recentBids || []).map((bid: any) => ({
+              id: bid.id,
+              productName: bid.auction?.product?.title || 'Product',
+              productImage: bid.auction?.product?.media?.[0]?.url || '',
+              category: '',
+              bidId: bid.id,
+              bidAmount: parseFloat(bid.amountMinor?.toString() || '0') / 100,
+              currentPrice: parseFloat(bid.amountMinor?.toString() || '0') / 100,
+              result: bid.isWinning ? 'won' : 'lost',
+              endDate: new Date(bid.auction?.endAt || new Date()).toLocaleDateString(),
+              status: bid.isWinning ? 'won-fully-paid' : 'lost',
+            })),
+            orders: (apiUser.recentOrders || []).map((order: any) => ({
+              id: order.id,
+              productName: order.items?.[0]?.product?.title || 'Product',
+              productImage: order.items?.[0]?.product?.media?.[0]?.url || '',
+              orderId: order.orderNumber,
+              amount: parseFloat(order.totalMinor?.toString() || '0') / 100,
+              date: new Date(order.createdAt).toLocaleDateString(),
+              status: order.status,
+            })),
+          }
+          
+          setUser(transformedUser)
+        } catch (error) {
+          console.error('Error fetching user details:', error)
+          navigate('/users')
         }
       }
       setLoading(false)
@@ -50,9 +96,18 @@ export default function UserDetails() {
     }
   }
 
-  const handleBlock = () => {
-    // Handle block logic
-    console.log('Block user:', user?.id)
+  const handleBlock = async () => {
+    if (!user || !id) return
+    
+    try {
+      const isCurrentlyBlocked = user.status === 'blocked'
+      await usersApi.toggleBlock(id, !isCurrentlyBlocked)
+      // Reload user data
+      window.location.reload()
+    } catch (error) {
+      console.error('Error blocking user:', error)
+      alert('Failed to update user status')
+    }
   }
 
   const handleDelete = (item: BiddingItem | OrderItem) => {

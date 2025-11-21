@@ -1,9 +1,9 @@
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import BidderInfoCard from '../components/bids/BidderInfoCard'
 import ProductInfoCard from '../components/bids/ProductInfoCard'
 import BidTimeline from '../components/bids/BidTimeline'
-import { getBidDetails } from '../data/mockBidDetails'
+import { bidsApi } from '../services/bids.api'
 import type { BidDetails } from '../types/bidDetails'
 
 /**
@@ -11,6 +11,7 @@ import type { BidDetails } from '../types/bidDetails'
  */
 export default function BidDetailPage() {
   const { bidId } = useParams<{ bidId: string }>()
+  const navigate = useNavigate()
   const [bid, setBid] = useState<BidDetails | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -18,16 +19,73 @@ export default function BidDetailPage() {
     const loadBid = async () => {
       setLoading(true)
       if (bidId) {
-        const bidData = getBidDetails(bidId)
-        if (bidData) {
-          setBid(bidData)
+        try {
+          const apiBid = await bidsApi.getById(bidId)
+          
+          // Transform API response to frontend format
+          const bidData = apiBid.bid as any
+          const auctionData = bidData.auction as any
+          const productData = auctionData?.product || {}
+          const reservePriceValue = auctionData?.reservePrice || productData?.priceMinor || BigInt(0)
+          
+          // Get all bids to find highest
+          const highestBid = apiBid.allBids?.reduce((max: any, b: any) => {
+            const maxAmount = parseFloat(max.amountMinor?.toString() || '0')
+            const bidAmount = parseFloat(b.amountMinor?.toString() || '0')
+            return bidAmount > maxAmount ? b : max
+          }, { amountMinor: '0' }) || bidData
+          
+          const transformedBid: BidDetails = {
+            id: bidData.id,
+            bidId: bidData.id,
+            auctionId: bidData.auctionId,
+            auctionName: productData.title || 'Auction',
+            categoryName: productData.categories?.[0]?.category?.name || 'Category',
+            startingPrice: parseFloat(reservePriceValue?.toString() || '0') / 100,
+            finalBidAmount: parseFloat(bidData.amountMinor?.toString() || '0') / 100,
+            status: bidData.isWinning ? 'winning' : 'lost',
+            bidDate: new Date(bidData.placedAt).toLocaleDateString(),
+            bidTime: new Date(bidData.placedAt).toLocaleTimeString(),
+            bidder: {
+              id: parseInt(bidData.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+              name: bidData.user.email?.split('@')[0] || 'Bidder',
+              email: bidData.user.email || '',
+              phone: bidData.user.phone || undefined,
+              avatar: '',
+            },
+            product: {
+              id: productData.id || '',
+              name: productData.title || 'Product',
+              image: productData.media?.[0]?.url || '',
+              category: productData.categories?.[0]?.category?.name || 'Category',
+              condition: 'New',
+              description: productData.description || '',
+              startingPrice: parseFloat(reservePriceValue?.toString() || '0') / 100,
+              reservePrice: parseFloat(reservePriceValue?.toString() || '0') / 100,
+              currentHighestBid: parseFloat(highestBid.amountMinor?.toString() || bidData.amountMinor?.toString() || '0') / 100,
+              auctionStatus: auctionData?.state === 'live' ? 'ongoing' : 
+                            auctionData?.state === 'ended' ? 'completed' : 'cancelled',
+            },
+            timeline: (apiBid.timeline || []).map((bidItem: any) => ({
+              id: bidItem.id,
+              amount: parseFloat(bidItem.amountMinor?.toString() || '0') / 100,
+              status: bidItem.isWinning ? 'winning' : 'outbid',
+              date: new Date(bidItem.placedAt).toLocaleDateString(),
+              time: new Date(bidItem.placedAt).toLocaleTimeString(),
+            })),
+          }
+          
+          setBid(transformedBid)
+        } catch (error) {
+          console.error('Error loading bid details:', error)
+          navigate('/bidding')
         }
       }
       setLoading(false)
     }
 
     loadBid()
-  }, [bidId])
+  }, [bidId, navigate])
 
   if (loading) {
     return (
