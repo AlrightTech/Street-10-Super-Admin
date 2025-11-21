@@ -34,11 +34,9 @@ export default function Dashboard() {
           setUserName(currentUser.email.split('@')[0])
         }
 
-        // Fetch dashboard stats, user stats, sales stats, and audit logs in parallel
-        const [dashboardStats, userStats, salesStats, auditLogs] = await Promise.all([
+        // Fetch dashboard stats and audit logs in parallel
+        const [dashboardStats, auditLogs] = await Promise.all([
           dashboardApi.getDashboard(),
-          dashboardApi.getUserStats(),
-          dashboardApi.getSalesStats(),
           dashboardApi.getAuditLogs({ page: 1, limit: 10 }),
         ])
 

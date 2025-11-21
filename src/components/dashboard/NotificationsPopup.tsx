@@ -31,8 +31,8 @@ export default function NotificationsPopup({ onClose }: NotificationsPopupProps)
       try {
         setLoading(true)
         const result = await notificationsApi.getAll({ 
-          user_id: null, // Admin notifications
-          read: false,
+          is_read: false, // Changed from 'read' to 'is_read' to match backend API
+          page: 1,
           limit: 20 
         })
         
@@ -71,7 +71,7 @@ export default function NotificationsPopup({ onClose }: NotificationsPopupProps)
 
   const handleDismiss = async (id: string) => {
     try {
-      await notificationsApi.delete(id)
+      await notificationsApi.markAsRead(id) // Mark as read instead of delete
       setNotifications((prev) => prev.filter((n) => n.id !== id))
     } catch (error) {
       console.error('Error dismissing notification:', error)
@@ -80,7 +80,7 @@ export default function NotificationsPopup({ onClose }: NotificationsPopupProps)
 
   const handleClearAll = async () => {
     try {
-      await notificationsApi.clearAll(null) // Clear admin notifications
+      await notificationsApi.clearAll() // Clear all notifications for current admin user
       setNotifications([])
     } catch (error) {
       console.error('Error clearing notifications:', error)

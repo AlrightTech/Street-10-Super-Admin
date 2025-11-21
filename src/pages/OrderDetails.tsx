@@ -5,7 +5,6 @@ import ProductDetailsCard from '../components/orders/ProductDetailsCard'
 import PaymentInformationCard from '../components/orders/PaymentInformationCard'
 import ShippingInformationCard from '../components/orders/ShippingInformationCard'
 import OrderTimelineCard from '../components/orders/OrderTimelineCard'
-import { getOrderDetails } from '../data/mockOrderDetails'
 import { ordersApi } from '../services/orders.api'
 import type { OrderDetails as OrderDetailsType } from '../types/orderDetails'
 import { ChevronDownIcon } from '../components/icons/Icons'
@@ -24,7 +23,7 @@ export default function OrderDetails() {
       setLoading(true)
       if (orderId) {
         try {
-          // Try to fetch from API first
+          // Fetch from API
           const apiOrder = await ordersApi.getById(orderId)
           
           // Transform API order to frontend format
@@ -38,7 +37,7 @@ export default function OrderDetails() {
               id: parseInt(apiOrder.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
               name: apiOrder.user.email.split('@')[0],
               email: apiOrder.user.email,
-              phone: '',
+              phone: (apiOrder.user as any).phone || '',
               avatar: '',
             },
             products: apiOrder.items.map((item: any) => ({
@@ -47,21 +46,21 @@ export default function OrderDetails() {
               image: item.product.media?.[0]?.url || '',
               category: '',
               quantity: item.quantity,
-              price: parseFloat(item.priceMinor) / 100,
-              total: (parseFloat(item.priceMinor) / 100) * item.quantity,
+              price: parseFloat(item.priceMinor?.toString() || '0') / 100,
+              total: (parseFloat(item.priceMinor?.toString() || '0') / 100) * item.quantity,
             })),
             payment: {
               method: apiOrder.paymentMethod as any,
               transactionId: apiOrder.id,
               status: apiOrder.status === 'paid' ? 'completed' : 'pending',
-              subtotal: parseFloat(apiOrder.totalMinor) / 100,
-              discount: parseFloat(apiOrder.discountMinor || '0') / 100,
+              subtotal: parseFloat(apiOrder.totalMinor?.toString() || '0') / 100,
+              discount: parseFloat(apiOrder.discountMinor?.toString() || '0') / 100,
               tax: 0,
               shipping: 0,
-              total: parseFloat(apiOrder.totalMinor) / 100,
+              total: parseFloat(apiOrder.totalMinor?.toString() || '0') / 100,
             },
             shipping: {
-              address: (apiOrder.shippingAddress as any)?.address || '',
+              address: (apiOrder.shippingAddress as any)?.street || (apiOrder.shippingAddress as any)?.address || '',
               city: (apiOrder.shippingAddress as any)?.city || '',
               state: (apiOrder.shippingAddress as any)?.state || '',
               postalCode: (apiOrder.shippingAddress as any)?.postalCode || '',
@@ -83,13 +82,7 @@ export default function OrderDetails() {
           setOrder(transformedOrder)
         } catch (error) {
           console.error('Error fetching order:', error)
-          // Fallback to mock data if API fails
-          const orderData = getOrderDetails(orderId)
-          if (orderData) {
-            setOrder(orderData)
-          } else {
-            navigate('/orders')
-          }
+          navigate('/orders')
         }
       }
       setLoading(false)
@@ -103,16 +96,13 @@ export default function OrderDetails() {
     console.log('Update status for order:', order?.orderId)
   }
 
-<<<<<<< HEAD
   const handleVendorInformation = () => {
-    // Handle vendor information logic
-    console.log('View vendor information for order:', order?.orderId)
+    if (order?.customer) {
+      // Navigate to vendor detail page if available
+      console.log('View vendor information for order:', order?.orderId)
+    }
   }
 
-  const handleDownloadInvoice = () => {
-    // Handle download invoice logic
-    console.log('Download invoice for order:', order?.orderId)
-=======
   const handleDownloadInvoice = async () => {
     if (!orderId || !order) return
     
@@ -136,7 +126,6 @@ export default function OrderDetails() {
       console.error('Error downloading invoice:', error)
       alert('Failed to download invoice. Please try again.')
     }
->>>>>>> b70564b14c849c579bdb5f16d26f8dd0733e113f
   }
 
   const handleCancelOrder = () => {
@@ -192,11 +181,13 @@ export default function OrderDetails() {
               onClick={handleVendorInformation}
               className="flex items-center gap-2 sm:gap-3 rounded-lg bg-[#F39C12] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white hover:bg-[#E67E22] transition-colors whitespace-nowrap"
             >
-              <img
-                src={order.customer.avatar}
-                alt={order.customer.name}
-                className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0"
-              />
+              {order.customer.avatar && (
+                <img
+                  src={order.customer.avatar}
+                  alt={order.customer.name}
+                  className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0"
+                />
+              )}
               <div className="flex flex-col items-start">
                 <span className="text-xs sm:text-sm font-semibold leading-tight">{order.customer.name}</span>
                 <span className="text-xs font-normal leading-tight opacity-90">Vendor Information</span>
@@ -281,4 +272,3 @@ export default function OrderDetails() {
     </div>
   )
 }
-
