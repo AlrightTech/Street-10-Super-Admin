@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import BrandLogo from '../components/BrandLogo'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import HeroSection from '../components/HeroSection'
@@ -6,12 +6,18 @@ import LoginForm from '../components/LoginForm'
 import Footer from '../components/Footer'
 import Button from '../components/ui/Button'
 import { useTranslation } from '../hooks/useTranslation'
+import { authApiService } from '../services/auth.api'
 
 /**
  * Login page component with split-screen layout
  */
 export default function LoginPage() {
   const { t } = useTranslation()
+  
+  // Redirect to dashboard if already authenticated as super-admin
+  if (authApiService.isAuthenticated() && authApiService.isSuperAdmin()) {
+    return <Navigate to="/dashboard" replace />
+  }
   
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">

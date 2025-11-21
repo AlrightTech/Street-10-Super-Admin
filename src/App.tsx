@@ -4,6 +4,7 @@ import { LanguageProvider } from './contexts/LanguageContext'
 import Layout from './components/layout/Layout'
 import LoginPage from './pages/LoginPage'
 import ResetPassword from './pages/ResetPassword'
+import ProtectedRoute from './components/auth/ProtectedRoute'
 
 // Lazy load dashboard pages for code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -71,7 +72,11 @@ function App() {
           <Route path="/" element={<LoginPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/" element={<Layout />}>
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="users" element={<Users />} />
             <Route path="users/:id" element={<UserDetails />} />

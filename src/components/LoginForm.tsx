@@ -4,6 +4,7 @@ import TextField from './ui/TextField'
 import PasswordField from './ui/PasswordField'
 import Button from './ui/Button'
 import { useTranslation } from '../hooks/useTranslation'
+import { authApiService } from '../services/auth.api'
 
 /**
  * Login form state type
@@ -62,16 +63,31 @@ export default function LoginForm() {
       return
     }
 
-    // Simulate API call
+    // Call actual API
     try {
-      // In a real app, you would make an API call here
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      const result = await authApiService.login({
+        email: formData.email.trim(),
+        password: formData.password,
+      })
+
+      // Check if user is super-admin
+      if (result.user.role !== 'super-admin') {
+        setErrors({ password: 'Access denied. Super admin credentials required.' })
+        setIsSubmitting(false)
+        return
+      }
+
+      // Store token and user info
+      localStorage.setItem('authToken', result.token)
+      localStorage.setItem('refreshToken', result.refreshToken)
+      localStorage.setItem('user', JSON.stringify(result.user))
       
       // Navigate to dashboard on success
       navigate('/dashboard')
     } catch (error) {
       console.error('Login error:', error)
-      setErrors({ password: t('invalidCredentials') })
+      const errorMessage = error instanceof Error ? error.message : t('invalidCredentials')
+      setErrors({ password: errorMessage })
     } finally {
       setIsSubmitting(false)
     }
