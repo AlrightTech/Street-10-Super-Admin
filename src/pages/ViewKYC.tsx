@@ -19,16 +19,98 @@ export default function ViewKYC() {
   const [user, setUser] = useState<UserDetails | null>(null)
   const [kycData, setKycData] = useState<KYCData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userUuid, setUserUuid] = useState<string | null>(null) // State to store the UUID
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)
+      let userIdToFetch: string | null = null
+
       if (id) {
         try {
-          // Fetch user details and KYC data from API
+          // Check if id is a numeric ID (not a UUID)
+          // UUIDs contain hyphens, numeric IDs don't
+          userIdToFetch = id
+
+          // Check if it's numeric (no hyphens and all digits)
+          const isNumericId = !id.includes("-") && /^\d+$/.test(id)
+
+          console.log("Processing KYC user ID:", { id, isNumericId })
+
+          if (isNumericId) {
+            // This is a numeric ID, we need to convert it to UUID
+            // Fetch users list to build the mapping
+            console.log(
+              "Numeric ID detected, fetching users list to find UUID...",
+              id
+            )
+
+            try {
+              const usersResult = await usersApi.getAll({
+                page: 1,
+                limit: 1000,
+              })
+              console.log(
+                "Fetched users for mapping:",
+                usersResult.data?.length || 0
+              )
+
+              if (!usersResult.data || usersResult.data.length === 0) {
+                throw new Error("No users found in the system")
+              }
+
+              const userIdMap = new Map<number, string>()
+              usersResult.data.forEach((user: any) => {
+                try {
+                  if (user.id && typeof user.id === "string") {
+                    const numericId =
+                      parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
+                      1000000
+                    userIdMap.set(numericId, user.id)
+                  }
+                } catch (e) {
+                  console.error("Error converting user ID for mapping:", user.id, e)
+                }
+              })
+
+              console.log("User ID map built with", userIdMap.size, "entries")
+
+              const numericId = parseInt(id)
+              const uuid = userIdMap.get(numericId)
+
+              if (!uuid) {
+                console.error(
+                  `User with numeric ID ${id} not found in mapping.`
+                )
+                throw new Error(
+                  `User with ID ${id} not found. The user may not exist or the ID mapping failed.`
+                )
+              }
+
+              userIdToFetch = uuid
+              console.log(
+                `Successfully converted numeric ID ${id} to UUID: ${uuid}`
+              )
+            } catch (error: any) {
+              console.error("Error converting numeric ID to UUID:", error)
+              throw new Error(
+                `Failed to convert user ID: ${
+                  error?.message || "Unknown error"
+                }`
+              )
+            }
+          } else {
+            // It's already a UUID, use it directly
+            console.log("Using UUID directly:", userIdToFetch)
+          }
+
+          // Store the UUID for later use (for approve, reject, etc.)
+          setUserUuid(userIdToFetch)
+
+          // Fetch user details and KYC data from API using UUID
           const [apiUserData, apiKycData] = await Promise.all([
-            usersApi.getById(id),
-            kycApi.getByUserId(id),
+            usersApi.getById(userIdToFetch),
+            kycApi.getByUserId(userIdToFetch),
           ])
           
           // Transform user to frontend format
@@ -97,8 +179,23 @@ export default function ViewKYC() {
           
           setUser(transformedUser)
           setKycData(transformedKyc)
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error loading KYC data:', error)
+          console.error('Error details:', {
+            message: error?.message,
+            response: error?.response?.data,
+            status: error?.response?.status,
+            id,
+            userIdToFetch,
+          })
+
+          // Show user-friendly error message
+          if (error?.response?.status === 404) {
+            alert(`KYC data for user ID ${id} not found. Please check if the user exists.`)
+          } else {
+            alert(`Failed to load KYC data: ${error?.message || "Unknown error"}`)
+          }
+
           navigate('/users')
         }
       }
@@ -109,27 +206,27 @@ export default function ViewKYC() {
   }, [id, navigate])
 
   const handleApprove = async () => {
-    if (!kycData || !id) return
+    if (!kycData || !userUuid) return
     
     try {
-      await kycApi.approve(id)
+      await kycApi.approve(userUuid)
       // Reload KYC data
-      setKycData({
-        ...kycData,
-        status: 'approved',
-        activityHistory: [
-          ...kycData.activityHistory.filter(item => !item.isCurrent),
-          {
-            id: String(Date.now()),
-            event: 'Status: Approved',
-            description: 'KYC has been approved by admin',
-            date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-            icon: 'check',
-            isCurrent: true,
-          },
-        ],
-      })
+    setKycData({
+      ...kycData,
+      status: 'approved',
+      activityHistory: [
+        ...kycData.activityHistory.filter(item => !item.isCurrent),
+        {
+          id: String(Date.now()),
+          event: 'Status: Approved',
+          description: 'KYC has been approved by admin',
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          icon: 'check',
+          isCurrent: true,
+        },
+      ],
+    })
     } catch (error) {
       console.error('Error approving KYC:', error)
       alert('Failed to approve KYC. Please try again.')
@@ -137,31 +234,31 @@ export default function ViewKYC() {
   }
 
   const handleReject = async () => {
-    if (!kycData || !id) return
+    if (!kycData || !userUuid) return
     
     const reason = prompt('Please enter rejection reason:')
     if (!reason) return
     
     try {
-      await kycApi.reject(id, reason)
+      await kycApi.reject(userUuid, reason)
       // Reload KYC data
-      setKycData({
-        ...kycData,
-        status: 'rejected',
+    setKycData({
+      ...kycData,
+      status: 'rejected',
         adminNotes: reason,
-        activityHistory: [
-          ...kycData.activityHistory.filter(item => !item.isCurrent),
-          {
-            id: String(Date.now()),
-            event: 'Status: Rejected',
+      activityHistory: [
+        ...kycData.activityHistory.filter(item => !item.isCurrent),
+        {
+          id: String(Date.now()),
+          event: 'Status: Rejected',
             description: `KYC has been rejected by admin: ${reason}`,
-            date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-            icon: 'x',
-            isCurrent: true,
-          },
-        ],
-      })
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          icon: 'x',
+          isCurrent: true,
+        },
+      ],
+    })
     } catch (error) {
       console.error('Error rejecting KYC:', error)
       alert('Failed to reject KYC. Please try again.')
@@ -169,7 +266,7 @@ export default function ViewKYC() {
   }
 
   const handleSaveNote = async (notes: string) => {
-    if (!kycData || !id) return
+    if (!kycData || !userUuid) return
     
     // Note: API doesn't have a separate endpoint for notes, they're saved with reject
     // For now, we'll just update local state
