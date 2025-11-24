@@ -11,7 +11,12 @@ import type { User } from '../types/users'
  * Filter icon component
  */
 const FilterIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <svg
+    className={className}
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -46,33 +51,61 @@ export default function Users() {
     const fetchUsers = async () => {
       try {
         setLoading(true)
-        const result = await usersApi.getAll({ ...filters, page: pagination.page, limit: pagination.limit })
-        
+        const result = await usersApi.getAll({
+          ...filters,
+          page: pagination.page,
+          limit: pagination.limit,
+        })
+
+        // Debug: Log the result to see what we're receiving
+        console.log('Users API result:', result)
+        console.log('Users data:', result?.data)
+        console.log('Users pagination:', result?.pagination)
+
+        // Handle case where result.data might be undefined
+        const usersArray = result?.data || []
+        if (!Array.isArray(usersArray)) {
+          console.error('Users data is not an array:', usersArray)
+          setUsers([])
+          return
+        }
+
         // Transform API users to frontend User format and create mapping
-        const transformedUsers: User[] = result.data.map((user: ApiUser) => {
-          const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+        const transformedUsers: User[] = usersArray.map((user: ApiUser) => {
+          const numericId =
+            parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
           return {
             id: numericId,
             name: user.email.split('@')[0],
             email: user.email,
             role: user.role,
-            totalPurchase: user.stats?.totalSpent ? parseFloat(user.stats.totalSpent.toString()) / 100 : 0,
-            status: user.status === 'active' ? 'active' : user.status === 'blocked' ? 'blocked' : 'pending',
+            totalPurchase: user.stats?.totalSpent
+              ? parseFloat(user.stats.totalSpent.toString()) / 100
+              : 0,
+            status:
+              user.status === 'active'
+                ? 'active'
+                : user.status === 'blocked'
+                ? 'blocked'
+                : 'pending',
             joinDate: new Date(user.createdAt).toLocaleDateString(),
             biddingWins: 0, // Default value
           }
         })
-        
+
         // Create mapping of numeric ID to API UUID
         const newMap = new Map<number, string>()
-        result.data.forEach((user: ApiUser) => {
-          const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+        usersArray.forEach((user: ApiUser) => {
+          const numericId =
+            parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
           newMap.set(numericId, user.id)
         })
         setUserIdMap(newMap)
-        
+
         setUsers(transformedUsers)
-        setPagination(result.pagination)
+        setPagination(
+          result?.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 }
+        )
       } catch (error) {
         console.error('Error fetching users:', error)
         // Fallback to mock data on error
@@ -166,10 +199,12 @@ export default function Users() {
       try {
         // TODO: Implement delete user API endpoint when available
         // For now, just remove from local state
-        setUsers((prevUsers) => prevUsers.filter((user) => {
-          const apiUserId = userIdMap.get(user.id)
-          return apiUserId !== userToDelete
-        }))
+        setUsers((prevUsers) =>
+          prevUsers.filter((user) => {
+            const apiUserId = userIdMap.get(user.id)
+            return apiUserId !== userToDelete
+          })
+        )
         setDeleteModalOpen(false)
         setUserToDelete(null)
       } catch (error) {
@@ -200,31 +235,44 @@ export default function Users() {
 
       const isCurrentlyBlocked = user.status === 'blocked'
       await usersApi.toggleBlock(apiUserId, !isCurrentlyBlocked)
-      
+
       // Refresh users list
-      const result = await usersApi.getAll({ ...filters, page: pagination.page, limit: pagination.limit })
+      const result = await usersApi.getAll({
+        ...filters,
+        page: pagination.page,
+        limit: pagination.limit,
+      })
       const transformedUsers: User[] = result.data.map((user: ApiUser) => {
-        const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+        const numericId =
+          parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
         return {
           id: numericId,
           name: user.email.split('@')[0],
           email: user.email,
           role: user.role,
-          totalPurchase: user.stats?.totalSpent ? parseFloat(user.stats.totalSpent.toString()) / 100 : 0,
-          status: user.status === 'active' ? 'active' : user.status === 'blocked' ? 'blocked' : 'pending',
+          totalPurchase: user.stats?.totalSpent
+            ? parseFloat(user.stats.totalSpent.toString()) / 100
+            : 0,
+          status:
+            user.status === 'active'
+              ? 'active'
+              : user.status === 'blocked'
+              ? 'blocked'
+              : 'pending',
           joinDate: new Date(user.createdAt).toLocaleDateString(),
           biddingWins: 0,
         }
       })
-      
+
       // Update mapping
       const newMap = new Map<number, string>()
       result.data.forEach((user: ApiUser) => {
-        const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+        const numericId =
+          parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
         newMap.set(numericId, user.id)
       })
       setUserIdMap(newMap)
-      
+
       setUsers(transformedUsers)
     } catch (error) {
       console.error('Error toggling block status:', error)
@@ -259,7 +307,9 @@ export default function Users() {
     <>
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="mb-2 text-xl sm:text-2xl font-bold text-gray-900">Users</h1>
+        <h1 className="mb-2 text-xl sm:text-2xl font-bold text-gray-900">
+          Users
+        </h1>
         <p className="text-xs sm:text-sm text-gray-600">Dashboard - Users</p>
       </div>
 

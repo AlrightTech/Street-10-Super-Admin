@@ -47,7 +47,10 @@ export default function Dashboard() {
         ]);
 
         // Debug: Log the dashboard stats to see what we're receiving
-        console.log("Dashboard Stats from API:", JSON.stringify(dashboardStats, null, 2));
+        console.log(
+          "Dashboard Stats from API:",
+          JSON.stringify(dashboardStats, null, 2)
+        );
         console.log("Users total:", dashboardStats?.users?.total);
         console.log("Orders total:", dashboardStats?.orders?.total);
         console.log("Vendors total:", dashboardStats?.vendors?.total);
@@ -55,11 +58,12 @@ export default function Dashboard() {
 
         // Transform dashboard stats to stat cards
         // Handle revenue - it should be a string from the API (already converted from BigInt)
-        const revenueTotal = typeof dashboardStats.revenue.totalMinor === "string"
-          ? parseFloat(dashboardStats.revenue.totalMinor) / 100
-          : typeof dashboardStats.revenue.totalMinor === "bigint"
-          ? Number(dashboardStats.revenue.totalMinor) / 100
-          : 0;
+        const revenueTotal =
+          typeof dashboardStats.revenue.totalMinor === "string"
+            ? parseFloat(dashboardStats.revenue.totalMinor) / 100
+            : typeof dashboardStats.revenue.totalMinor === "bigint"
+            ? Number(dashboardStats.revenue.totalMinor) / 100
+            : 0;
 
         const cards: StatCardType[] = [
           {
@@ -169,24 +173,28 @@ export default function Dashboard() {
         setStatCards(cards);
 
         // Transform audit logs to activities
-        const transformedActivities: ActivityItem[] = auditLogs.logs.map(
-          (log) => ({
-            id: log.id,
-            activity: `${log.action} ${log.resourceType}`,
-            user: log.user?.email || "System",
-            date: new Date(log.createdAt).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          })
-        );
+        // Handle case where auditLogs might be undefined or logs array is missing
+        const auditLogsArray = auditLogs?.logs || [];
+        console.log("Audit logs from API:", auditLogs);
+        console.log("Audit logs array:", auditLogsArray);
 
-        setActivities(
-          transformedActivities.length > 0 ? transformedActivities : []
-        );
+        const transformedActivities: ActivityItem[] =
+          Array.isArray(auditLogsArray) && auditLogsArray.length > 0
+            ? auditLogsArray.map((log: any) => ({
+                id: log.id,
+                activity: `${log.action} ${log.resourceType}`,
+                user: log.user?.email || "System",
+                date: new Date(log.createdAt).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              }))
+            : [];
+
+        setActivities(transformedActivities);
 
         // For now, use mock data for charts (will be replaced with real time-series data later)
         setUserGrowthData(mockUserGrowthData);

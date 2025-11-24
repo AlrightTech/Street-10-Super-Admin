@@ -39,20 +39,21 @@ export default function UserStatsCard({ user, onEdit, onBlock, onDelete }: UserS
                 <div className="flex flex-col">
                   <span className="text-sm text-gray-600 sm:hidden">Account Status</span>
                   {(() => {
-                    const status = user.status || 'pending'
+                    // Use accountStatus if available, otherwise fall back to status
+                    const accountStatus = user.accountStatus || (user.status === 'active' ? 'verified' : user.status === 'blocked' ? 'unverified' : 'pending')
                     let statusText = 'Pending'
                     let statusStyles = 'bg-yellow-100 text-yellow-800'
 
-                    if (status === 'blocked') {
-                      statusText = 'Blocked'
+                    if (accountStatus === 'unverified') {
+                      statusText = 'Unverified'
                       statusStyles = 'bg-red-100 text-red-800'
-                    } else if (status === 'active') {
-                      statusText = 'Active'
+                    } else if (accountStatus === 'verified') {
+                      statusText = 'Verified'
                       statusStyles = 'bg-green-100 text-green-800'
                     }
 
                     return (
-                      <span className={`inline-flex w-20  flex justify-center    rounded-full px-3 py-1 text-xs font-medium ${statusStyles}`}>
+                      <span className={`inline-flex w-20 justify-center rounded-full px-3 py-1 text-xs font-medium ${statusStyles}`}>
                         {statusText}
                       </span>
                     )

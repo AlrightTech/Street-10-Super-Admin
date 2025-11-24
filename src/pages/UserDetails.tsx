@@ -1,154 +1,301 @@
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import UserSummaryCard from '../components/users/UserSummaryCard'
-import UserStatsCard from '../components/users/UserStatsCard'
-import SpendingSummary from '../components/users/SpendingSummary'
-import OrderHistoryTable from '../components/users/OrderHistoryTable'
-import ConfirmModal from '../components/ui/ConfirmModal'
-import { usersApi } from '../services/users.api'
-import type { UserDetails as UserDetailsType, BiddingItem, OrderItem } from '../types/userDetails'
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import UserSummaryCard from "../components/users/UserSummaryCard";
+import UserStatsCard from "../components/users/UserStatsCard";
+import SpendingSummary from "../components/users/SpendingSummary";
+import OrderHistoryTable from "../components/users/OrderHistoryTable";
+import ConfirmModal from "../components/ui/ConfirmModal";
+import { usersApi } from "../services/users.api";
+import type {
+  UserDetails as UserDetailsType,
+  BiddingItem,
+  OrderItem,
+} from "../types/userDetails";
 
 /**
  * User Details page component
  */
 export default function UserDetails() {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [user, setUser] = useState<UserDetailsType | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [itemToDelete, setItemToDelete] = useState<BiddingItem | OrderItem | null>(null)
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [user, setUser] = useState<UserDetailsType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<
+    BiddingItem | OrderItem | null
+  >(null);
+  const [userUuid, setUserUuid] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUser = async () => {
-      setLoading(true)
+      setLoading(true);
+      let userIdToFetch: string | null = null; // Declare in broader scope for error handling
+
       if (id) {
         try {
           // Check if user data is passed from navigation state (e.g., after edit)
           if (location.state?.user) {
-            setUser(location.state.user as UserDetailsType)
-            setLoading(false)
-            return
+            setUser(location.state.user as UserDetailsType);
+            setUserUuid(id); // Store the ID from URL as UUID
+            setLoading(false);
+            return;
           }
 
-          // Fetch from API
-          const apiUser = await usersApi.getById(id)
-          
+          // Check if id is a numeric ID (not a UUID)
+          // UUIDs contain hyphens, numeric IDs don't
+          userIdToFetch = id;
+
+          // Check if it's numeric (no hyphens and all digits)
+          const isNumericId = !id.includes("-") && /^\d+$/.test(id);
+
+          console.log("Processing user ID:", { id, isNumericId });
+
+          if (isNumericId) {
+            // This is a numeric ID, we need to convert it to UUID
+            // Fetch users list to build the mapping
+            console.log(
+              "Numeric ID detected, fetching users list to find UUID...",
+              id
+            );
+
+            try {
+              const usersResult = await usersApi.getAll({
+                page: 1,
+                limit: 1000,
+              });
+              console.log(
+                "Fetched users for mapping:",
+                usersResult.data?.length || 0
+              );
+
+              if (!usersResult.data || usersResult.data.length === 0) {
+                throw new Error("No users found in the system");
+              }
+
+              const userIdMap = new Map<number, string>();
+              usersResult.data.forEach((user: any) => {
+                try {
+                  if (user.id && typeof user.id === "string") {
+                    const numericId =
+                      parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
+                      1000000;
+                    userIdMap.set(numericId, user.id);
+                  }
+                } catch (e) {
+                  console.error("Error converting user ID:", user.id, e);
+                }
+              });
+
+              console.log("User ID map built with", userIdMap.size, "entries");
+              console.log(
+                "Sample mapping entries:",
+                Array.from(userIdMap.entries()).slice(0, 5)
+              );
+
+              const numericId = parseInt(id);
+              const uuid = userIdMap.get(numericId);
+
+              if (!uuid) {
+                console.error(
+                  `User with numeric ID ${id} not found in mapping.`
+                );
+                console.error(
+                  "Available numeric IDs:",
+                  Array.from(userIdMap.keys())
+                );
+                throw new Error(
+                  `User with ID ${id} not found. The user may not exist or the ID mapping failed.`
+                );
+              }
+
+              userIdToFetch = uuid;
+              console.log(
+                `Successfully converted numeric ID ${id} to UUID: ${uuid}`
+              );
+            } catch (error: any) {
+              console.error("Error converting numeric ID to UUID:", error);
+              throw new Error(
+                `Failed to convert user ID: ${
+                  error?.message || "Unknown error"
+                }`
+              );
+            }
+          } else {
+            // It's already a UUID, use it directly
+            console.log("Using UUID directly:", userIdToFetch);
+          }
+
+          // Verify we have a UUID to fetch
+          if (!userIdToFetch) {
+            throw new Error("Invalid user ID format");
+          }
+
+          // Store the UUID for later use (for edit, block, etc.)
+          setUserUuid(userIdToFetch);
+
+          // Fetch from API using UUID
+          console.log("Fetching user with UUID:", userIdToFetch);
+          const apiUser = await usersApi.getById(userIdToFetch);
+
           // Transform API response to frontend format
           const transformedUser: UserDetailsType = {
-            id: parseInt(apiUser.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
-            name: apiUser.user.email.split('@')[0],
+            id:
+              parseInt(apiUser.user.id.replace(/-/g, "").substring(0, 10), 16) %
+              1000000,
+            name: apiUser.user.email.split("@")[0],
             email: apiUser.user.email,
-            phone: apiUser.user.phone || '',
-            avatar: '',
+            phone: apiUser.user.phone || "",
+            avatar: "",
             role: apiUser.user.role,
-            accountStatus: apiUser.user.status === 'active' ? 'verified' : apiUser.user.status === 'blocked' ? 'unverified' : 'pending',
-            status: apiUser.user.status === 'active' ? 'active' : apiUser.user.status === 'blocked' ? 'blocked' : 'pending',
+            accountStatus:
+              apiUser.user.status === "active"
+                ? "verified"
+                : apiUser.user.status === "blocked"
+                ? "unverified"
+                : "pending",
+            status:
+              apiUser.user.status === "active"
+                ? "active"
+                : apiUser.user.status === "blocked"
+                ? "blocked"
+                : "pending",
             ordersMade: apiUser.stats?.ordersCount || 0,
             biddingWins: apiUser.stats?.bidsWon || 0,
-            totalSpent: parseFloat(apiUser.stats?.totalSpent?.toString() || '0') / 100,
+            totalSpent:
+              parseFloat(apiUser.stats?.totalSpent?.toString() || "0") / 100,
             totalRefunds: 0,
             pendingRefunds: 0,
-            netSpending: parseFloat(apiUser.stats?.totalSpent?.toString() || '0') / 100,
-            walletBalance: parseFloat(apiUser.user.wallet?.availableMinor?.toString() || '0') / 100,
+            netSpending:
+              parseFloat(apiUser.stats?.totalSpent?.toString() || "0") / 100,
+            walletBalance:
+              parseFloat(
+                apiUser.user.wallet?.availableMinor?.toString() || "0"
+              ) / 100,
             walletLimit: 10000,
             interests: [],
-            interestsImage: '',
+            interestsImage: "",
             biddings: (apiUser.recentBids || []).map((bid: any) => ({
               id: bid.id,
-              productName: bid.auction?.product?.title || 'Product',
-              productImage: bid.auction?.product?.media?.[0]?.url || '',
-              category: '',
+              productName: bid.auction?.product?.title || "Product",
+              productImage: bid.auction?.product?.media?.[0]?.url || "",
+              category: "",
               bidId: bid.id,
-              bidAmount: parseFloat(bid.amountMinor?.toString() || '0') / 100,
-              currentPrice: parseFloat(bid.amountMinor?.toString() || '0') / 100,
-              result: bid.isWinning ? 'won' : 'lost',
-              endDate: new Date(bid.auction?.endAt || new Date()).toLocaleDateString(),
-              status: bid.isWinning ? 'won-fully-paid' : 'lost',
+              bidAmount: parseFloat(bid.amountMinor?.toString() || "0") / 100,
+              currentPrice:
+                parseFloat(bid.amountMinor?.toString() || "0") / 100,
+              result: bid.isWinning ? "won" : "lost",
+              endDate: new Date(
+                bid.auction?.endAt || new Date()
+              ).toLocaleDateString(),
+              status: bid.isWinning ? "won-fully-paid" : "lost",
             })),
             orders: (apiUser.recentOrders || []).map((order: any) => ({
               id: order.id,
-              productName: order.items?.[0]?.product?.title || 'Product',
-              productImage: order.items?.[0]?.product?.media?.[0]?.url || '',
+              productName: order.items?.[0]?.product?.title || "Product",
+              productImage: order.items?.[0]?.product?.media?.[0]?.url || "",
               orderId: order.orderNumber,
-              amount: parseFloat(order.totalMinor?.toString() || '0') / 100,
+              amount: parseFloat(order.totalMinor?.toString() || "0") / 100,
               date: new Date(order.createdAt).toLocaleDateString(),
               status: order.status,
             })),
-          }
-          
-          setUser(transformedUser)
-        } catch (error) {
-          console.error('Error fetching user details:', error)
-          navigate('/users')
-        }
-      }
-      setLoading(false)
-    }
+          };
 
-    loadUser()
-  }, [id, navigate, location.state])
+          setUser(transformedUser);
+        } catch (error: any) {
+          console.error("Error fetching user details:", error);
+          console.error("Error details:", {
+            message: error?.message,
+            response: error?.response?.data,
+            status: error?.response?.status,
+            id,
+            userIdToFetch,
+          });
+
+          // Show user-friendly error message
+          if (error?.response?.status === 404) {
+            alert(
+              `User with ID ${id} not found. Please check if the user exists.`
+            );
+          } else {
+            alert(
+              `Failed to load user details: ${
+                error?.message || "Unknown error"
+              }`
+            );
+          }
+
+          navigate("/users");
+        }
+      } else {
+        // No ID provided, redirect to users list
+        navigate("/users");
+      }
+      setLoading(false);
+    };
+
+    loadUser();
+  }, [id, navigate, location.state]);
 
   const handleEdit = () => {
-    if (user) {
-      navigate(`/users/${user.id}/edit`)
+    if (user && userUuid) {
+      navigate(`/users/${userUuid}/edit`, { state: { user } });
     }
-  }
+  };
 
   const handleBlock = async () => {
-    if (!user || !id) return
-    
+    if (!user || !userUuid) return;
+
     try {
-      const isCurrentlyBlocked = user.status === 'blocked'
-      await usersApi.toggleBlock(id, !isCurrentlyBlocked)
+      const isCurrentlyBlocked = user.status === "blocked";
+      await usersApi.toggleBlock(userUuid, !isCurrentlyBlocked);
       // Reload user data
-      window.location.reload()
+      window.location.reload();
     } catch (error) {
-      console.error('Error blocking user:', error)
-      alert('Failed to update user status')
+      console.error("Error blocking user:", error);
+      alert("Failed to update user status");
     }
-  }
+  };
 
   const handleDelete = (item: BiddingItem | OrderItem) => {
-    setItemToDelete(item)
-    setDeleteModalOpen(true)
-  }
+    setItemToDelete(item);
+    setDeleteModalOpen(true);
+  };
 
   const confirmDelete = () => {
     if (user && itemToDelete) {
       // Update user data by removing the item
-      if ('status' in itemToDelete && 'bidId' in itemToDelete) {
+      if ("status" in itemToDelete && "bidId" in itemToDelete) {
         // It's a bidding item
-        const biddingItem = itemToDelete as BiddingItem
+        const biddingItem = itemToDelete as BiddingItem;
         setUser({
           ...user,
           biddings: user.biddings.filter((b) => b.id !== biddingItem.id),
-        })
+        });
       } else {
         // It's an order item
-        const orderItem = itemToDelete as OrderItem
+        const orderItem = itemToDelete as OrderItem;
         setUser({
           ...user,
           orders: user.orders.filter((o) => o.id !== orderItem.id),
-        })
+        });
       }
-      setDeleteModalOpen(false)
-      setItemToDelete(null)
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
     }
-  }
+  };
 
   const cancelDelete = () => {
-    setDeleteModalOpen(false)
-    setItemToDelete(null)
-  }
+    setDeleteModalOpen(false);
+    setItemToDelete(null);
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <p className="text-gray-600">Loading user details...</p>
       </div>
-    )
+    );
   }
 
   if (!user) {
@@ -156,14 +303,16 @@ export default function UserDetails() {
       <div className="flex items-center justify-center min-h-[400px]">
         <p className="text-gray-600">User not found</p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="mb-2 text-xl sm:text-2xl font-bold text-gray-900">Users</h1>
+        <h1 className="mb-2 text-xl sm:text-2xl font-bold text-gray-900">
+          Users
+        </h1>
         <p className="text-xs sm:text-sm text-gray-600">Dashboard • Users</p>
       </div>
 
@@ -178,7 +327,7 @@ export default function UserDetails() {
           onBlock={handleBlock}
           onDelete={() => {
             // Handle user delete
-            console.log('Delete user:', user.id)
+            console.log("Delete user:", user.id);
           }}
         />
 
@@ -189,10 +338,10 @@ export default function UserDetails() {
         <OrderHistoryTable
           user={user}
           onEdit={(item) => {
-            console.log('Edit item:', item)
+            console.log("Edit item:", item);
           }}
           onBlock={(item) => {
-            console.log('Block item:', item)
+            console.log("Block item:", item);
           }}
           onDelete={handleDelete}
         />
@@ -209,6 +358,5 @@ export default function UserDetails() {
         onCancel={cancelDelete}
       />
     </div>
-  )
+  );
 }
-
