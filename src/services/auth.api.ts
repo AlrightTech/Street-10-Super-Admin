@@ -1,8 +1,17 @@
 import axios, { type AxiosError } from "axios";
 import type { ApiResponse } from "../utils/api";
 
+// In development, use relative path to work with Vite proxy
+// In production, use full URL or environment variable
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api/v1";
+  import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "/api/v1" : "https://street10backend.up.railway.app/api/v1");
+
+// Debug: Log the API base URL in development
+if (import.meta.env.DEV) {
+  console.log("🔧 API Base URL (Auth):", API_BASE_URL);
+  console.log("🔧 VITE_API_BASE_URL:", import.meta.env.VITE_API_BASE_URL);
+  console.log("🔧 Is Dev Mode:", import.meta.env.DEV);
+}
 
 // Create a separate axios instance for auth (without token interceptor)
 const authApi = axios.create({

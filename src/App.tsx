@@ -14,6 +14,7 @@ const EditUser = lazy(() => import('./pages/EditUser'))
 const Vendors = lazy(() => import('./pages/Vendors'))
 const Orders = lazy(() => import('./pages/Orders'))
 const OrderDetails = lazy(() => import('./pages/OrderDetails'))
+const EcommerceOrderView = lazy(() => import('./pages/EcommerceOrderView'))
 const BidDetailPage = lazy(() => import('./pages/BidDetailPage'))
 const ViewKYC = lazy(() => import('./pages/ViewKYC'))
 const RefundRequest = lazy(() => import('./pages/RefundRequest'))
@@ -40,7 +41,17 @@ const Categories = lazy(() => import('./pages/Categories'))
 const AddCategory = lazy(() => import('./pages/AddCategory'))
 const Products = lazy(() => import('./pages/Products'))
 const BiddingProducts = lazy(() => import('./pages/BiddingProducts'))
+const AddBiddingProduct = lazy(() => import('./pages/AddBiddingProduct'))
 const EcommerceProducts = lazy(() => import('./pages/EcommerceProducts'))
+const AddEcommerceProduct = lazy(() => import('./pages/AddEcommerceProduct'))
+const EditEcommerceProduct = lazy(() => import('./pages/EditEcommerceProduct'))
+const EcommerceProductDetail = lazy(() => import('./pages/EcommerceProductDetail'))
+const EndedUnsoldDetailRoute = lazy(() => import('./pages/bidding/EndedUnsoldDetailRoute'))
+const PaymentRequestedDetailRoute = lazy(() => import('./pages/bidding/PaymentRequestedDetailRoute'))
+const FullyPaidSoldDetailRoute = lazy(() => import('./pages/bidding/FullyPaidSoldDetailRoute'))
+const ScheduledDetailRoute = lazy(() => import('./pages/bidding/ScheduledDetailRoute'))
+const EditBiddingProduct = lazy(() => import('./pages/EditBiddingProduct'))
+const BiddingHistory = lazy(() => import('./pages/bidding/BiddingHistory'))
 const Wallet = lazy(() => import('./pages/Wallet'))
 const AllTransactions = lazy(() => import('./pages/AllTransactions'))
 const TransactionDetails = lazy(() => import('./pages/TransactionDetails'))
@@ -116,6 +127,17 @@ function App() {
             <Route path="products/bidding" element={<BiddingProducts />} />
             <Route path="products/ecommerce" element={<EcommerceProducts />} />
             <Route path="building-products" element={<BiddingProducts />} />
+            <Route path="building-products/add" element={<AddBiddingProduct />} />
+            <Route path="building-products/:id/edit" element={<EditBiddingProduct />} />
+            <Route path="building-products/:id/history" element={<BiddingHistory />} />
+            <Route path="building-products/:id/ended-unsold" element={<EndedUnsoldDetailRoute />} />
+            <Route path="building-products/:id/payment-requested" element={<PaymentRequestedDetailRoute />} />
+            <Route path="building-products/:id/fully-paid-sold" element={<FullyPaidSoldDetailRoute />} />
+            <Route path="building-products/:id/scheduled" element={<ScheduledDetailRoute />} />
+            <Route path="ecommerce-products/orders/:orderId" element={<EcommerceOrderView />} />
+            <Route path="ecommerce-products/add" element={<AddEcommerceProduct />} />
+            <Route path="ecommerce-products/:productId/edit" element={<EditEcommerceProduct />} />
+            <Route path="ecommerce-products/:productId" element={<EcommerceProductDetail />} />
             <Route path="ecommerce-products" element={<EcommerceProducts />} />
             <Route path="wallet" element={<Wallet />} />
             <Route path="wallet/all-transactions" element={<AllTransactions />} />

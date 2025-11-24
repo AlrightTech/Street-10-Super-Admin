@@ -441,8 +441,9 @@ export default function Finance() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className=" flex justify-between bg-white p-4 rounded-md">
         {summaryCards.map((card, index) => (
+          
           <FinanceSummaryCard
             key={index}
             icon={card.icon}
@@ -451,7 +452,9 @@ export default function Finance() {
             subtext={card.subtext}
             iconBgColor={card.iconBgColor}
           />
+          
         ))}
+        
       </div>
 
       {/* Vendor/Users Toggle */}

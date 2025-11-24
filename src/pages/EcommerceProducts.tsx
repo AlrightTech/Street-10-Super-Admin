@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import SearchBar from '../components/ui/SearchBar'
-import { PlusIcon, FilterIcon } from '../components/icons/Icons'
+import { FilterIcon } from '../components/icons/Icons'
 import EcommerceProductsTable, { type EcommerceProduct } from '../components/ecommerce/EcommerceProductsTable'
 import AdminOrdersTable, { type AdminOrder, type AdminOrderStatus } from '../components/ecommerce/AdminOrdersTable'
 import OrdersFilterTabs from '../components/orders/OrdersFilterTabs'
@@ -439,6 +440,7 @@ const ORDERS_PAGE_SIZE = 4
  * E-commerce Products page component
  */
 export default function EcommerceProducts() {
+  const navigate = useNavigate()
   // E-commerce Products state
   const [productSearch, setProductSearch] = useState('')
   const [productsPage, setProductsPage] = useState(1)
@@ -506,6 +508,11 @@ export default function EcommerceProducts() {
     setOrdersPage(1)
   }
 
+  const handleOrderSearchChange = (value: string) => {
+    setOrderSearch(value)
+    setOrdersPage(1) // Reset to first page when search changes
+  }
+
   const handleProductsPageChange = (page: number) => {
     if (page < 1 || page > productsTotalPages) return
     setProductsPage(page)
@@ -517,24 +524,26 @@ export default function EcommerceProducts() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* E-commerce Products Section */}
-      <section className="space-y-4">
+      <section className="space-y-3 sm:space-y-4">
         {/* Header with Search and Add Button */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">E-commerce Products</h1>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">E-commerce Products</h1>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
             <SearchBar
               placeholder="Search by Title"
               value={productSearch}
               onChange={setProductSearch}
-              className="min-w-[220px] sm:min-w-[240px]"
+              className="w-full sm:min-w-[220px] sm:w-auto"
             />
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap cursor-pointer"
+              onClick={() => navigate('/ecommerce-products/add')}
+              className="inline-flex items-center justify-center 
+               rounded-lg bg-[#F7931E] px-3 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap cursor-pointer w-full sm:w-auto"
             >
-              <PlusIcon className="h-4 w-4" />
+            
               +Add Product
             </button>
           </div>
@@ -542,7 +551,7 @@ export default function EcommerceProducts() {
 
         {/* Products Table */}
         <div className="rounded-xl bg-white shadow-sm">
-          <div className="px-4 py-4 sm:px-6">
+          <div className="py-2 sm:py-4">
             <div className="overflow-x-auto">
               <EcommerceProductsTable products={paginatedProducts} />
             </div>
@@ -636,13 +645,14 @@ export default function EcommerceProducts() {
       </section>
 
       {/* Admin Orders Section */}
-      <section className="space-y-4">
+      <section className="space-y-3 sm:space-y-4">
         {/* Header */}
-        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Admin Orders</h2>
+        <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">Admin Orders</h2>
 
         {/* Orders Table */}
         <div className="rounded-xl bg-white shadow-sm">
-          <header className="flex flex-col gap-2 border-b border-gray-100 px-4 pt-3 pb-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+          <header className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3
+            sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-0">
             <div className="flex-1 flex items-center min-w-0">
               <OrdersFilterTabs
                 tabs={orderTabOptionsWithCounts}
@@ -651,7 +661,7 @@ export default function EcommerceProducts() {
               />
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 flex-shrink-0">
-              <div className="relative w-full sm:w-auto min-w-[140px] sm:min-w-[160px]">
+              <div className="relative w-full sm:w-auto sm:min-w-[160px]">
                 <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -661,13 +671,13 @@ export default function EcommerceProducts() {
                   type="text"
                   placeholder="Search Order #"
                   value={orderSearch}
-                  onChange={(e) => setOrderSearch(e.target.value)}
+                  onChange={(e) => handleOrderSearchChange(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-white py-1.5 pl-7 pr-2 text-xs sm:text-sm outline-none placeholder:text-gray-400 focus:border-[#FF8C00] focus:ring-1 focus:ring-[#FF8C00]"
                 />
               </div>
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer w-full sm:w-auto"
               >
                 <FilterIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Filter
@@ -675,14 +685,16 @@ export default function EcommerceProducts() {
             </div>
           </header>
 
-          <div className="px-4 py-4 sm:px-6">
+          <div className="py-2 sm:py-4">
             <div className="overflow-x-auto">
               <AdminOrdersTable orders={paginatedOrders} />
             </div>
           </div>
 
           {/* Pagination */}
-          <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-6">
+          <footer className="flex flex-col 
+          sm:flex-row justify-end items-center gap-3 
+          border-t border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
               <button
                 type="button"

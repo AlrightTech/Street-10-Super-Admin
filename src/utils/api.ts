@@ -1,7 +1,9 @@
 import axios, { type AxiosInstance, type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 
 // API base URL - adjust based on your environment
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+// In development, use relative path to work with Vite proxy
+// In production, use full URL or environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api/v1' : 'http://localhost:3000/api/v1');
 
 // Create axios instance
 const api: AxiosInstance = axios.create({

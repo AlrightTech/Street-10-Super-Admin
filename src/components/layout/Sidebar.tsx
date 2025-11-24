@@ -144,7 +144,7 @@ export default function Sidebar() {
                       onClick={() => {
                         setIsProductsOpen(!isProductsOpen)
                       }}
-                      className={`flex w-full items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors ${
+                      className={`flex w-full items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                         // Active if on /products route OR any product sub-route
                         isActive || isAnyProductSubRouteActive
                           ? 'bg-[#F7931E] text-white'
@@ -185,7 +185,7 @@ export default function Sidebar() {
                           <span className="text-white flex-shrink-0">
                             <GridIcon className="h-5 w-5" />
                           </span>
-                          <span className="truncate">Building Products</span>
+                          <span className="truncate">Bidding Products</span>
                         </Link>
                         <Link
                           to="/ecommerce-products"

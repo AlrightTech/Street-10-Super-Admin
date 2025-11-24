@@ -1,4 +1,5 @@
-import { Fragment } from 'react'
+import { useNavigate } from 'react-router-dom'
+import EcommerceProductsActionMenu from './EcommerceProductsActionMenu'
 
 export interface EcommerceProduct {
   id: string
@@ -16,6 +17,20 @@ interface EcommerceProductsTableProps {
 }
 
 export default function EcommerceProductsTable({ products, emptyState }: EcommerceProductsTableProps) {
+  const navigate = useNavigate()
+
+  const handleView = (productId: string) => {
+    navigate(`/ecommerce-products/${productId}`)
+  }
+
+  const handleDelete = (productId: string, productName: string) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)
+    if (confirmed) {
+      console.log('Delete product:', productId)
+      // Add API call here to delete the product
+    }
+  }
   if (products.length === 0) {
     return (
       <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
@@ -32,44 +47,43 @@ export default function EcommerceProductsTable({ products, emptyState }: Ecommer
   }
 
   return (
-    <Fragment>
-      <div className="w-full overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full w-full border-collapse">
-            <thead className="bg-white">
-              <tr>
-                <TableHeader>Product</TableHeader>
-                <TableHeader>Category</TableHeader>
-                <TableHeader>Price</TableHeader>
-                <TableHeader>Stock</TableHeader>
-                <TableHeader>Status</TableHeader>
-                <TableHeader align="center">Action</TableHeader>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+    <div className="w-full bg-white">
+      <div className="overflow-x-auto">
+        <table className="min-w-full w-full border-collapse">
+          <thead className="bg-white">
+            <tr>
+              <TableHeader>Product</TableHeader>
+              <TableHeader>Category</TableHeader>
+              <TableHeader>Price</TableHeader>
+              <TableHeader>Stock</TableHeader>
+              <TableHeader>Status</TableHeader>
+              <TableHeader align="center">Action</TableHeader>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
               {products.map((product) => (
                 <tr key={product.id} className="hover:bg-gray-50">
                   <TableCell>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                       {product.imageUrl ? (
                         <img
                           src={product.imageUrl}
                           alt={product.name}
-                          className="h-10 w-10 rounded object-cover flex-shrink-0"
+                          className="h-8 w-8 sm:h-10 sm:w-10 rounded object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="h-10 w-10 rounded bg-gray-200 flex items-center justify-center flex-shrink-0">
-                          <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded bg-gray-200 flex items-center justify-center flex-shrink-0">
+                          <svg className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </div>
                       )}
-                      <span className="text-gray-900 font-medium text-sm">{product.name}</span>
+                      <span className="text-gray-900 font-medium text-xs sm:text-sm truncate">{product.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-700">{product.category}</TableCell>
-                  <TableCell className={`text-sm ${product.price === 'No bids' ? 'text-gray-700' : 'font-medium text-gray-900'}`}>{product.price}</TableCell>
-                  <TableCell className="text-sm text-gray-700">{product.stock}</TableCell>
+                  <TableCell className="text-xs sm:text-sm text-gray-700">{product.category}</TableCell>
+                  <TableCell className={`text-xs sm:text-sm ${product.price === 'No bids' ? 'text-gray-700' : 'font-medium text-gray-900'}`}>{product.price}</TableCell>
+                  <TableCell className="text-xs sm:text-sm text-gray-700">{product.stock}</TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium ${
@@ -82,23 +96,17 @@ export default function EcommerceProductsTable({ products, emptyState }: Ecommer
                     </span>
                   </TableCell>
                   <TableCell align="center">
-                    <button
-                      type="button"
-                      className="text-gray-400 hover:text-gray-600 p-1 cursor-pointer"
-                      aria-label="More options"
-                    >
-                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                      </svg>
-                    </button>
+                    <EcommerceProductsActionMenu
+                      onView={() => handleView(product.id)}
+                      onDelete={() => handleDelete(product.id, product.name)}
+                    />
                   </TableCell>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+          </tbody>
+        </table>
       </div>
-    </Fragment>
+    </div>
   )
 }
 
@@ -113,7 +121,9 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-black tracking-wider border-b border-gray-200 ${textAlign}`}
+      className={`whitespace-nowrap px-2 sm:px-4 py-1 
+        text-left text-xs sm:text-sm font-semibold text-black
+         tracking-wider border-b border-gray-200 ${textAlign}`}
     >
       {children}
     </th>
@@ -131,7 +141,7 @@ function TableCell({ children, className = '', align = 'left' }: TableCellProps)
   
   return (
     <td
-      className={`px-4 py-3 whitespace-nowrap ${textAlign} ${className}`}
+      className={`px-2 sm:px-4 py-2 whitespace-nowrap ${textAlign} ${className}`}
     >
       {children}
     </td>

@@ -1,14 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import CustomerInformationCard from '../components/orders/CustomerInformationCard'
-import ProductDetailsCard from '../components/orders/ProductDetailsCard'
-import PaymentInformationCard from '../components/orders/PaymentInformationCard'
-import ShippingInformationCard from '../components/orders/ShippingInformationCard'
 import OrderTimelineCard from '../components/orders/OrderTimelineCard'
-import { getOrderDetails } from '../data/mockOrderDetails'
+import QuickActionsCard from '../components/orders/QuickActionsCard'
 import { ordersApi } from '../services/orders.api'
 import type { OrderDetails as OrderDetailsType } from '../types/orderDetails'
-import { ChevronDownIcon } from '../components/icons/Icons'
 
 /**
  * Order Details page component
@@ -24,7 +20,7 @@ export default function OrderDetails() {
       setLoading(true)
       if (orderId) {
         try {
-          // Try to fetch from API first
+          // Fetch from API
           const apiOrder = await ordersApi.getById(orderId)
           
           // Transform API order to frontend format
@@ -38,7 +34,7 @@ export default function OrderDetails() {
               id: parseInt(apiOrder.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
               name: apiOrder.user.email.split('@')[0],
               email: apiOrder.user.email,
-              phone: '',
+              phone: (apiOrder.user as any).phone || '',
               avatar: '',
             },
             products: apiOrder.items.map((item: any) => ({
@@ -47,21 +43,21 @@ export default function OrderDetails() {
               image: item.product.media?.[0]?.url || '',
               category: '',
               quantity: item.quantity,
-              price: parseFloat(item.priceMinor) / 100,
-              total: (parseFloat(item.priceMinor) / 100) * item.quantity,
+              price: parseFloat(item.priceMinor?.toString() || '0') / 100,
+              total: (parseFloat(item.priceMinor?.toString() || '0') / 100) * item.quantity,
             })),
             payment: {
               method: apiOrder.paymentMethod as any,
               transactionId: apiOrder.id,
               status: apiOrder.status === 'paid' ? 'completed' : 'pending',
-              subtotal: parseFloat(apiOrder.totalMinor) / 100,
-              discount: parseFloat(apiOrder.discountMinor || '0') / 100,
+              subtotal: parseFloat(apiOrder.totalMinor?.toString() || '0') / 100,
+              discount: parseFloat(apiOrder.discountMinor?.toString() || '0') / 100,
               tax: 0,
               shipping: 0,
-              total: parseFloat(apiOrder.totalMinor) / 100,
+              total: parseFloat(apiOrder.totalMinor?.toString() || '0') / 100,
             },
             shipping: {
-              address: (apiOrder.shippingAddress as any)?.address || '',
+              address: (apiOrder.shippingAddress as any)?.street || (apiOrder.shippingAddress as any)?.address || '',
               city: (apiOrder.shippingAddress as any)?.city || '',
               state: (apiOrder.shippingAddress as any)?.state || '',
               postalCode: (apiOrder.shippingAddress as any)?.postalCode || '',
@@ -83,13 +79,7 @@ export default function OrderDetails() {
           setOrder(transformedOrder)
         } catch (error) {
           console.error('Error fetching order:', error)
-          // Fallback to mock data if API fails
-          const orderData = getOrderDetails(orderId)
-          if (orderData) {
-            setOrder(orderData)
-          } else {
-            navigate('/orders')
-          }
+          navigate('/orders')
         }
       }
       setLoading(false)
@@ -103,10 +93,13 @@ export default function OrderDetails() {
     console.log('Update status for order:', order?.orderId)
   }
 
-  const handleVendorInformation = () => {
-    // Handle vendor information logic
-    console.log('View vendor information for order:', order?.orderId)
-  }
+  // Unused - keeping for reference
+  // const _handleVendorInformation = () => {
+  //   if (order?.customer) {
+  //     // Navigate to vendor detail page if available
+  //     console.log('View vendor information for order:', order?.orderId)
+  //   }
+  // }
 
   const handleDownloadInvoice = async () => {
     if (!orderId || !order) return
@@ -138,10 +131,11 @@ export default function OrderDetails() {
     console.log('Cancel order:', order?.orderId)
   }
 
-  const handleProcessRefund = () => {
-    // Handle process refund logic
-    console.log('Process refund for order:', order?.orderId)
-  }
+  // Unused - keeping for reference
+  // const _handleProcessRefund = () => {
+  //   // Handle process refund logic
+  //   console.log('Process refund for order:', order?.orderId)
+  // }
 
   const handleSendInvoice = () => {
     // Handle send invoice logic
@@ -164,115 +158,146 @@ export default function OrderDetails() {
     )
   }
 
+  // Calculate totals for order summary
+  const subtotal = order.products.reduce((sum, product) => sum + product.total, 0)
+  const itemsCount = order.products.reduce((sum, product) => sum + product.quantity, 0)
+
   return (
     <div className="w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="mb-2 text-xl sm:text-2xl font-bold text-gray-900">Orders</h1>
-        <p className="mb-4 text-xs sm:text-sm text-gray-600">Dashboard • Orders</p>
+        <h1 className="mb-2 text-xl sm:text-2xl font-bold text-gray-900">E-commerce Products</h1>
+        <p className="mb-4 text-xs sm:text-sm text-gray-600">Dashboard · Order View</p>
       </div>
 
       {/* Order Details Container */}
-      <div className="rounded-lg bg-white p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-x-hidden">
-        {/* Order Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 break-words">Order #{order.orderId}</h2>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">{order.date} at {order.time}</p>
-          </div>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={handleVendorInformation}
-              className="flex items-center gap-2 sm:gap-3 rounded-lg bg-[#F39C12] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white hover:bg-[#E67E22] transition-colors whitespace-nowrap"
-            >
-              <img
-                src={order.customer.avatar}
-                alt={order.customer.name}
-                className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0"
-              />
-              <div className="flex flex-col items-start">
-                <span className="text-xs sm:text-sm font-semibold leading-tight">{order.customer.name}</span>
-                <span className="text-xs font-normal leading-tight opacity-90">Vendor Information</span>
+      <div className="space-y-4 sm:space-y-6">
+        {/* Order Details Card */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Order #{order.orderId}</h2>
+              <p className="mt-1 text-sm text-gray-600">Manage order status and view details</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Status:</label>
+                <select 
+                  defaultValue={order.status}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F7931E] focus:outline-none focus:ring-1 focus:ring-[#F7931E]"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="refunded">Refunded</option>
+                </select>
               </div>
-            </button>
-            <button
-              type="button"
-              onClick={handleDownloadInvoice}
-              className="flex items-center gap-1 sm:gap-2 rounded-lg bg-[#F39C12] px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white hover:bg-[#E67E22] transition-colors whitespace-nowrap"
-            >
-              <svg className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                />
-              </svg>
-              <span className="hidden sm:inline">Download Invoice</span>
-              <span className="sm:hidden">Invoice</span>
-            </button>
+              <button
+                type="button"
+                onClick={handleUpdateStatus}
+                className="rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#E8840D]"
+              >
+                Update Status
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Customer Information Card */}
-        <CustomerInformationCard customer={order.customer} status={order.status} />
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+            {/* Customer Information Card */}
+            <CustomerInformationCard customer={order.customer} status={order.status} shipping={order.shipping} />
 
-        {/* Product Details Card */}
-        <ProductDetailsCard products={order.products} />
+            {/* Ordered Items Card */}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-base font-semibold text-gray-900">Ordered Items</h3>
+              <div className="space-y-0 divide-y divide-gray-200">
+                {order.products.map((product, _index) => (
+                  <div key={product.id} className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
+                    <img
+                      src={product.image || 'https://via.placeholder.com/80'}
+                      alt={product.name}
+                      className="h-20 w-20 rounded-lg object-cover flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-medium text-gray-900">{product.name}</h4>
+                      <p className="mt-1 text-xs text-gray-600">Color: Black, Size: One Size</p>
+                      <div className="mt-2 flex items-center gap-4 text-xs text-gray-600">
+                        <span>Quantity: {product.quantity}</span>
+                        <span>Price: ${product.price.toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">Subtotal: ${product.total.toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
-        {/* Payment Information Card */}
-        <PaymentInformationCard payment={order.payment} />
+          {/* Right Column */}
+          <div className="space-y-4 sm:space-y-6">
+            {/* Order Summary Card */}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-base font-semibold text-gray-900">Order Summary</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Placed On:</span>
+                  <span className="font-medium text-gray-900">{order.date}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Order Type:</span>
+                  <span className="font-medium text-gray-900">Regular Order</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Payment Method:</span>
+                  <span className="font-medium text-gray-900">{order.payment.method === 'credit-card' ? 'Online Payment' : order.payment.method}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Items Count:</span>
+                  <span className="font-medium text-gray-900">{itemsCount} items</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Subtotal:</span>
+                  <span className="font-medium text-gray-900">${subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Shipping:</span>
+                  <span className="font-medium text-gray-900">${order.payment.shipping.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Tax:</span>
+                  <span className="font-medium text-gray-900">${order.payment.tax.toFixed(2)}</span>
+                </div>
+                {order.payment.discount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Discount:</span>
+                    <span className="font-medium text-green-600">-${order.payment.discount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t border-gray-200">
+                  <span className="text-sm font-semibold text-gray-900">Total Amount:</span>
+                  <span className="text-base font-bold text-gray-900">${order.payment.total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
 
-        {/* Shipping Information Card */}
-        <ShippingInformationCard shipping={order.shipping} />
+            {/* Quick Actions Card */}
+            <QuickActionsCard
+              onPrintInvoice={handleDownloadInvoice}
+              onSendEmail={handleSendInvoice}
+              onTrackShipment={() => console.log('Track shipment')}
+              onCancelOrder={handleCancelOrder}
+            />
 
-        {/* Order Timeline Card */}
-        <OrderTimelineCard timeline={order.timeline} />
-
-        {/* Bottom Action Buttons */}
-        <div className="flex flex-col sm:flex-row flex-wrap justify-end gap-2 sm:gap-3 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={handleCancelOrder}
-            className="w-full sm:w-auto rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
-          >
-            Cancel Order
-          </button>
-          <button
-            type="button"
-            onClick={handleUpdateStatus}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white hover:bg-blue-700 transition-colors whitespace-nowrap"
-          >
-            Update Status
-            <ChevronDownIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={handleProcessRefund}
-            className="w-full sm:w-auto rounded-lg bg-[#F39C12] px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white hover:bg-[#E67E22] transition-colors whitespace-nowrap"
-          >
-            <span className="hidden sm:inline">Process Refund/Cancel Order</span>
-            <span className="sm:hidden">Refund/Cancel</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleSendInvoice}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-lg bg-[#F39C12] px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white hover:bg-[#E67E22] transition-colors whitespace-nowrap"
-          >
-            <svg className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
-            </svg>
-            Send Invoice
-          </button>
+            {/* Order Timeline Card */}
+            <OrderTimelineCard timeline={order.timeline} />
+          </div>
         </div>
       </div>
     </div>
   )
 }
-

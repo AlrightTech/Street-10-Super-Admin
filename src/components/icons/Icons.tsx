@@ -106,8 +106,22 @@ export const DownloadIcon = ({ className = 'h-5 w-5' }: { className?: string }) 
 )
 
 export const CalendarIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Calendar body - rounded rectangle */}
+    <rect x="4" y="6" width="16" height="14" rx="2" fill="#6B7280" stroke="#4B5563" strokeWidth="1.5"/>
+    {/* Top binding rings */}
+    <rect x="7" y="3" width="2" height="3" rx="0.5" fill="#4B5563"/>
+    <rect x="15" y="3" width="2" height="3" rx="0.5" fill="#4B5563"/>
+    {/* Grid of dots - 3x3 */}
+    <circle cx="8" cy="10" r="1.5" fill="#E5E7EB"/>
+    <circle cx="12" cy="10" r="1.5" fill="#E5E7EB"/>
+    <circle cx="16" cy="10" r="1.5" fill="#E5E7EB"/>
+    <circle cx="8" cy="14" r="1.5" fill="#E5E7EB"/>
+    <circle cx="12" cy="14" r="1.5" fill="#E5E7EB"/>
+    <circle cx="16" cy="14" r="1.5" fill="#E5E7EB"/>
+    <circle cx="8" cy="18" r="1.5" fill="#E5E7EB"/>
+    <circle cx="12" cy="18" r="1.5" fill="#E5E7EB"/>
+    <circle cx="16" cy="18" r="1.5" fill="#E5E7EB"/>
   </svg>
 )
 
@@ -272,6 +286,12 @@ export const EyeOffIcon = ({ className = 'h-5 w-5' }: { className?: string }) =>
 export const CheckIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+  </svg>
+)
+
+export const DocumentIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
   </svg>
 )
 

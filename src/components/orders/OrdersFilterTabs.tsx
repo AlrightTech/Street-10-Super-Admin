@@ -21,7 +21,7 @@ interface OrdersFilterTabsProps {
 
 export default function OrdersFilterTabs({ tabs, activeTab, onTabChange, className = '' }: OrdersFilterTabsProps) {
   return (
-    <nav className={`flex flex-nowrap items-center gap-1 ${className}`}>
+    <nav className={`flex flex-nowrap items-center gap-1 -mx-1 px-1 ${className}`}>
       {tabs.map((tab) => {
         const isActive = tab.key === activeTab
 

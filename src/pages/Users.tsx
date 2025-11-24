@@ -29,7 +29,7 @@ export default function Users() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [userToDelete, setUserToDelete] = useState<number | null>(null)
+  const [userToDelete, setUserToDelete] = useState<string | null>(null)
   
   // Filter states
   const [totalPurchaseFilter, setTotalPurchaseFilter] = useState<string>('All')
@@ -38,6 +38,9 @@ export default function Users() {
   const [filters] = useState<any>({})
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 })
 
+  // Map to store API user IDs
+  const [userIdMap, setUserIdMap] = useState<Map<number, string>>(new Map())
+
   // Fetch users from API with fallback to mock data
   useEffect(() => {
     const fetchUsers = async () => {
@@ -45,17 +48,28 @@ export default function Users() {
         setLoading(true)
         const result = await usersApi.getAll({ ...filters, page: pagination.page, limit: pagination.limit })
         
-        // Transform API users to frontend User format
-        const transformedUsers: User[] = result.data.map((user: ApiUser) => ({
-          id: parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000, // Convert UUID to number for compatibility
-          name: user.email.split('@')[0], // Use email prefix as name
-          email: user.email,
-          role: user.role,
-          totalPurchase: user.stats?.totalSpent ? parseFloat(user.stats.totalSpent) / 100 : 0, // Convert minor units
-          status: user.status === 'active' ? 'active' : user.status === 'blocked' ? 'blocked' : 'pending',
-          joinDate: new Date(user.createdAt).toLocaleDateString(),
-          biddingWins: 0, // Default value
-        }))
+        // Transform API users to frontend User format and create mapping
+        const transformedUsers: User[] = result.data.map((user: ApiUser) => {
+          const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+          return {
+            id: numericId,
+            name: user.email.split('@')[0],
+            email: user.email,
+            role: user.role,
+            totalPurchase: user.stats?.totalSpent ? parseFloat(user.stats.totalSpent.toString()) / 100 : 0,
+            status: user.status === 'active' ? 'active' : user.status === 'blocked' ? 'blocked' : 'pending',
+            joinDate: new Date(user.createdAt).toLocaleDateString(),
+            biddingWins: 0, // Default value
+          }
+        })
+        
+        // Create mapping of numeric ID to API UUID
+        const newMap = new Map<number, string>()
+        result.data.forEach((user: ApiUser) => {
+          const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+          newMap.set(numericId, user.id)
+        })
+        setUserIdMap(newMap)
         
         setUsers(transformedUsers)
         setPagination(result.pagination)
@@ -75,16 +89,20 @@ export default function Users() {
    * Handle edit user
    */
   const handleEdit = (userId: number, user: User) => {
-    // Navigate to edit page with user data in state
-    navigate(`/users/${userId}/edit`, { state: { user } })
+    const apiUserId = userIdMap.get(userId)
+    if (apiUserId) {
+      navigate(`/users/${apiUserId}/edit`, { state: { user } })
+    }
   }
 
   /**
    * Handle view user
    */
   const handleView = (userId: number) => {
-    // Navigate to user details page
-    navigate(`/users/${userId}`)
+    const apiUserId = userIdMap.get(userId)
+    if (apiUserId) {
+      navigate(`/users/${apiUserId}`)
+    }
   }
 
   /**
@@ -146,9 +164,12 @@ export default function Users() {
   const confirmDelete = async () => {
     if (userToDelete !== null) {
       try {
-        // TODO: Implement delete user API endpoint
+        // TODO: Implement delete user API endpoint when available
         // For now, just remove from local state
-        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userToDelete))
+        setUsers((prevUsers) => prevUsers.filter((user) => {
+          const apiUserId = userIdMap.get(user.id)
+          return apiUserId !== userToDelete
+        }))
         setDeleteModalOpen(false)
         setUserToDelete(null)
       } catch (error) {
@@ -171,44 +192,40 @@ export default function Users() {
    */
   const handleToggleBlock = async (userId: number) => {
     try {
-      // Find user in current list to get their status
+      const apiUserId = userIdMap.get(userId)
+      if (!apiUserId) return
+
       const user = users.find((u) => u.id === userId)
       if (!user) return
 
       const isCurrentlyBlocked = user.status === 'blocked'
-      // Find the API user ID (we need to store mapping or refetch)
-      // For now, we'll need to handle this differently
-      // This is a simplified version - in production, maintain a proper mapping
-      const apiUserId = users.find((u) => u.id === userId)?.email
+      await usersApi.toggleBlock(apiUserId, !isCurrentlyBlocked)
       
-      if (apiUserId) {
-        await usersApi.toggleBlock(apiUserId, !isCurrentlyBlocked)
-        // Refresh users list
-        const result = await usersApi.getAll({ ...filters, page: pagination.page, limit: pagination.limit })
-        const transformedUsers: User[] = result.data.map((user: ApiUser) => ({
-          id: parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+      // Refresh users list
+      const result = await usersApi.getAll({ ...filters, page: pagination.page, limit: pagination.limit })
+      const transformedUsers: User[] = result.data.map((user: ApiUser) => {
+        const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+        return {
+          id: numericId,
           name: user.email.split('@')[0],
           email: user.email,
           role: user.role,
-          totalPurchase: user.stats?.totalSpent ? parseFloat(user.stats.totalSpent) / 100 : 0,
+          totalPurchase: user.stats?.totalSpent ? parseFloat(user.stats.totalSpent.toString()) / 100 : 0,
           status: user.status === 'active' ? 'active' : user.status === 'blocked' ? 'blocked' : 'pending',
           joinDate: new Date(user.createdAt).toLocaleDateString(),
           biddingWins: 0,
-        }))
-        setUsers(transformedUsers)
-      } else {
-        // Fallback: update local state if API call fails
-        setUsers((prevUsers) =>
-          prevUsers.map((user) =>
-            user.id === userId
-              ? {
-                  ...user,
-                  status: user.status === 'active' ? 'blocked' : user.status === 'blocked' ? 'active' : user.status,
-                }
-              : user
-          )
-        )
-      }
+        }
+      })
+      
+      // Update mapping
+      const newMap = new Map<number, string>()
+      result.data.forEach((user: ApiUser) => {
+        const numericId = parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+        newMap.set(numericId, user.id)
+      })
+      setUserIdMap(newMap)
+      
+      setUsers(transformedUsers)
     } catch (error) {
       console.error('Error toggling block status:', error)
       // Fallback: update local state if API call fails

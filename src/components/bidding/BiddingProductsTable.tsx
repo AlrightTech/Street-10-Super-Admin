@@ -39,52 +39,63 @@ export default function BiddingProductsTable({ products, emptyState, onView }: B
 
   return (
     <Fragment>
-      <div className="w-full overflow-hidden rounded-lg">
-        <div className="overflow-x-auto">
-          <table className="min-w-full w-full border-collapse bg-white">
+      <div className="w-full">
+        <div className="overflow-x-auto lg:overflow-x-visible">
+          <table className="w-full border-collapse bg-white">
+            <colgroup>
+              <col style={{ width: 'auto' }} />
+              <col style={{ width: 'auto' }} />
+              <col style={{ width: 'auto' }} />
+              <col style={{ width: 'auto' }} />
+              <col style={{ width: 'auto' }} />
+              <col style={{ width: '140px', minWidth: '140px' }} />
+              <col style={{ width: 'auto' }} />
+            </colgroup>
             <thead className="bg-white">
               <tr>
-                <TableHeader>PRODUCT</TableHeader>
-                <TableHeader>STARTING PRICE</TableHeader>
-                <TableHeader>CURRENT BID</TableHeader>
-                <TableHeader>BIDS</TableHeader>
-                <TableHeader>TIME LEFT</TableHeader>
-                <TableHeader>STATUS</TableHeader>
-                <TableHeader align="center">ACTION</TableHeader>
+                <TableHeader>Product</TableHeader>
+                <TableHeader>Starting Price</TableHeader>
+                <TableHeader>Current Bid</TableHeader>
+                <TableHeader>Bids</TableHeader>
+                <TableHeader>Time Left</TableHeader>
+                <TableHeader>Status</TableHeader>
+                <TableHeader align="center">Action</TableHeader>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {products.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50 border-b border-gray-200">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
+            <tbody className="bg-white">
+              {products.map((product, index) => (
+                <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${index === products.length - 1 ? 'border-b-0' : ''}`}>
+                  <TableCell className="py-2">
+                    <div className="flex items-center gap-3 min-w-0">
                       {product.imageUrl ? (
                         <img
                           src={product.imageUrl}
                           alt={product.name}
-                          className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                          className="h-12 w-12 rounded-lg object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                        <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
                           <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </div>
                       )}
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-gray-900 font-medium text-sm truncate">{product.name}</span>
-                        <span className="text-gray-500 text-xs">{product.category}</span>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-gray-900 font-normal text-sm truncate">{product.name}</span>
+                        <span className="text-gray-500 text-xs mt-0.5 truncate">{product.category}</span>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-900 font-medium">{product.startingPrice}</TableCell>
-                  <TableCell className="text-sm text-gray-900 font-medium">{product.currentBid}</TableCell>
-                  <TableCell className="text-sm text-gray-700">{product.bids}</TableCell>
-                  <TableCell className="text-sm text-gray-700">{product.timeLeft}</TableCell>
-                  <TableCell>
-                    <BiddingProductStatusBadge status={product.status} />
+                  <TableCell className="text-sm text-gray-900 font-normal py-2 whitespace-nowrap">{product.startingPrice}</TableCell>
+                  <TableCell className="text-sm text-gray-900 font-normal py-2 whitespace-nowrap">{product.currentBid}</TableCell>
+                  <TableCell className="text-sm text-gray-600 font-normal py-2 whitespace-nowrap">{product.bids}</TableCell>
+                  <TableCell className="text-sm text-gray-600 font-normal py-2 whitespace-nowrap">{product.timeLeft}</TableCell>
+                  <TableCell className="py-2 max-w-[140px] text-xs">
+                    <div className="flex items-center  justify-start">
+                      <BiddingProductStatusBadge status={product.status} />
+                    </div>
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" className="py-2 whitespace-nowrap">
                     <BiddingProductsActionMenu
                       onView={() => onView?.(product)}
                       align="right"
@@ -115,9 +126,13 @@ function BiddingProductStatusBadge({ status }: { status: BiddingProductStatus })
     'scheduled': 'Scheduled',
   }
 
+  // Reduce padding for longer status text to prevent overflow
+  const isLongText = status === 'payment-requested' || status === 'fully-paid-sold'
+  const paddingClass = isLongText ? 'px-1.5 py-1' : 'px-2 py-1'
+  
   return (
     <span
-      className={`inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium ${statusStyles[status]}`}
+      className={`inline-flex items-center justify-center rounded ${paddingClass} text-xs font-medium whitespace-nowrap ${statusStyles[status]}`}
     >
       {statusLabels[status]}
     </span>
@@ -135,7 +150,7 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b-2 border-gray-300 bg-white ${textAlign}`}
+      className={`px-4 py-3 text-sm font-semibold text-gray-700 tracking-wider border-b border-gray-300 bg-white whitespace-nowrap ${textAlign}`}
     >
       {children}
     </th>
@@ -153,7 +168,7 @@ function TableCell({ children, className = '', align = 'left' }: TableCellProps)
   
   return (
     <td
-      className={`px-4 py-4 whitespace-nowrap text-sm ${textAlign} ${className}`}
+      className={`px-4 text-sm ${textAlign} ${className}`}
     >
       {children}
     </td>

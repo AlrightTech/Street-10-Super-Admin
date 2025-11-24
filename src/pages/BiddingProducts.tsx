@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react'
-import { PlusIcon, CalendarIcon, ChevronDownIcon } from '../components/icons/Icons'
+import { useNavigate } from 'react-router-dom'
+import { CalendarIcon } from '../components/icons/Icons'
+import FilterDropdown from '../components/finance/FilterDropdown'
+import SearchBar from '../components/ui/SearchBar'
 import BiddingProductsTable, { type BiddingProduct } from '../components/bidding/BiddingProductsTable'
-import EndedUnsoldDetail from './bidding/EndedUnsoldDetail'
-import PaymentRequestedDetail from './bidding/PaymentRequestedDetail'
-import FullyPaidSoldDetail from './bidding/FullyPaidSoldDetail'
-import ScheduledDetail from './bidding/ScheduledDetail'
+import { BIDDING_PRODUCTS_DATA, getProductDetailRoute } from '../utils/biddingProducts'
 
-// Sample data for Bidding Products
-const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
+// Unused - keeping for reference
+/*
+const BIDDING_PRODUCTS_DATA_OLD: BiddingProduct[] = [
   {
     id: '1',
     name: 'Vintage Rolex Submariner Watch',
     category: 'Luxury Goods',
-    startingPrice: '$8,000',
+    startingPrice: '$5,000',
     currentBid: '$8,750',
     bids: 23,
     timeLeft: 'Ended 15/02/2024',
@@ -46,7 +47,7 @@ const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
     name: 'Antique Persian Rug',
     category: 'Home Decor',
     startingPrice: '$1,200',
-    currentBid: 'No bids',
+    currentBid: '$No bids',
     bids: 0,
     timeLeft: 'Ended 15/02/2024',
     status: 'scheduled',
@@ -97,6 +98,7 @@ const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
     imageUrl: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=100&h=100&fit=crop',
   },
 ]
+*/
 
 const PAGE_SIZE = 4
 
@@ -104,27 +106,58 @@ const PAGE_SIZE = 4
  * Bidding Products page component
  */
 export default function BiddingProducts() {
+  const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState('')
-  const [sortBy] = useState('date')
-  const [statusFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('Sort By Date')
+  const [statusFilter, setStatusFilter] = useState('All Status')
   const [currentPage, setCurrentPage] = useState(1)
-  const [viewingProduct, setViewingProduct] = useState<BiddingProduct | null>(null)
+
+  // Parse date from timeLeft string (e.g., "Ended 15/02/2024")
+  const parseDate = (timeLeft: string): Date => {
+    const match = timeLeft.match(/(\d{2})\/(\d{2})\/(\d{4})/)
+    if (match) {
+      const [, day, month, year] = match
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    }
+    return new Date(0) // Default to epoch if parsing fails
+  }
 
   const filteredProducts = useMemo(() => {
     let result = [...BIDDING_PRODUCTS_DATA]
 
+    // Filter by search value
     if (searchValue.trim()) {
       const query = searchValue.toLowerCase()
       result = result.filter((product) => product.name.toLowerCase().includes(query))
     }
 
-    if (statusFilter !== 'all') {
-      result = result.filter((product) => product.status === statusFilter)
+    // Filter by status
+    if (statusFilter !== 'All Status') {
+      const statusMap: Record<string, string> = {
+        'Ended - Unsold': 'ended-unsold',
+        'Payment Requested': 'payment-requested',
+        'Fully Paid - Sold': 'fully-paid-sold',
+        'Scheduled': 'scheduled',
+      }
+      const statusValue = statusMap[statusFilter]
+      if (statusValue) {
+        result = result.filter((product) => product.status === statusValue)
+      }
     }
 
-    // Sort by date (for now, just return as is since we don't have actual dates)
-    if (sortBy === 'date') {
-      // Keep original order
+    // Sort by date
+    if (sortBy === 'Newest First') {
+      result.sort((a, b) => {
+        const dateA = parseDate(a.timeLeft)
+        const dateB = parseDate(b.timeLeft)
+        return dateB.getTime() - dateA.getTime()
+      })
+    } else if (sortBy === 'Oldest First') {
+      result.sort((a, b) => {
+        const dateA = parseDate(a.timeLeft)
+        const dateB = parseDate(b.timeLeft)
+        return dateA.getTime() - dateB.getTime()
+      })
     }
 
     return result
@@ -142,105 +175,129 @@ export default function BiddingProducts() {
     setCurrentPage(page)
   }
 
-  const handleViewProduct = (product: BiddingProduct) => {
-    setViewingProduct(product)
-  }
-
-  const handleCloseDetail = () => {
-    setViewingProduct(null)
-  }
-
-  // Show detail view based on product status
-  if (viewingProduct) {
-    switch (viewingProduct.status) {
-      case 'ended-unsold':
-        return <EndedUnsoldDetail product={viewingProduct} onClose={handleCloseDetail} />
-      case 'payment-requested':
-        return <PaymentRequestedDetail product={viewingProduct} onClose={handleCloseDetail} />
-      case 'fully-paid-sold':
-        return <FullyPaidSoldDetail product={viewingProduct} onClose={handleCloseDetail} />
-      case 'scheduled':
-        return <ScheduledDetail product={viewingProduct} onClose={handleCloseDetail} />
-      default:
-        return <EndedUnsoldDetail product={viewingProduct} onClose={handleCloseDetail} />
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    
+    if (totalPages <= 8) {
+      // Show all pages if 8 or fewer
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      // Always show first page
+      pages.push(1)
+      
+      if (currentPage > 3) {
+        pages.push('...')
+      }
+      
+      // Show pages around current page
+      const start = Math.max(2, currentPage - 1)
+      const end = Math.min(totalPages - 1, currentPage + 1)
+      
+      for (let i = start; i <= end; i++) {
+        if (i !== 1 && i !== totalPages) {
+          pages.push(i)
+        }
+      }
+      
+      if (currentPage < totalPages - 2) {
+        pages.push('...')
+      }
+      
+      // Always show last page
+      if (totalPages > 1) {
+        pages.push(totalPages)
+      }
     }
+    
+    return pages
+  }
+
+  const handleViewProduct = (product: BiddingProduct) => {
+    const route = getProductDetailRoute(product)
+    navigate(route)
+  }
+
+  const handleSortChange = (value: string) => {
+    setSortBy(value)
+    setCurrentPage(1) // Reset to first page when sorting changes
+  }
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value)
+    setCurrentPage(1) // Reset to first page when filter changes
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value)
+    setCurrentPage(1) // Reset to first page when search changes
+  }
+
+  const handleAddProduct = () => {
+    navigate('/building-products/add')
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Bidding Products</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          <span>Dashboard &gt; </span>
+      <div className="mb-4 sm:mb-6">
+        <p className="text-sm text-gray-700">
+          <span>Dashboard</span>
+          <span className="mx-1">:</span>
           <span className="text-gray-900">Bidding Products</span>
         </p>
       </div>
 
       {/* Manage Product Catalog Section */}
-      <section className="space-y-4">
+      <section className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">Manage your product catalog</h2>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
             {/* Sort By Date Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-              >
-                <CalendarIcon className="h-4 w-4" />
-                <span>Sort By Date</span>
-                <ChevronDownIcon className="h-4 w-4" />
-              </button>
-            </div>
+            <FilterDropdown
+              label={sortBy}
+              options={['Sort By Date', 'Newest First', 'Oldest First']}
+              onSelect={handleSortChange}
+              icon={<CalendarIcon className="h-4 w-4" />}
+              hideArrow={true}
+            />
 
             {/* All Status Dropdown */}
-            <div className="relative">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-              >
-                <span>All Status</span>
-                <ChevronDownIcon className="h-4 w-4" />
-              </button>
-            </div>
+            <FilterDropdown
+              label={statusFilter}
+              options={['All Status', 'Ended - Unsold', 'Payment Requested', 'Fully Paid - Sold', 'Scheduled']}
+              onSelect={handleStatusChange}
+            />
 
             {/* Search Input */}
-            <div className="relative w-full sm:w-auto min-w-[180px] sm:min-w-[200px]">
-              <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search by Title"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm outline-none placeholder:text-gray-400 focus:border-[#FF8C00] focus:ring-1 focus:ring-[#FF8C00]"
-              />
-            </div>
+            <SearchBar
+              placeholder="Search by Title"
+              value={searchValue}
+              onChange={handleSearchChange}
+              className="min-w-[180px] sm:min-w-[200px]"
+            />
 
             {/* Add Product Button */}
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap cursor-pointer"
+              onClick={handleAddProduct}
+              className="inline-flex items-center justify-center 
+              gap-2 rounded-lg bg-[#F7931E] px-2 py-2.5 text-xs font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap cursor-pointer"
             >
-              <PlusIcon className="h-4 w-4" />
-              Add Product
+              
+              +Add Product
             </button>
           </div>
         </div>
 
         {/* Products Table */}
-        <div className="rounded-xl bg-white shadow-sm">
-          <div className="px-4 py-4 sm:px-6">
-            <BiddingProductsTable products={paginatedProducts} onView={handleViewProduct} />
-          </div>
+        <div className="rounded-xl bg-white shadow-sm border border-gray-200 overflow-hidden">
+          <BiddingProductsTable products={paginatedProducts} onView={handleViewProduct} />
 
           {/* Pagination */}
-          <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-6">
-            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
+          <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
               <button
                 type="button"
                 onClick={() => handlePageChange(currentPage - 1)}
@@ -249,53 +306,34 @@ export default function BiddingProducts() {
               >
                 Back
               </button>
-              <div className="flex items-center gap-1">
-                {/* Show first 3 pages */}
-                {Array.from({ length: Math.min(totalPages, 3) }, (_, index) => index + 1).map((page) => (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => handlePageChange(page)}
-                    className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
-                      currentPage === page
-                        ? 'bg-[#6B46C1] text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                {/* Show ellipsis if there are more than 3 pages */}
-                {totalPages > 3 && (
-                  <span className="px-1 text-gray-600 text-sm">...</span>
-                )}
-                {/* Show last 2 pages if total pages > 3 */}
-                {totalPages > 3 && (
-                  <>
+              <div className="flex items-center gap-0.5 sm:gap-1">
+                {getPageNumbers().map((page, index) => {
+                  if (page === '...') {
+                    return (
+                      <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                        ...
+                      </span>
+                    )
+                  }
+                  
+                  const pageNum = page as number
+                  const isActive = pageNum === currentPage
+                  
+                  return (
                     <button
+                      key={pageNum}
                       type="button"
-                      onClick={() => handlePageChange(totalPages - 1)}
-                      className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
-                        currentPage === totalPages - 1
-                          ? 'bg-[#6B46C1] text-white'
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
+                        isActive
+                          ? 'bg-[#4C50A2] text-white'
                           : 'text-gray-600 hover:bg-gray-100'
                       }`}
                     >
-                      {totalPages - 1}
+                      {pageNum}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePageChange(totalPages)}
-                      className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
-                        currentPage === totalPages
-                          ? 'bg-[#6B46C1] text-white'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
+                  )
+                })}
               </div>
               <button
                 type="button"

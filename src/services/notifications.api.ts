@@ -20,7 +20,7 @@ export interface Notification {
 export interface NotificationFilters {
   user_id?: string | null;
   type?: string;
-  read?: boolean;
+  is_read?: boolean;
   priority?: string;
   start_date?: string;
   end_date?: string;

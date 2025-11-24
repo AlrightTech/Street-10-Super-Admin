@@ -115,5 +115,10 @@ export const ordersApi = {
     const response = await api.get<ApiResponse<InvoiceData>>(`/admin/orders/${id}/invoice`);
     return response.data.data;
   },
+
+  // Send invoice to customer
+  sendInvoice: async (id: string): Promise<void> => {
+    await api.post<ApiResponse<void>>(`/admin/orders/${id}/invoice/send`);
+  },
 };
 

@@ -10,17 +10,21 @@ interface FinanceSummaryCardProps {
 
 export default function FinanceSummaryCard({ icon, title, value, subtext, iconBgColor }: FinanceSummaryCardProps) {
   return (
-    <div className="w-full rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 transition-colors hover:bg-gray-50">
+    <div className="
+    
+    ">
       <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-4">
           {/* Icon */}
-          <div className="mb-3 flex items-center">
+        
             <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${iconBgColor}`}>
               {icon}
             </div>
-          </div>
+          
           
           {/* Title */}
+          <div>
+
           <h3 className="text-sm font-normal text-gray-600 mb-2">{title}</h3>
           
           {/* Value */}
@@ -28,7 +32,9 @@ export default function FinanceSummaryCard({ icon, title, value, subtext, iconBg
           
           {/* Subtext */}
           <p className="text-xs sm:text-sm text-gray-500">{subtext}</p>
+          </div>
         </div>
+        
       </div>
     </div>
   )
