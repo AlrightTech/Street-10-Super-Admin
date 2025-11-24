@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getVendorDetailById } from '../data/mockVendorDetails'
+import { vendorsApi } from '../services/vendors.api'
 import type { VendorDetailData } from '../types/vendorDetails'
 import { useTranslation } from '../hooks/useTranslation'
 
@@ -63,25 +63,120 @@ export default function VendorDetail() {
   const navigate = useNavigate()
   const { translateStatus, translateLabel, translateTitle, translateRole, translateCategory, translateServiceName } = useTranslation()
   const [vendor, setVendor] = useState<VendorDetailData | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!id) return
-    const detail = getVendorDetailById(Number(id))
-    if (!detail) {
-      navigate('/vendors', { replace: true })
-      return
+    const loadVendor = async () => {
+      if (!id) {
+        navigate('/vendors', { replace: true })
+        return
+      }
+
+      try {
+        setLoading(true)
+        let vendorIdToFetch: string = id
+
+        // Check if id is numeric (not a UUID)
+        const isNumericId = !id.includes("-") && /^\d+$/.test(id)
+
+        if (isNumericId) {
+          // Fetch vendors list to find UUID
+          const vendorsResult = await vendorsApi.getAll({ page: 1, limit: 1000 })
+          if (vendorsResult.data && vendorsResult.data.length > 0) {
+            const vendorIdMap = new Map<number, string>()
+            vendorsResult.data.forEach((v: any) => {
+              try {
+                if (v.id && typeof v.id === "string") {
+                  const numericId =
+                    parseInt(v.id.replace(/-/g, "").substring(0, 10), 16) %
+                    1000000
+                  vendorIdMap.set(numericId, v.id)
+                }
+              } catch (e) {
+                console.error("Error converting vendor ID:", v.id, e)
+              }
+            })
+            const numericId = parseInt(id)
+            const uuid = vendorIdMap.get(numericId)
+            if (uuid) {
+              vendorIdToFetch = uuid
+              console.log(`Successfully converted numeric ID ${id} to UUID: ${uuid}`)
+            } else {
+              throw new Error(`Vendor with ID ${id} not found`)
+            }
+          } else {
+            throw new Error("No vendors found in the system")
+          }
+        }
+
+        // Fetch vendor from API
+        const apiVendor = await vendorsApi.getById(vendorIdToFetch)
+
+        // Transform API response to VendorDetailData format
+        const transformedVendor: VendorDetailData = {
+          id: parseInt(apiVendor.id.replace(/-/g, "").substring(0, 10), 16) % 1000000,
+          ownerName: apiVendor.name || apiVendor.user?.email?.split('@')[0] || 'Unknown',
+          businessName: apiVendor.name || 'Unknown Business',
+          email: apiVendor.email || apiVendor.user?.email || '',
+          phone: apiVendor.phone || apiVendor.user?.phone || '',
+          role: 'vendor',
+          status: apiVendor.status === 'approved' ? 'approved' : 'pending',
+          avatar: '', // API doesn't provide avatar
+          address: 'N/A', // API doesn't provide address
+          vendorType: 'General',
+          commissionRate: '10%', // Default, API doesn't provide this
+          financialInfo: {
+            commissionRate: '10%',
+            accountStatus: apiVendor.status === 'approved' ? 'active' : 'pending',
+            totalSales: '0', // Would need to calculate from orders
+            paymentRequest: 'pending',
+          },
+          performance: [
+            { id: '1', label: 'Total Orders', value: '0', icon: 'clipboard' },
+            { id: '2', label: 'Completed Orders', value: '0', icon: 'check' },
+            { id: '3', label: 'Rating', value: '0', icon: 'star' },
+            { id: '4', label: 'Pending Orders', value: '0', icon: 'clipboard' },
+          ],
+          documents: [
+            { id: '1', title: 'Business License', status: apiVendor.status === 'approved' ? 'verified' : 'pending', date: new Date(apiVendor.createdAt).toLocaleDateString() },
+            { id: '2', title: 'ID Document', status: apiVendor.status === 'approved' ? 'verified' : 'pending', date: new Date(apiVendor.createdAt).toLocaleDateString() },
+            { id: '3', title: 'Tax Certificate', status: apiVendor.status === 'approved' ? 'verified' : 'pending', date: new Date(apiVendor.createdAt).toLocaleDateString() },
+          ],
+          services: [], // Would need to fetch from products API
+        }
+
+        if (transformedVendor.status !== 'approved') {
+          navigate(`/vendor-request-detail/${transformedVendor.id}`, { replace: true })
+          return
+        }
+
+        setVendor(transformedVendor)
+      } catch (error: any) {
+        console.error('Error loading vendor:', error)
+        alert(`Error loading vendor: ${error?.message || 'Vendor not found'}`)
+        navigate('/vendors', { replace: true })
+      } finally {
+        setLoading(false)
+      }
     }
 
-    if (detail.status !== 'approved') {
-      navigate(`/vendor-request-detail/${detail.id}`, { replace: true })
-      return
-    }
-
-    setVendor(detail)
+    loadVendor()
   }, [id, navigate])
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-gray-600">Loading vendor data...</p>
+      </div>
+    )
+  }
+
   if (!vendor) {
-    return null
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-gray-600">Vendor not found</p>
+      </div>
+    )
   }
 
   return (

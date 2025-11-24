@@ -1,39 +1,41 @@
 import { useState } from 'react'
 import { XIcon } from '../icons/Icons'
-import type { VendorStatus } from '../../types/vendors'
+import { vendorsApi } from '../../services/vendors.api'
+import { usersApi } from '../../services/users.api'
 
 interface AddVendorModalProps {
   isOpen: boolean
   onClose: () => void
-  onAdd: (vendorData: {
-    ownerName: string
-    businessName: string
-    status: VendorStatus
-    avatar?: string
-  }) => void
+  onAdd: () => void // Callback to refresh vendors list
 }
 
 export default function AddVendorModal({ isOpen, onClose, onAdd }: AddVendorModalProps) {
   const [formData, setFormData] = useState({
-    ownerName: '',
-    businessName: '',
-    avatar: '',
+    name: '',
+    email: '',
+    phone: '',
+    ownerIdUrl: '',
   })
-  const [status, setStatus] = useState<VendorStatus>('pending')
-  const [errors, setErrors] = useState<{ ownerName?: string; businessName?: string }>({})
+  const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string }>({})
+  const [loading, setLoading] = useState(false)
 
   if (!isOpen) return null
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     // Validation
-    const newErrors: { ownerName?: string; businessName?: string } = {}
-    if (!formData.ownerName.trim()) {
-      newErrors.ownerName = 'Owner name is required'
+    const newErrors: { name?: string; email?: string; phone?: string } = {}
+    if (!formData.name.trim()) {
+      newErrors.name = 'Vendor name is required'
     }
-    if (!formData.businessName.trim()) {
-      newErrors.businessName = 'Business name is required'
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address'
+    }
+    if (formData.phone && formData.phone.trim() && !/^\+?[\d\s-()]+$/.test(formData.phone)) {
+      newErrors.phone = 'Please enter a valid phone number'
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -41,32 +43,59 @@ export default function AddVendorModal({ isOpen, onClose, onAdd }: AddVendorModa
       return
     }
 
-    // Add vendor
-    onAdd({
-      ownerName: formData.ownerName.trim(),
-      businessName: formData.businessName.trim(),
-      status,
-      avatar: formData.avatar.trim() || undefined,
-    })
+    try {
+      setLoading(true)
+      
+      // First, find user by email to get userId
+      const usersResult = await usersApi.getAll({ page: 1, limit: 1000 })
+      const user = usersResult.data?.find((u: any) => u.email.toLowerCase() === formData.email.toLowerCase())
+      
+      if (!user) {
+        setErrors({ email: 'User with this email does not exist. Please create the user first.' })
+        setLoading(false)
+        return
+      }
 
-    // Reset form
-    setFormData({
-      ownerName: '',
-      businessName: '',
-      avatar: '',
-    })
-    setStatus('pending')
-    setErrors({})
-    onClose()
+      // Create vendor
+      await vendorsApi.create({
+        userId: user.id,
+        name: formData.name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim() || undefined,
+        ownerIdUrl: formData.ownerIdUrl.trim() || undefined,
+      })
+
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        ownerIdUrl: '',
+      })
+      setErrors({})
+      onClose()
+      onAdd() // Refresh vendors list
+      alert('Vendor created successfully!')
+    } catch (error: any) {
+      console.error('Error creating vendor:', error)
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to create vendor'
+      if (error?.response?.data?.error?.message) {
+        setErrors({ email: error.response.data.error.message })
+      } else {
+        alert(`Error: ${errorMessage}`)
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleClose = () => {
     setFormData({
-      ownerName: '',
-      businessName: '',
-      avatar: '',
+      name: '',
+      email: '',
+      phone: '',
+      ownerIdUrl: '',
     })
-    setStatus('pending')
     setErrors({})
     onClose()
   }
@@ -95,82 +124,92 @@ export default function AddVendorModal({ isOpen, onClose, onAdd }: AddVendorModa
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-4 bg-white rounded-b-lg">
           <div className="space-y-4">
-            {/* Owner Name */}
+            {/* Vendor Name */}
             <div>
-              <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700 mb-1">
-                Owner Name <span className="text-red-500">*</span>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Vendor Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                id="ownerName"
-                value={formData.ownerName}
+                id="name"
+                value={formData.name}
                 onChange={(e) => {
-                  setFormData({ ...formData, ownerName: e.target.value })
-                  if (errors.ownerName) setErrors({ ...errors, ownerName: undefined })
+                  setFormData({ ...formData, name: e.target.value })
+                  if (errors.name) setErrors({ ...errors, name: undefined })
                 }}
                 className={`w-full rounded-lg border ${
-                  errors.ownerName ? 'border-red-300' : 'border-gray-300'
+                  errors.name ? 'border-red-300' : 'border-gray-300'
                 } bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]`}
-                placeholder="Enter owner name"
+                placeholder="Enter vendor name"
+                disabled={loading}
               />
-              {errors.ownerName && (
-                <p className="mt-1 text-xs text-red-600">{errors.ownerName}</p>
+              {errors.name && (
+                <p className="mt-1 text-xs text-red-600">{errors.name}</p>
               )}
             </div>
 
-            {/* Business Name */}
+            {/* Email */}
             <div>
-              <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 mb-1">
-                Business Name <span className="text-red-500">*</span>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email <span className="text-red-500">*</span>
               </label>
               <input
-                type="text"
-                id="businessName"
-                value={formData.businessName}
+                type="email"
+                id="email"
+                value={formData.email}
                 onChange={(e) => {
-                  setFormData({ ...formData, businessName: e.target.value })
-                  if (errors.businessName) setErrors({ ...errors, businessName: undefined })
+                  setFormData({ ...formData, email: e.target.value })
+                  if (errors.email) setErrors({ ...errors, email: undefined })
                 }}
                 className={`w-full rounded-lg border ${
-                  errors.businessName ? 'border-red-300' : 'border-gray-300'
+                  errors.email ? 'border-red-300' : 'border-gray-300'
                 } bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]`}
-                placeholder="Enter business name"
+                placeholder="Enter email (user must exist)"
+                disabled={loading}
               />
-              {errors.businessName && (
-                <p className="mt-1 text-xs text-red-600">{errors.businessName}</p>
+              {errors.email && (
+                <p className="mt-1 text-xs text-red-600">{errors.email}</p>
               )}
             </div>
 
-            {/* Avatar URL */}
+            {/* Phone */}
             <div>
-              <label htmlFor="avatar" className="block text-sm font-medium text-gray-700 mb-1">
-                Avatar URL (Optional)
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Phone (Optional)
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => {
+                  setFormData({ ...formData, phone: e.target.value })
+                  if (errors.phone) setErrors({ ...errors, phone: undefined })
+                }}
+                className={`w-full rounded-lg border ${
+                  errors.phone ? 'border-red-300' : 'border-gray-300'
+                } bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]`}
+                placeholder="Enter phone number"
+                disabled={loading}
+              />
+              {errors.phone && (
+                <p className="mt-1 text-xs text-red-600">{errors.phone}</p>
+              )}
+            </div>
+
+            {/* Owner ID URL */}
+            <div>
+              <label htmlFor="ownerIdUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                Owner ID URL (Optional)
               </label>
               <input
                 type="url"
-                id="avatar"
-                value={formData.avatar}
-                onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
+                id="ownerIdUrl"
+                value={formData.ownerIdUrl}
+                onChange={(e) => setFormData({ ...formData, ownerIdUrl: e.target.value })}
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
-                placeholder="https://example.com/avatar.jpg"
+                placeholder="https://example.com/owner-id.jpg"
+                disabled={loading}
               />
-            </div>
-
-            {/* Status */}
-            <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                id="status"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as VendorStatus)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12] cursor-pointer"
-              >
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
             </div>
           </div>
 
@@ -185,9 +224,10 @@ export default function AddVendorModal({ isOpen, onClose, onAdd }: AddVendorModa
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-[#F39C12] px-4 py-2 text-sm font-medium text-white hover:bg-[#E67E22] transition-colors cursor-pointer"
+              disabled={loading}
+              className="rounded-lg bg-[#F39C12] px-4 py-2 text-sm font-medium text-white hover:bg-[#E67E22] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add Vendor
+              {loading ? 'Creating...' : 'Add Vendor'}
             </button>
           </div>
         </form>

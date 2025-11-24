@@ -39,56 +39,56 @@ export default function Vendors() {
   const itemsPerPage = 10
 
   // Fetch vendors from API
-  useEffect(() => {
-    const fetchVendors = async () => {
-      try {
-        setLoading(true)
-        const filters: any = {
-          page: currentPage,
-          limit: itemsPerPage,
-        }
-        
-        if (activeFilter !== 'all') {
-          filters.status = activeFilter
-        }
-        
-        const result = await vendorsApi.getAll(filters)
-        
-        // Safety check: ensure result.data is an array
-        if (!result?.data || !Array.isArray(result.data)) {
-          console.error('Invalid API response structure:', result)
-          setVendors([])
-          setTotalPages(1)
-          return
-        }
-        
-        // Transform API vendors to frontend format
-        const transformedVendors: Vendor[] = result.data.map((vendor: any) => {
-          // Convert UUID to numeric ID for frontend
-          const numericId = parseInt(vendor.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
-          return {
-            id: numericId,
-            ownerName: vendor.user?.email?.split('@')[0] || vendor.name || 'Vendor',
-            businessName: vendor.name || 'Business',
-            status: (vendor.status === 'approved' ? 'approved' : 
-                    vendor.status === 'rejected' ? 'rejected' : 
-                    'pending') as VendorStatus,
-            avatar: '',
-            // Store full vendor data for reference
-            _vendorData: vendor,
-          }
-        })
-        
-        setVendors(transformedVendors)
-        setTotalPages(result.pagination.totalPages)
-      } catch (error) {
-        console.error('Error fetching vendors:', error)
-        setVendors([])
-      } finally {
-        setLoading(false)
+  const fetchVendors = async () => {
+    try {
+      setLoading(true)
+      const filters: any = {
+        page: currentPage,
+        limit: itemsPerPage,
       }
+      
+      if (activeFilter !== 'all') {
+        filters.status = activeFilter
+      }
+      
+      const result = await vendorsApi.getAll(filters)
+      
+      // Safety check: ensure result.data is an array
+      if (!result?.data || !Array.isArray(result.data)) {
+        console.error('Invalid API response structure:', result)
+        setVendors([])
+        setTotalPages(1)
+        return
+      }
+      
+      // Transform API vendors to frontend format
+      const transformedVendors: Vendor[] = result.data.map((vendor: any) => {
+        // Convert UUID to numeric ID for frontend
+        const numericId = parseInt(vendor.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+        return {
+          id: numericId,
+          ownerName: vendor.user?.email?.split('@')[0] || vendor.name || 'Vendor',
+          businessName: vendor.name || 'Business',
+          status: (vendor.status === 'approved' ? 'approved' : 
+                  vendor.status === 'rejected' ? 'rejected' : 
+                  'pending') as VendorStatus,
+          avatar: '',
+          // Store full vendor data for reference
+          _vendorData: vendor,
+        }
+      })
+      
+      setVendors(transformedVendors)
+      setTotalPages(result.pagination.totalPages)
+    } catch (error) {
+      console.error('Error fetching vendors:', error)
+      setVendors([])
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchVendors()
   }, [activeFilter, currentPage])
 
@@ -197,26 +197,11 @@ export default function Vendors() {
   /**
    * Handle add vendor submit
    */
-  const handleAddVendorSubmit = (vendorData: {
-    ownerName: string
-    businessName: string
-    status: VendorStatus
-    avatar?: string
-  }) => {
-    // Generate new ID (max existing ID + 1)
-    const newId = Math.max(...vendors.map((v) => v.id), 0) + 1
-    
-    const newVendor: Vendor = {
-      id: newId,
-      ownerName: vendorData.ownerName,
-      businessName: vendorData.businessName,
-      status: vendorData.status,
-      avatar: vendorData.avatar,
-    }
-
-    setVendors((prevVendors) => [...prevVendors, newVendor])
-    setAddModalOpen(false)
+  const handleAddVendorSubmit = async () => {
+    // Refresh vendors list after adding
+    await fetchVendors()
   }
+
 
   /**
    * Handle filter change

@@ -303,6 +303,7 @@ export default function OrderDetails() {
     }
 
     try {
+      console.log('Updating order status:', { orderUuid, selectedStatus, currentStatus: backendStatus })
       await ordersApi.updateStatus(orderUuid, selectedStatus)
       
       // Reload order data to get updated status
@@ -370,7 +371,27 @@ export default function OrderDetails() {
       alert('Order status updated successfully!')
     } catch (error: any) {
       console.error('Error updating order status:', error)
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update order status'
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        orderUuid,
+        selectedStatus,
+        backendStatus,
+      })
+      
+      let errorMessage = 'Failed to update order status'
+      if (error?.response?.status === 400) {
+        const validationError = error?.response?.data?.error?.message || error?.response?.data?.message
+        errorMessage = validationError || 'Invalid status value or validation failed. Please check the status value matches backend enum.'
+      } else if (error?.response?.status === 409) {
+        errorMessage = 'Order status cannot be changed. The order may already be in this state or the transition is not allowed.'
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      
       alert(`Error: ${errorMessage}`)
     }
   }
@@ -608,7 +629,30 @@ export default function OrderDetails() {
       alert('Order cancelled successfully! Refund will be processed if payment was made.')
     } catch (error: any) {
       console.error('Error cancelling order:', error)
-      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to cancel order'
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        orderUuid,
+        currentStatus: backendStatus,
+      })
+      
+      let errorMessage = 'Failed to cancel order'
+      if (error?.response?.status === 409) {
+        const conflictMessage = error?.response?.data?.error?.message || error?.response?.data?.message
+        if (conflictMessage?.includes('Invalid status transition')) {
+          errorMessage = `Cannot cancel order: ${conflictMessage}. The order is currently in "${backendStatus}" status and cannot be cancelled from this state.`
+        } else {
+          errorMessage = `Cannot cancel order: ${conflictMessage || 'Order status transition is not allowed. The order may already be cancelled, closed, or delivered.'}`
+        }
+      } else if (error?.response?.status === 400) {
+        errorMessage = 'Invalid request. Please check the order status and try again.'
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      
       alert(`Error: ${errorMessage}`)
     }
   }
@@ -673,14 +717,14 @@ export default function OrderDetails() {
                   <option value="cancelled">Cancelled</option>
                   <option value="refunded">Refunded</option>
                 </select>
-              </div>
-              <button
-                type="button"
-                onClick={handleUpdateStatus}
+          </div>
+            <button
+              type="button"
+              onClick={handleUpdateStatus}
                 className="rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#E8840D]"
               >
                 Update Status
-              </button>
+            </button>
             </div>
           </div>
         </div>
@@ -689,7 +733,7 @@ export default function OrderDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            {/* Customer Information Card */}
+        {/* Customer Information Card */}
             <CustomerInformationCard customer={order.customer} status={order.status} shipping={order.shipping} />
 
             {/* Ordered Items Card */}
@@ -775,8 +819,8 @@ export default function OrderDetails() {
               onCancelOrder={handleCancelOrder}
             />
 
-            {/* Order Timeline Card */}
-            <OrderTimelineCard timeline={order.timeline} />
+        {/* Order Timeline Card */}
+        <OrderTimelineCard timeline={order.timeline} />
           </div>
         </div>
       </div>
@@ -802,6 +846,7 @@ export default function OrderDetails() {
                   onChange={(e) => setSelectedStatus(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
                 >
+                  <option value="">Select status...</option>
                   <option value="created">Created</option>
                   <option value="paid">Paid</option>
                   <option value="fulfillment_pending">Fulfillment Pending</option>
@@ -817,22 +862,22 @@ export default function OrderDetails() {
                 )}
               </div>
               <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-                <button
-                  type="button"
+          <button
+            type="button"
                   onClick={() => setStatusModalOpen(false)}
                   className="w-full sm:w-auto rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                >
+          >
                   Cancel
-                </button>
-                <button
-                  type="button"
+          </button>
+          <button
+            type="button"
                   onClick={handleConfirmStatusUpdate}
                   className="w-full sm:w-auto rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-                >
-                  Update Status
-                </button>
-              </div>
-            </div>
+          >
+            Update Status
+          </button>
+        </div>
+      </div>
           </div>
         </>
       )}

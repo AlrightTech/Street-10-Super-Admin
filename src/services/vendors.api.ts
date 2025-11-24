@@ -53,5 +53,18 @@ export const vendorsApi = {
     const response = await api.get<ApiResponse<{ vendor: Vendor }>>(`/vendors/${id}`);
     return response.data.data.vendor;
   },
+
+  // Create vendor
+  create: async (data: {
+    userId: string;
+    name: string;
+    email: string;
+    phone?: string;
+    companyDocs?: any;
+    ownerIdUrl?: string;
+  }): Promise<Vendor> => {
+    const response = await api.post<ApiResponse<{ vendor: Vendor }>>('/vendors', data);
+    return response.data.data.vendor;
+  },
 };
 
