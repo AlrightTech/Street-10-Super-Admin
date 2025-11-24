@@ -14,14 +14,141 @@ export default function OrderDetails() {
   const navigate = useNavigate()
   const [order, setOrder] = useState<OrderDetailsType | null>(null)
   const [loading, setLoading] = useState(true)
+  const [orderUuid, setOrderUuid] = useState<string | null>(null) // State to store the UUID
 
   useEffect(() => {
     const loadOrder = async () => {
       setLoading(true)
+      let orderIdToFetch: string | null = null
+
       if (orderId) {
         try {
-          // Fetch from API
-          const apiOrder = await ordersApi.getById(orderId)
+          // Check if orderId is a UUID (contains hyphens)
+          // UUIDs contain hyphens, numeric IDs and order numbers don't
+          const isUuid = orderId.includes("-") && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)
+          const isNumericId = !orderId.includes("-") && /^\d+$/.test(orderId)
+
+          console.log("Processing order ID:", { orderId, isUuid, isNumericId })
+
+          if (isUuid) {
+            // It's already a UUID, use it directly
+            orderIdToFetch = orderId
+            console.log("Using UUID directly:", orderIdToFetch)
+          } else if (isNumericId) {
+            // This is a numeric ID, we need to convert it to UUID
+            // Fetch orders list to build the mapping
+            console.log(
+              "Numeric ID detected, fetching orders list to find UUID...",
+              orderId
+            )
+
+            try {
+              const ordersResult = await ordersApi.getAll({
+                page: 1,
+                limit: 1000,
+              })
+              console.log(
+                "Fetched orders for mapping:",
+                ordersResult.data?.length || 0
+              )
+
+              if (!ordersResult.data || ordersResult.data.length === 0) {
+                throw new Error("No orders found in the system")
+              }
+
+              const orderIdMap = new Map<number, string>()
+              ordersResult.data.forEach((order: any) => {
+                try {
+                  if (order.id && typeof order.id === "string") {
+                    const numericId =
+                      parseInt(order.id.replace(/-/g, "").substring(0, 10), 16) %
+                      1000000
+                    orderIdMap.set(numericId, order.id)
+                  }
+                } catch (e) {
+                  console.error("Error converting order ID for mapping:", order.id, e)
+                }
+              })
+
+              console.log("Order ID map built with", orderIdMap.size, "entries")
+
+              const numericId = parseInt(orderId)
+              const uuid = orderIdMap.get(numericId)
+
+              if (!uuid) {
+                console.error(
+                  `Order with numeric ID ${orderId} not found in mapping.`
+                )
+                throw new Error(
+                  `Order with ID ${orderId} not found. The order may not exist or the ID mapping failed.`
+                )
+              }
+
+              orderIdToFetch = uuid
+              console.log(
+                `Successfully converted numeric ID ${orderId} to UUID: ${uuid}`
+              )
+            } catch (error: any) {
+              console.error("Error converting numeric ID to UUID:", error)
+              throw new Error(
+                `Failed to convert order ID: ${
+                  error?.message || "Unknown error"
+                }`
+              )
+            }
+          } else {
+            // It might be an order number (like "ORD-..."), try to find by order number
+            console.log(
+              "Order number detected, fetching orders to find UUID...",
+              orderId
+            )
+
+            try {
+              const ordersResult = await ordersApi.getAll({
+                page: 1,
+                limit: 1000,
+              })
+
+              if (!ordersResult.data || ordersResult.data.length === 0) {
+                throw new Error("No orders found in the system")
+              }
+
+              // Try to find order by order number
+              // Remove '#' prefix if present
+              const cleanOrderNumber = orderId.replace(/^#/, "")
+              const matchingOrder = ordersResult.data.find(
+                (order: any) =>
+                  order.orderNumber === cleanOrderNumber ||
+                  order.orderNumber === orderId ||
+                  order.id === orderId
+              )
+
+              if (!matchingOrder) {
+                console.error(
+                  `Order with number/ID ${orderId} not found.`
+                )
+                throw new Error(
+                  `Order with ID ${orderId} not found. The order may not exist.`
+                )
+              }
+
+              orderIdToFetch = matchingOrder.id
+              console.log(
+                `Successfully found order: ${orderId} -> UUID: ${orderIdToFetch}`
+              )
+            } catch (error: any) {
+              console.error("Error finding order by number:", error)
+              throw new Error(
+                `Failed to find order: ${error?.message || "Unknown error"}`
+              )
+            }
+          }
+
+          // Store the UUID for later use (for invoice download, etc.)
+          setOrderUuid(orderIdToFetch)
+
+          // Fetch from API using UUID
+          const apiOrder = await ordersApi.getById(orderIdToFetch)
           
           // Transform API order to frontend format
           const transformedOrder: OrderDetailsType = {
@@ -77,8 +204,23 @@ export default function OrderDetails() {
           }
           
           setOrder(transformedOrder)
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error fetching order:', error)
+          console.error('Error details:', {
+            message: error?.message,
+            response: error?.response?.data,
+            status: error?.response?.status,
+            orderId,
+            orderIdToFetch,
+          })
+
+          // Show user-friendly error message
+          if (error?.response?.status === 404) {
+            alert(`Order with ID ${orderId} not found. Please check if the order exists.`)
+        } else {
+            alert(`Failed to load order details: ${error?.message || "Unknown error"}`)
+          }
+
           navigate('/orders')
         }
       }
@@ -102,10 +244,10 @@ export default function OrderDetails() {
   // }
 
   const handleDownloadInvoice = async () => {
-    if (!orderId || !order) return
+    if (!orderUuid || !order) return
     
     try {
-      const invoiceData = await ordersApi.getInvoice(orderId)
+      const invoiceData = await ordersApi.getInvoice(orderUuid)
       // Convert invoice data to JSON and download as file
       const blob = new Blob([JSON.stringify(invoiceData, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
