@@ -5,7 +5,7 @@ import FilterTabs from '../components/vendors/FilterTabs'
 import AddVendorModal from '../components/vendors/AddVendorModal'
 import Pagination from '../components/ui/Pagination'
 import ConfirmModal from '../components/ui/ConfirmModal'
-import { mockVendors } from '../data/mockVendors'
+import { vendorsApi } from '../services/vendors.api'
 import type { Vendor, VendorStatus } from '../types/vendors'
 
 /**
@@ -27,55 +27,112 @@ const FilterIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
  */
 export default function Vendors() {
   const navigate = useNavigate()
-  const [vendors, setVendors] = useState<Vendor[]>(mockVendors)
+  const [vendors, setVendors] = useState<Vendor[]>([])
   const [activeFilter, setActiveFilter] = useState<'all' | VendorStatus>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [vendorToDelete, setVendorToDelete] = useState<number | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
   const itemsPerPage = 10
 
-  // Calculate counts
-  const counts = useMemo(() => {
-    return {
-      all: vendors.length,
-      pending: vendors.filter((v) => v.status === 'pending').length,
-      approved: vendors.filter((v) => v.status === 'approved').length,
-      rejected: vendors.filter((v) => v.status === 'rejected').length,
+  // Fetch vendors from API
+  useEffect(() => {
+    const fetchVendors = async () => {
+      try {
+        setLoading(true)
+        const filters: any = {
+          page: currentPage,
+          limit: itemsPerPage,
+        }
+        
+        if (activeFilter !== 'all') {
+          filters.status = activeFilter
+        }
+        
+        const result = await vendorsApi.getAll(filters)
+        
+        // Safety check: ensure result.data is an array
+        if (!result?.data || !Array.isArray(result.data)) {
+          console.error('Invalid API response structure:', result)
+          setVendors([])
+          setTotalPages(1)
+          return
+        }
+        
+        // Transform API vendors to frontend format
+        const transformedVendors: Vendor[] = result.data.map((vendor: any) => {
+          // Convert UUID to numeric ID for frontend
+          const numericId = parseInt(vendor.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+          return {
+            id: numericId,
+            ownerName: vendor.user?.email?.split('@')[0] || vendor.name || 'Vendor',
+            businessName: vendor.name || 'Business',
+            status: (vendor.status === 'approved' ? 'approved' : 
+                    vendor.status === 'rejected' ? 'rejected' : 
+                    'pending') as VendorStatus,
+            avatar: '',
+            // Store full vendor data for reference
+            _vendorData: vendor,
+          }
+        })
+        
+        setVendors(transformedVendors)
+        setTotalPages(result.pagination.totalPages)
+      } catch (error) {
+        console.error('Error fetching vendors:', error)
+        setVendors([])
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [vendors])
 
-  // Filter and search vendors
+    fetchVendors()
+  }, [activeFilter, currentPage])
+
+  // Calculate counts - fetch all vendors for accurate counts
+  const [counts, setCounts] = useState({ all: 0, pending: 0, approved: 0, rejected: 0 })
+  
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const allResult = await vendorsApi.getAll({ limit: 1000 })
+        const countsData = {
+          all: allResult.pagination.total,
+          pending: allResult.data.filter((v: any) => v.status === 'pending').length,
+          approved: allResult.data.filter((v: any) => v.status === 'approved').length,
+          rejected: allResult.data.filter((v: any) => v.status === 'rejected').length,
+        }
+        setCounts(countsData)
+      } catch (error) {
+        console.error('Error fetching vendor counts:', error)
+      }
+    }
+    fetchCounts()
+  }, [])
+
+  // Filter and search vendors (client-side filtering for search only, status is handled by API)
   const filteredVendors = useMemo(() => {
     let filtered = vendors
 
-    // Apply status filter
-    if (activeFilter !== 'all') {
-      filtered = filtered.filter((v) => v.status === activeFilter)
-    }
-
-    // Apply search filter
+    // Apply search filter (status filter is handled by API)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (v) =>
-          v.ownerName.toLowerCase().includes(query) ||
-          v.businessName.toLowerCase().includes(query)
+          (v as any).name?.toLowerCase().includes(query) ||
+          (v as any).email?.toLowerCase().includes(query) ||
+          ((v as any).user?.email?.toLowerCase().includes(query))
       )
     }
 
     return filtered
-  }, [vendors, activeFilter, searchQuery])
+  }, [vendors, searchQuery])
 
-  // Paginate vendors
-  const paginatedVendors = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const endIndex = startIndex + itemsPerPage
-    return filteredVendors.slice(startIndex, endIndex)
-  }, [filteredVendors, currentPage])
-
-  const totalPages = Math.ceil(filteredVendors.length / itemsPerPage)
+  // Use filtered vendors (pagination is handled by API)
+  const paginatedVendors = filteredVendors
 
   // Reset to page 1 when filter or search changes
   useEffect(() => {
@@ -198,7 +255,15 @@ export default function Vendors() {
         </button>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <p className="text-gray-600">Loading vendors...</p>
+        </div>
+      )}
+
       {/* Table Container with Filter Tabs, Search, and Table */}
+      {!loading && (
       <div className="bg-white rounded-lg overflow-hidden">
         {/* Filter Tabs and Search Controls */}
         <div className="border-b border-gray-200">
@@ -291,6 +356,7 @@ export default function Vendors() {
           </div>
         )}
       </div>
+      )}
 
       {/* Add Vendor Modal */}
       <AddVendorModal

@@ -90,19 +90,60 @@ export default function EditUser() {
   const handleSave = async () => {
     if (!userDetails || !id) return
     
+    // Basic validation
+    if (!formData.email || !formData.email.includes('@')) {
+      alert('Please enter a valid email address')
+      return
+    }
+    
+    if (formData.phone && formData.phone.length > 0 && formData.phone.length < 10) {
+      alert('Please enter a valid phone number')
+      return
+    }
+    
     try {
-      // Update user via API
-      await usersApi.update(id, {
-        email: formData.email,
-        phone: formData.phone,
-        status: isActive ? 'active' : 'blocked',
-      })
+      // Prepare update data - only include fields that can be updated
+      const updateData: any = {}
       
-      // Navigate back to user details
-      navigate(`/users/${id}`)
-    } catch (error) {
+      if (formData.email !== userDetails.email) {
+        updateData.email = formData.email
+      }
+      
+      if (formData.phone !== userDetails.phone) {
+        updateData.phone = formData.phone || null
+      }
+      
+      const newStatus = isActive ? 'active' : 'blocked'
+      if (newStatus !== userDetails.status) {
+        updateData.status = newStatus
+      }
+      
+      // Only make API call if there are changes
+      if (Object.keys(updateData).length > 0) {
+        await usersApi.update(id, updateData)
+        
+        // Show success message
+        alert('User updated successfully!')
+        
+        // Navigate back to user details with updated data
+        navigate(`/users/${id}`, { 
+          state: { 
+            user: {
+              ...userDetails,
+              email: formData.email,
+              phone: formData.phone,
+              status: newStatus,
+            }
+          } 
+        })
+      } else {
+        // No changes made
+        alert('No changes to save')
+      }
+    } catch (error: any) {
       console.error('Error updating user:', error)
-      alert('Failed to update user. Please try again.')
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update user. Please try again.'
+      alert(`Error: ${errorMessage}`)
     }
   }
 

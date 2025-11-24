@@ -10,5 +10,6 @@ export interface Vendor {
   businessName: string
   status: VendorStatus
   avatar?: string
+  _vendorData?: any // Store full API vendor data for reference
 }
 

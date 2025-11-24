@@ -4,6 +4,7 @@ import UserSummaryCard from "../components/users/UserSummaryCard";
 import UserStatsCard from "../components/users/UserStatsCard";
 import SpendingSummary from "../components/users/SpendingSummary";
 import OrderHistoryTable from "../components/users/OrderHistoryTable";
+import ActivityHistoryCard from "../components/kyc/ActivityHistoryCard";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { usersApi } from "../services/users.api";
 import type {
@@ -11,6 +12,7 @@ import type {
   BiddingItem,
   OrderItem,
 } from "../types/userDetails";
+import type { ActivityHistoryItem } from "../types/kyc";
 
 /**
  * User Details page component
@@ -26,6 +28,8 @@ export default function UserDetails() {
     BiddingItem | OrderItem | null
   >(null);
   const [userUuid, setUserUuid] = useState<string | null>(null);
+  const [activityHistory, setActivityHistory] = useState<ActivityHistoryItem[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -34,8 +38,8 @@ export default function UserDetails() {
 
       if (id) {
         try {
-          // Check if user data is passed from navigation state (e.g., after edit)
-          if (location.state?.user) {
+        // Check if user data is passed from navigation state (e.g., after edit)
+        if (location.state?.user) {
             setUser(location.state.user as UserDetailsType);
             setUserUuid(id); // Store the ID from URL as UUID
             setLoading(false);
@@ -121,7 +125,7 @@ export default function UserDetails() {
                 }`
               );
             }
-          } else {
+        } else {
             // It's already a UUID, use it directly
             console.log("Using UUID directly:", userIdToFetch);
           }
@@ -237,6 +241,56 @@ export default function UserDetails() {
     loadUser();
   }, [id, navigate, location.state]);
 
+  // Fetch activity history when userUuid is available
+  useEffect(() => {
+    const loadActivityHistory = async () => {
+      if (!userUuid) return;
+      
+      try {
+        setLoadingActivity(true);
+        const result = await usersApi.getActivity(userUuid, 1, 50);
+        
+        // Transform audit logs to ActivityHistoryItem format
+        const transformedHistory: ActivityHistoryItem[] = (result.activities || []).map((log: any, index: number) => {
+          // Determine icon based on action
+          let icon: ActivityHistoryItem['icon'] = 'clock';
+          if (log.action?.toLowerCase().includes('approve') || log.action?.toLowerCase().includes('accept')) {
+            icon = 'check';
+          } else if (log.action?.toLowerCase().includes('reject') || log.action?.toLowerCase().includes('deny')) {
+            icon = 'x';
+          } else if (log.action?.toLowerCase().includes('view') || log.action?.toLowerCase().includes('read')) {
+            icon = 'eye';
+          } else if (log.action?.toLowerCase().includes('note') || log.action?.toLowerCase().includes('comment')) {
+            icon = 'note';
+          } else if (log.action?.toLowerCase().includes('create') || log.action?.toLowerCase().includes('register')) {
+            icon = 'user';
+          } else if (log.action?.toLowerCase().includes('document') || log.action?.toLowerCase().includes('upload')) {
+            icon = 'document';
+          }
+          
+          return {
+            id: log.id || String(index),
+            event: log.action || 'Activity',
+            description: log.details?.reason || log.details?.message || log.action || 'User activity',
+            date: new Date(log.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: new Date(log.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            icon,
+            isCurrent: index === 0,
+          };
+        });
+        
+        setActivityHistory(transformedHistory);
+      } catch (error) {
+        console.error('Error fetching activity history:', error);
+        setActivityHistory([]);
+      } finally {
+        setLoadingActivity(false);
+      }
+    };
+
+    loadActivityHistory();
+  }, [userUuid]);
+
   const handleEdit = () => {
     if (user && userUuid) {
       navigate(`/users/${userUuid}/edit`, { state: { user } });
@@ -248,12 +302,26 @@ export default function UserDetails() {
 
     try {
       const isCurrentlyBlocked = user.status === "blocked";
+      const action = isCurrentlyBlocked ? "unblock" : "block";
+      
+      if (!confirm(`Are you sure you want to ${action} this user?`)) {
+        return;
+      }
+
       await usersApi.toggleBlock(userUuid, !isCurrentlyBlocked);
-      // Reload user data
-      window.location.reload();
-    } catch (error) {
+      
+      // Update local state immediately
+      setUser({
+        ...user,
+        status: isCurrentlyBlocked ? "active" : "blocked",
+        accountStatus: isCurrentlyBlocked ? "verified" : "unverified",
+      });
+      
+      alert(`User ${action}ed successfully!`);
+    } catch (error: any) {
       console.error("Error blocking user:", error);
-      alert("Failed to update user status");
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to update user status";
+      alert(`Error: ${errorMessage}`);
     }
   };
 
@@ -345,6 +413,15 @@ export default function UserDetails() {
           }}
           onDelete={handleDelete}
         />
+
+        {/* Activity History */}
+        {loadingActivity ? (
+          <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
+            <p className="text-gray-600">Loading activity history...</p>
+          </div>
+        ) : activityHistory.length > 0 ? (
+          <ActivityHistoryCard activityHistory={activityHistory} />
+        ) : null}
       </div>
 
       {/* Delete Confirmation Modal */}

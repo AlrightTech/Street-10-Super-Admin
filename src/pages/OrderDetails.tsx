@@ -15,6 +15,9 @@ export default function OrderDetails() {
   const [order, setOrder] = useState<OrderDetailsType | null>(null)
   const [loading, setLoading] = useState(true)
   const [orderUuid, setOrderUuid] = useState<string | null>(null) // State to store the UUID
+  const [backendStatus, setBackendStatus] = useState<string>('') // Store backend status separately
+  const [statusModalOpen, setStatusModalOpen] = useState(false)
+  const [selectedStatus, setSelectedStatus] = useState<string>('')
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -109,8 +112,31 @@ export default function OrderDetails() {
                 limit: 1000,
               })
 
-              if (!ordersResult.data || ordersResult.data.length === 0) {
-                throw new Error("No orders found in the system")
+              console.log("Orders result for lookup:", {
+                hasResult: !!ordersResult,
+                hasData: !!ordersResult?.data,
+                isArray: Array.isArray(ordersResult?.data),
+                dataLength: ordersResult?.data?.length || 0,
+                pagination: ordersResult?.pagination,
+              })
+
+              // Safety check: ensure ordersResult has valid structure
+              if (!ordersResult) {
+                console.error("Orders API returned null/undefined")
+                throw new Error("Failed to fetch orders from API. Please check backend logs.")
+              }
+
+              if (!ordersResult.data || !Array.isArray(ordersResult.data)) {
+                console.error("Invalid API response structure:", ordersResult)
+                throw new Error("Invalid orders data structure received from API.")
+              }
+
+              if (ordersResult.data.length === 0) {
+                console.error("No orders returned from API. This might indicate:")
+                console.error("1. No orders exist in the database")
+                console.error("2. API error (check backend logs)")
+                console.error("3. BigInt serialization issue (check backend)")
+                throw new Error("No orders found in the system. Please check if orders exist or if there's an API error.")
               }
 
               // Try to find order by order number
@@ -138,9 +164,26 @@ export default function OrderDetails() {
               )
             } catch (error: any) {
               console.error("Error finding order by number:", error)
-              throw new Error(
-                `Failed to find order: ${error?.message || "Unknown error"}`
-              )
+              console.error("Error details:", {
+                message: error?.message,
+                response: error?.response?.data,
+                status: error?.response?.status,
+                orderId,
+                stack: error?.stack,
+              })
+              
+              // Provide more specific error message
+              let errorMessage = 'Failed to find order'
+              if (error?.response?.status === 500) {
+                errorMessage = 'Server error while fetching orders. This might be a BigInt serialization issue. Please check backend logs.'
+                console.error('Backend 500 error - likely BigInt serialization issue')
+              } else if (error?.message) {
+                errorMessage = `Failed to find order: ${error.message}`
+              } else {
+                errorMessage = 'Failed to find order: Unknown error occurred.'
+              }
+              
+              throw new Error(errorMessage)
             }
           }
 
@@ -149,6 +192,7 @@ export default function OrderDetails() {
 
           // Fetch from API using UUID
           const apiOrder = await ordersApi.getById(orderIdToFetch)
+          setBackendStatus(apiOrder.status) // Store backend status
           
           // Transform API order to frontend format
           const transformedOrder: OrderDetailsType = {
@@ -212,15 +256,26 @@ export default function OrderDetails() {
             status: error?.response?.status,
             orderId,
             orderIdToFetch,
+            stack: error?.stack,
           })
 
-          // Show user-friendly error message
+          // Show user-friendly error message based on error type
+          let errorMessage = 'Failed to load order details'
+          
           if (error?.response?.status === 404) {
-            alert(`Order with ID ${orderId} not found. Please check if the order exists.`)
+            errorMessage = `Order with ID ${orderId} not found. Please check if the order exists.`
+          } else if (error?.response?.status === 500) {
+            errorMessage = `Server error while loading order details. This might be a BigInt serialization issue. Please check backend logs.`
+            console.error('Backend 500 error - likely BigInt serialization issue')
+          } else if (error?.response?.status === 401) {
+            errorMessage = `Unauthorized. Please log in again.`
+          } else if (error?.message) {
+            errorMessage = `Failed to load order details: ${error.message}`
         } else {
-            alert(`Failed to load order details: ${error?.message || "Unknown error"}`)
+            errorMessage = `Failed to load order details: Unknown error occurred.`
           }
 
+          alert(errorMessage)
           navigate('/orders')
         }
       }
@@ -231,8 +286,93 @@ export default function OrderDetails() {
   }, [orderId, navigate])
 
   const handleUpdateStatus = () => {
-    // Handle update status logic
-    console.log('Update status for order:', order?.orderId)
+    if (!order || !orderUuid) return
+    
+    // Use the stored backend status
+    setSelectedStatus(backendStatus || 'created')
+    setStatusModalOpen(true)
+  }
+
+  const handleConfirmStatusUpdate = async () => {
+    if (!orderUuid || !order || !selectedStatus || selectedStatus === backendStatus) {
+      if (selectedStatus === backendStatus) {
+        alert('Status is already set to this value')
+      }
+      setStatusModalOpen(false)
+      return
+    }
+
+    try {
+      await ordersApi.updateStatus(orderUuid, selectedStatus)
+      
+      // Reload order data to get updated status
+      const updatedOrder = await ordersApi.getById(orderUuid)
+      
+      // Transform updated order to frontend format
+      const transformedOrder: OrderDetailsType = {
+        id: updatedOrder.id,
+        orderId: updatedOrder.orderNumber,
+        date: new Date(updatedOrder.createdAt).toLocaleDateString(),
+        time: new Date(updatedOrder.createdAt).toLocaleTimeString(),
+        customer: {
+          id: parseInt(updatedOrder.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+          name: updatedOrder.user.email.split('@')[0],
+          email: updatedOrder.user.email,
+          phone: (updatedOrder.user as any).phone || '',
+          avatar: '',
+        },
+        status: updatedOrder.status === 'closed' || updatedOrder.status === 'delivered' ? 'completed' :
+                updatedOrder.status === 'cancelled' ? 'cancelled' : 'pending',
+        products: updatedOrder.items.map((item: any) => ({
+          id: item.product?.id || '',
+          name: item.product?.title || 'Product',
+          image: item.product?.media?.[0]?.url || '',
+          category: item.product?.category || 'General',
+          quantity: item.quantity,
+          price: parseFloat(item.priceMinor?.toString() || '0') / 100,
+          total: parseFloat(item.priceMinor?.toString() || '0') / 100 * item.quantity,
+        })),
+        payment: {
+          method: updatedOrder.paymentMethod === 'card' ? 'credit-card' : 
+                  updatedOrder.paymentMethod === 'wallet' ? 'bank-transfer' : 
+                  updatedOrder.paymentMethod === 'cod' ? 'cash-on-delivery' : 'credit-card',
+          transactionId: updatedOrder.id,
+          status: updatedOrder.status === 'paid' || updatedOrder.status === 'closed' || updatedOrder.status === 'delivered' ? 'completed' : 
+                  updatedOrder.status === 'cancelled' ? 'refunded' : 'pending',
+          subtotal: parseFloat(updatedOrder.totalMinor?.toString() || '0') / 100,
+          discount: parseFloat(updatedOrder.discountMinor?.toString() || '0') / 100,
+          tax: 0,
+          shipping: 0,
+          total: parseFloat(updatedOrder.totalMinor?.toString() || '0') / 100,
+        },
+        shipping: {
+          address: (updatedOrder.shippingAddress as any)?.street || (updatedOrder.shippingAddress as any)?.address || '',
+          city: (updatedOrder.shippingAddress as any)?.city || '',
+          state: (updatedOrder.shippingAddress as any)?.state || '',
+          postalCode: (updatedOrder.shippingAddress as any)?.postalCode || '',
+          country: (updatedOrder.shippingAddress as any)?.country || '',
+          method: 'Standard',
+          trackingNumber: '',
+          estimatedDelivery: '',
+        },
+        timeline: [
+          {
+            id: '1',
+            status: 'Order Created',
+            date: new Date(updatedOrder.createdAt).toLocaleDateString(),
+            time: new Date(updatedOrder.createdAt).toLocaleTimeString(),
+          },
+        ],
+      }
+      
+      setOrder(transformedOrder)
+      setStatusModalOpen(false)
+      alert('Order status updated successfully!')
+    } catch (error: any) {
+      console.error('Error updating order status:', error)
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update order status'
+      alert(`Error: ${errorMessage}`)
+    }
   }
 
   // Unused - keeping for reference
@@ -248,29 +388,229 @@ export default function OrderDetails() {
     
     try {
       const invoiceData = await ordersApi.getInvoice(orderUuid)
-      // Convert invoice data to JSON and download as file
-      const blob = new Blob([JSON.stringify(invoiceData, null, 2)], { type: 'application/json' })
+      
+      // Generate HTML invoice
+      const invoiceHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Invoice ${invoiceData.invoiceNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+            .header { border-bottom: 2px solid #F39C12; padding-bottom: 20px; margin-bottom: 30px; }
+            .header h1 { color: #F39C12; margin: 0; }
+            .invoice-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
+            .info-section { flex: 1; }
+            .info-section h3 { margin-top: 0; color: #666; font-size: 14px; }
+            .info-section p { margin: 5px 0; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th { background-color: #f5f5f5; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; }
+            td { padding: 12px; border-bottom: 1px solid #eee; }
+            .text-right { text-align: right; }
+            .total-section { margin-top: 20px; padding-top: 20px; border-top: 2px solid #ddd; }
+            .total-row { display: flex; justify-content: space-between; margin: 10px 0; }
+            .total-row.final { font-size: 18px; font-weight: bold; color: #F39C12; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>INVOICE</h1>
+            <p>Invoice #${invoiceData.invoiceNumber}</p>
+            <p>Date: ${new Date(invoiceData.invoiceDate).toLocaleDateString()}</p>
+          </div>
+          
+          <div class="invoice-info">
+            <div class="info-section">
+              <h3>Bill To:</h3>
+              <p><strong>${invoiceData.customer.email}</strong></p>
+              ${invoiceData.customer.phone ? `<p>Phone: ${invoiceData.customer.phone}</p>` : ''}
+              ${invoiceData.customer.shippingAddress ? `
+                <p>${invoiceData.customer.shippingAddress.street || invoiceData.customer.shippingAddress.address || ''}</p>
+                <p>${invoiceData.customer.shippingAddress.city || ''}, ${invoiceData.customer.shippingAddress.state || ''} ${invoiceData.customer.shippingAddress.postalCode || ''}</p>
+                <p>${invoiceData.customer.shippingAddress.country || ''}</p>
+              ` : ''}
+            </div>
+            <div class="info-section">
+              <h3>Ship From:</h3>
+              <p><strong>${invoiceData.vendor.email}</strong></p>
+            </div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th class="text-right">Unit Price</th>
+                <th class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoiceData.items.map((item: any) => `
+                <tr>
+                  <td>${item.productName}</td>
+                  <td>${item.quantity}</td>
+                  <td class="text-right">${(parseFloat(item.unitPrice?.toString() || '0') / 100).toFixed(2)} ${item.currency || invoiceData.currency}</td>
+                  <td class="text-right">${(parseFloat(item.total?.toString() || '0') / 100).toFixed(2)} ${item.currency || invoiceData.currency}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="total-section">
+            <div class="total-row">
+              <span>Subtotal:</span>
+              <span>${(parseFloat(invoiceData.subtotal?.toString() || '0') / 100).toFixed(2)} ${invoiceData.currency}</span>
+            </div>
+            ${parseFloat(invoiceData.discount?.toString() || '0') > 0 ? `
+              <div class="total-row">
+                <span>Discount:</span>
+                <span>-${(parseFloat(invoiceData.discount?.toString() || '0') / 100).toFixed(2)} ${invoiceData.currency}</span>
+              </div>
+            ` : ''}
+            ${parseFloat(invoiceData.tax?.toString() || '0') > 0 ? `
+              <div class="total-row">
+                <span>Tax:</span>
+                <span>${(parseFloat(invoiceData.tax?.toString() || '0') / 100).toFixed(2)} ${invoiceData.currency}</span>
+              </div>
+            ` : ''}
+            ${parseFloat(invoiceData.shipping?.toString() || '0') > 0 ? `
+              <div class="total-row">
+                <span>Shipping:</span>
+                <span>${(parseFloat(invoiceData.shipping?.toString() || '0') / 100).toFixed(2)} ${invoiceData.currency}</span>
+              </div>
+            ` : ''}
+            <div class="total-row final">
+              <span>Total:</span>
+              <span>${(parseFloat(invoiceData.total?.toString() || '0') / 100).toFixed(2)} ${invoiceData.currency}</span>
+            </div>
+          </div>
+          
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <p><strong>Payment Method:</strong> ${invoiceData.paymentMethod === 'card' ? 'Credit Card' : invoiceData.paymentMethod === 'wallet' ? 'Wallet' : invoiceData.paymentMethod === 'cod' ? 'Cash on Delivery' : invoiceData.paymentMethod}</p>
+            <p><strong>Status:</strong> ${invoiceData.status}</p>
+          </div>
+        </body>
+        </html>
+      `
+      
+      // Create blob and download
+      const blob = new Blob([invoiceHTML], { type: 'text/html' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `invoice-${invoiceData.invoiceNumber}.json`
+      link.download = `invoice-${invoiceData.invoiceNumber}.html`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
       
-      // TODO: If PDF generation is added, download PDF instead
-      // For now, JSON download is available
+      // Also provide option to print (which can save as PDF)
+      if (window.confirm('Invoice downloaded. Would you like to open it for printing (can save as PDF)?')) {
+        const printWindow = window.open('', '_blank')
+        if (printWindow) {
+          printWindow.document.write(invoiceHTML)
+          printWindow.document.close()
+          printWindow.focus()
+          setTimeout(() => {
+            printWindow.print()
+          }, 250)
+        }
+      }
+      
       console.log('Invoice downloaded:', invoiceData.invoiceNumber)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error downloading invoice:', error)
-      alert('Failed to download invoice. Please try again.')
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to download invoice. Please try again.'
+      alert(`Error: ${errorMessage}`)
     }
   }
 
-  const handleCancelOrder = () => {
-    // Handle cancel order logic
-    console.log('Cancel order:', order?.orderId)
+  const handleCancelOrder = async () => {
+    if (!orderUuid || !order) return
+    
+    if (!confirm(`Are you sure you want to cancel order ${order.orderId}? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      // Update order status to cancelled
+      await ordersApi.updateStatus(orderUuid, 'cancelled')
+      
+      // Reload order data to get updated status
+      const updatedOrder = await ordersApi.getById(orderUuid)
+      setBackendStatus(updatedOrder.status)
+      
+      // Transform updated order to frontend format
+      const transformedOrder: OrderDetailsType = {
+        id: updatedOrder.id,
+        orderId: updatedOrder.orderNumber,
+        date: new Date(updatedOrder.createdAt).toLocaleDateString(),
+        time: new Date(updatedOrder.createdAt).toLocaleTimeString(),
+        customer: {
+          id: parseInt(updatedOrder.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+          name: updatedOrder.user.email.split('@')[0],
+          email: updatedOrder.user.email,
+          phone: (updatedOrder.user as any).phone || '',
+          avatar: '',
+        },
+        status: 'cancelled',
+        products: updatedOrder.items.map((item: any) => ({
+          id: item.product?.id || '',
+          name: item.product?.title || 'Product',
+          image: item.product?.media?.[0]?.url || '',
+          category: item.product?.category || 'General',
+          quantity: item.quantity,
+          price: parseFloat(item.priceMinor?.toString() || '0') / 100,
+          total: parseFloat(item.priceMinor?.toString() || '0') / 100 * item.quantity,
+        })),
+        payment: {
+          method: updatedOrder.paymentMethod === 'card' ? 'credit-card' :
+                  updatedOrder.paymentMethod === 'wallet' ? 'bank-transfer' :
+                  updatedOrder.paymentMethod === 'cod' ? 'cash-on-delivery' : 'credit-card',
+          transactionId: updatedOrder.id,
+          status: 'refunded',
+          subtotal: parseFloat(updatedOrder.totalMinor?.toString() || '0') / 100,
+          discount: parseFloat(updatedOrder.discountMinor?.toString() || '0') / 100,
+          tax: 0,
+          shipping: 0,
+          total: parseFloat(updatedOrder.totalMinor?.toString() || '0') / 100,
+        },
+        shipping: {
+          address: (updatedOrder.shippingAddress as any)?.street || (updatedOrder.shippingAddress as any)?.address || '',
+          city: (updatedOrder.shippingAddress as any)?.city || '',
+          state: (updatedOrder.shippingAddress as any)?.state || '',
+          postalCode: (updatedOrder.shippingAddress as any)?.postalCode || '',
+          country: (updatedOrder.shippingAddress as any)?.country || '',
+          method: 'Standard',
+          trackingNumber: '',
+          estimatedDelivery: '',
+        },
+        timeline: [
+          {
+            id: '1',
+            status: 'Order Created',
+            date: new Date(updatedOrder.createdAt).toLocaleDateString(),
+            time: new Date(updatedOrder.createdAt).toLocaleTimeString(),
+          },
+          {
+            id: '2',
+            status: 'Order Cancelled',
+            date: new Date().toLocaleDateString(),
+            time: new Date().toLocaleTimeString(),
+          },
+        ],
+      }
+      
+      setOrder(transformedOrder)
+      alert('Order cancelled successfully! Refund will be processed if payment was made.')
+    } catch (error: any) {
+      console.error('Error cancelling order:', error)
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to cancel order'
+      alert(`Error: ${errorMessage}`)
+    }
   }
 
   // Unused - keeping for reference
@@ -440,6 +780,62 @@ export default function OrderDetails() {
           </div>
         </div>
       </div>
+
+      {/* Status Update Modal */}
+      {statusModalOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            onClick={() => setStatusModalOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div
+              className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-xl my-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">Update Order Status</h3>
+              <div className="space-y-4 mb-6">
+                <p className="text-sm text-gray-600">Select new status for this order:</p>
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
+                >
+                  <option value="created">Created</option>
+                  <option value="paid">Paid</option>
+                  <option value="fulfillment_pending">Fulfillment Pending</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="closed">Closed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+                {order && selectedStatus !== backendStatus && (
+                  <p className="text-xs text-gray-500">
+                    Current status: <span className="font-semibold">{backendStatus}</span> → New status: <span className="font-semibold">{selectedStatus}</span>
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStatusModalOpen(false)}
+                  className="w-full sm:w-auto rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmStatusUpdate}
+                  className="w-full sm:w-auto rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                >
+                  Update Status
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

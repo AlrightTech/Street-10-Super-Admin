@@ -86,6 +86,15 @@ export default function Orders() {
         
         const result = await ordersApi.getAll(filters)
         
+        // Safety check: ensure result.data is an array
+        if (!result?.data || !Array.isArray(result.data)) {
+          console.error('Invalid API response structure:', result)
+          setOrders([])
+          setTotalPages(1)
+          setOrderCounts({ all: 0, pending: 0, completed: 0, cancelled: 0 })
+          return
+        }
+        
         // Transform API orders to frontend format
         const transformedOrders: OrderRecord[] = result.data.map((order: any) => ({
           id: order.orderNumber,
@@ -104,16 +113,34 @@ export default function Orders() {
         setTotalPages(result.pagination.totalPages)
         
         // Update counts for tabs
-        const allResult = await ordersApi.getAll({ limit: 1000 })
-        const counts = {
-          all: allResult.pagination.total,
-          pending: allResult.data.filter((o: any) => !['closed', 'delivered', 'cancelled'].includes(o.status)).length,
-          completed: allResult.data.filter((o: any) => ['closed', 'delivered'].includes(o.status)).length,
-          cancelled: allResult.data.filter((o: any) => o.status === 'cancelled').length,
+        try {
+          const allResult = await ordersApi.getAll({ limit: 1000 })
+          if (allResult?.data && Array.isArray(allResult.data)) {
+            const counts = {
+              all: allResult.pagination?.total || 0,
+              pending: allResult.data.filter((o: any) => !['closed', 'delivered', 'cancelled'].includes(o.status)).length,
+              completed: allResult.data.filter((o: any) => ['closed', 'delivered'].includes(o.status)).length,
+              cancelled: allResult.data.filter((o: any) => o.status === 'cancelled').length,
+            }
+            setOrderCounts(counts)
+          } else {
+            console.warn('Invalid response structure when fetching all orders for counts')
+          }
+        } catch (countError) {
+          console.error('Error fetching order counts:', countError)
+          // Don't fail the whole request if counts fail
         }
-        setOrderCounts(counts)
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching orders:', error)
+        console.error('Error details:', {
+          message: error?.message,
+          response: error?.response?.data,
+          status: error?.response?.status,
+        })
+        // Show user-friendly error
+        if (error?.response?.status === 500) {
+          console.error('Backend error - might be BigInt serialization issue. Check backend logs.')
+        }
         setOrders([])
       } finally {
         setLoading(false)
