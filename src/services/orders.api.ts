@@ -90,10 +90,20 @@ export interface OrderFilters {
 export const ordersApi = {
   // Get all orders
   getAll: async (filters?: OrderFilters): Promise<PaginatedResponse<Order>> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<Order>>>('/orders', {
+    const response = await api.get<ApiResponse<Order[]>>('/orders', {
       params: filters,
     });
-    return response.data.data;
+    // Backend sendPaginated returns { success: true, data: [...], pagination: {...} }
+    // We need to return { data: [...], pagination: {...} }
+    return {
+      data: response.data.data || [],
+      pagination: (response.data as any).pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+      },
+    };
   },
 
   // Get order by ID

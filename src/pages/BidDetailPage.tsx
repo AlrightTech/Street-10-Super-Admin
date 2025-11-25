@@ -18,20 +18,70 @@ export default function BidDetailPage() {
   useEffect(() => {
     const loadBid = async () => {
       setLoading(true)
+      let bidIdToFetch: string | null = null
+
       if (bidId) {
         try {
-          const apiBid = await bidsApi.getById(bidId)
+          // Check if bidId is a UUID (contains hyphens)
+          const isUuid = bidId.includes("-") && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bidId)
+
+          console.log("Processing bid ID:", { bidId, isUuid })
+
+          if (isUuid) {
+            // It's already a UUID, use it directly
+            bidIdToFetch = bidId
+            console.log("Using UUID directly:", bidIdToFetch)
+          } else {
+            // Numeric ID or other format - try to find by fetching all bids
+            console.log("Non-UUID detected, fetching bids to find UUID...", bidId)
+            try {
+              const bidsResult = await bidsApi.getAll({
+                page: 1,
+                limit: 1000,
+              })
+
+              if (!bidsResult.data || bidsResult.data.length === 0) {
+                throw new Error("No bids found in the system")
+              }
+
+              // Try to find bid by numeric ID conversion or direct match
+              const numericId = /^\d+$/.test(bidId) ? parseInt(bidId) : null
+              const matchingBid = bidsResult.data.find((bid: any) => {
+                if (bid.id === bidId) return true
+                if (numericId) {
+                  const bidNumericId = parseInt(bid.id.replace(/-/g, "").substring(0, 10), 16) % 1000000
+                  return bidNumericId === numericId
+                }
+                return false
+              })
+
+              if (!matchingBid) {
+                throw new Error(`Bid with ID ${bidId} not found. The bid may not exist.`)
+              }
+
+              bidIdToFetch = matchingBid.id
+              console.log(`Successfully found bid: ${bidId} -> UUID: ${bidIdToFetch}`)
+            } catch (error: any) {
+              console.error("Error finding bid:", error)
+              throw new Error(`Failed to find bid: ${error?.message || "Unknown error"}`)
+            }
+          }
+
+          // Fetch bid details using UUID
+          const apiBid = await bidsApi.getById(bidIdToFetch)
           
           // Transform API response to frontend format
           const bidData = apiBid.bid as any
           const auctionData = bidData.auction as any
           const productData = auctionData?.product || {}
-          const reservePriceValue = auctionData?.reservePrice || productData?.priceMinor || BigInt(0)
+          // amountMinor is now a string from the API, not BigInt
+          const reservePriceValue = auctionData?.reservePrice || productData?.priceMinor || "0"
           
           // Get all bids to find highest
+          // amountMinor is now a string from the API
           const highestBid = apiBid.allBids?.reduce((max: any, b: any) => {
-            const maxAmount = parseFloat(max.amountMinor?.toString() || '0')
-            const bidAmount = parseFloat(b.amountMinor?.toString() || '0')
+            const maxAmount = parseFloat(typeof max.amountMinor === 'string' ? max.amountMinor : max.amountMinor?.toString() || '0')
+            const bidAmount = parseFloat(typeof b.amountMinor === 'string' ? b.amountMinor : b.amountMinor?.toString() || '0')
             return bidAmount > maxAmount ? b : max
           }, { amountMinor: '0' }) || bidData
           
@@ -41,8 +91,8 @@ export default function BidDetailPage() {
             auctionId: bidData.auctionId,
             auctionName: productData.title || 'Auction',
             categoryName: productData.categories?.[0]?.category?.name || 'Category',
-            startingPrice: parseFloat(reservePriceValue?.toString() || '0') / 100,
-            finalBidAmount: parseFloat(bidData.amountMinor?.toString() || '0') / 100,
+            startingPrice: parseFloat(typeof reservePriceValue === 'string' ? reservePriceValue : reservePriceValue?.toString() || '0') / 100,
+            finalBidAmount: parseFloat(typeof bidData.amountMinor === 'string' ? bidData.amountMinor : bidData.amountMinor?.toString() || '0') / 100,
             status: bidData.isWinning ? 'winning' : 'lost',
             bidDate: new Date(bidData.placedAt).toLocaleDateString(),
             bidTime: new Date(bidData.placedAt).toLocaleTimeString(),
@@ -60,15 +110,22 @@ export default function BidDetailPage() {
               category: productData.categories?.[0]?.category?.name || 'Category',
               condition: 'New',
               description: productData.description || '',
-              startingPrice: parseFloat(reservePriceValue?.toString() || '0') / 100,
-              reservePrice: parseFloat(reservePriceValue?.toString() || '0') / 100,
-              currentHighestBid: parseFloat(highestBid.amountMinor?.toString() || bidData.amountMinor?.toString() || '0') / 100,
+              startingPrice: parseFloat(typeof reservePriceValue === 'string' ? reservePriceValue : reservePriceValue?.toString() || '0') / 100,
+              reservePrice: parseFloat(typeof reservePriceValue === 'string' ? reservePriceValue : reservePriceValue?.toString() || '0') / 100,
+              currentHighestBid: parseFloat(
+                typeof highestBid.amountMinor === 'string' 
+                  ? highestBid.amountMinor 
+                  : highestBid.amountMinor?.toString() || 
+                typeof bidData.amountMinor === 'string'
+                  ? bidData.amountMinor
+                  : bidData.amountMinor?.toString() || '0'
+              ) / 100,
               auctionStatus: auctionData?.state === 'live' ? 'ongoing' : 
                             auctionData?.state === 'ended' ? 'completed' : 'cancelled',
             },
             timeline: (apiBid.timeline || []).map((bidItem: any) => ({
               id: bidItem.id,
-              amount: parseFloat(bidItem.amountMinor?.toString() || '0') / 100,
+              amount: parseFloat(typeof bidItem.amountMinor === 'string' ? bidItem.amountMinor : bidItem.amountMinor?.toString() || '0') / 100,
               status: bidItem.isWinning ? 'winning' : 'outbid',
               date: new Date(bidItem.placedAt).toLocaleDateString(),
               time: new Date(bidItem.placedAt).toLocaleTimeString(),
@@ -76,8 +133,34 @@ export default function BidDetailPage() {
           }
           
           setBid(transformedBid)
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error loading bid details:', error)
+          console.error('Error details:', {
+            message: error?.message,
+            response: error?.response?.data,
+            status: error?.response?.status,
+            bidId,
+            bidIdToFetch,
+            stack: error?.stack,
+          })
+
+          // Show user-friendly error message based on error type
+          let errorMessage = 'Failed to load bid details'
+          
+          if (error?.response?.status === 404) {
+            errorMessage = `Bid with ID ${bidId} not found. Please check if the bid exists.`
+          } else if (error?.response?.status === 500) {
+            errorMessage = `Server error while loading bid details. This might be a BigInt serialization issue. Please check backend logs.`
+            console.error('Backend 500 error - likely BigInt serialization issue')
+          } else if (error?.response?.status === 401) {
+            errorMessage = `Unauthorized. Please log in again.`
+          } else if (error?.message) {
+            errorMessage = `Failed to load bid details: ${error.message}`
+          } else {
+            errorMessage = `Failed to load bid details: Unknown error occurred.`
+          }
+
+          alert(errorMessage)
           navigate('/bidding')
         }
       }

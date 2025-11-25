@@ -227,16 +227,41 @@ export default function Users() {
    */
   const handleToggleBlock = async (userId: number) => {
     try {
-      const apiUserId = userIdMap.get(userId)
-      if (!apiUserId) return
+      const apiUserId = userIdMap.get(userId);
+      if (!apiUserId) {
+        console.error("User UUID not found in map for ID:", userId);
+        return;
+      }
 
-      const user = users.find((u) => u.id === userId)
-      if (!user) return
+      const user = users.find((u) => u.id === userId);
+      if (!user) {
+        console.error("User not found in users list:", userId);
+        return;
+      }
 
-      const isCurrentlyBlocked = user.status === 'blocked'
-      await usersApi.toggleBlock(apiUserId, !isCurrentlyBlocked)
+      const isCurrentlyBlocked = user.status === "blocked";
+      const action = isCurrentlyBlocked ? "unblock" : "block";
+      
+      if (!confirm(`Are you sure you want to ${action} this user?`)) {
+        return;
+      }
 
-      // Refresh users list
+      await usersApi.toggleBlock(apiUserId, !isCurrentlyBlocked);
+
+      // Update local state immediately for better UX
+      setUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.id === userId
+            ? {
+                ...u,
+                status: isCurrentlyBlocked ? "active" : "blocked",
+                accountStatus: isCurrentlyBlocked ? "verified" : "unverified",
+              }
+            : u
+        )
+      );
+
+      // Refresh users list to ensure consistency
       const result = await usersApi.getAll({
         ...filters,
         page: pagination.page,
@@ -273,20 +298,48 @@ export default function Users() {
       })
       setUserIdMap(newMap)
 
-      setUsers(transformedUsers)
-    } catch (error) {
-      console.error('Error toggling block status:', error)
-      // Fallback: update local state if API call fails
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.id === userId
-            ? {
-                ...user,
-                status: user.status === 'active' ? 'blocked' : user.status === 'blocked' ? 'active' : user.status,
-              }
-            : user
-        )
-      )
+      setUsers(transformedUsers);
+      setPagination(result.pagination);
+      
+      alert(`User ${action}ed successfully!`);
+    } catch (error: any) {
+      console.error("Error toggling block status:", error);
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to update user status";
+      alert(`Error: ${errorMessage}`);
+      
+      // Refresh users list on error to restore correct state
+      try {
+        const result = await usersApi.getAll({
+          ...filters,
+          page: pagination.page,
+          limit: pagination.limit,
+        });
+        const transformedUsers: User[] = result.data.map((user: ApiUser) => {
+          const numericId =
+            parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) % 1000000;
+          return {
+            id: numericId,
+            name: user.email.split("@")[0],
+            email: user.email,
+            role: user.role,
+            totalPurchase: user.stats?.totalSpent
+              ? parseFloat(user.stats.totalSpent.toString()) / 100
+              : 0,
+            status:
+              user.status === "active"
+                ? "active"
+                : user.status === "blocked"
+                ? "blocked"
+                : "pending",
+            joinDate: new Date(user.createdAt).toLocaleDateString(),
+            biddingWins: 0,
+          };
+        });
+        setUsers(transformedUsers);
+        setPagination(result.pagination);
+      } catch (refreshError) {
+        console.error("Error refreshing users list:", refreshError);
+      }
     }
   }
 

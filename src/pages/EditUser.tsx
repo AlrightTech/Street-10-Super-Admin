@@ -12,6 +12,7 @@ export default function EditUser() {
   const { id } = useParams<{ id: string }>()
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userUuid, setUserUuid] = useState<string | null>(null) // Store UUID for API calls
   
   // Form state
   const [formData, setFormData] = useState({
@@ -27,15 +28,124 @@ export default function EditUser() {
   useEffect(() => {
     const loadUser = async () => {
       setLoading(true)
+      let userIdToFetch: string | null = null
+      
       try {
         let userData: UserDetails | null = null
         
         // Try to get user from location state first
         if (location.state?.user) {
           userData = location.state.user as UserDetails
+          // Still need to get UUID for API calls
+          if (id) {
+            userIdToFetch = id
+            // Check if it's numeric and convert
+            const isNumericId = !id.includes("-") && /^\d+$/.test(id)
+            if (isNumericId) {
+              try {
+                const usersResult = await usersApi.getAll({
+                  page: 1,
+                  limit: 1000,
+                })
+                if (usersResult.data && usersResult.data.length > 0) {
+                  const userIdMap = new Map<number, string>()
+                  usersResult.data.forEach((user: any) => {
+                    try {
+                      if (user.id && typeof user.id === "string") {
+                        const numericId =
+                          parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
+                          1000000
+                        userIdMap.set(numericId, user.id)
+                      }
+                    } catch (e) {
+                      console.error("Error converting user ID:", user.id, e)
+                    }
+                  })
+                  const numericId = parseInt(id)
+                  const uuid = userIdMap.get(numericId)
+                  if (uuid) {
+                    userIdToFetch = uuid
+                    console.log(`Successfully converted numeric ID ${id} to UUID: ${uuid}`)
+                  }
+                }
+              } catch (error) {
+                console.error("Error converting numeric ID to UUID:", error)
+              }
+            }
+            setUserUuid(userIdToFetch)
+          } else {
+            setUserUuid(id || null)
+          }
+          setLoading(false)
+          return
         } else if (id) {
-          // Fetch from API
-          const apiUser = await usersApi.getById(id)
+          // Check if id is a numeric ID (not a UUID)
+          userIdToFetch = id
+          const isNumericId = !id.includes("-") && /^\d+$/.test(id)
+          
+          console.log("Processing user ID:", { id, isNumericId })
+          
+          if (isNumericId) {
+            // This is a numeric ID, we need to convert it to UUID
+            console.log("Numeric ID detected, fetching users list to find UUID...", id)
+            
+            try {
+              const usersResult = await usersApi.getAll({
+                page: 1,
+                limit: 1000,
+              })
+              console.log("Fetched users for mapping:", usersResult.data?.length || 0)
+              
+              if (!usersResult.data || usersResult.data.length === 0) {
+                throw new Error("No users found in the system")
+              }
+              
+              const userIdMap = new Map<number, string>()
+              usersResult.data.forEach((user: any) => {
+                try {
+                  if (user.id && typeof user.id === "string") {
+                    const numericId =
+                      parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
+                      1000000
+                    userIdMap.set(numericId, user.id)
+                  }
+                } catch (e) {
+                  console.error("Error converting user ID:", user.id, e)
+                }
+              })
+              
+              console.log("User ID map built with", userIdMap.size, "entries")
+              
+              const numericId = parseInt(id)
+              const uuid = userIdMap.get(numericId)
+              
+              if (!uuid) {
+                console.error(`User with numeric ID ${id} not found in mapping.`)
+                throw new Error(`User with ID ${id} not found. The user may not exist or the ID mapping failed.`)
+              }
+              
+              userIdToFetch = uuid
+              console.log(`Successfully converted numeric ID ${id} to UUID: ${uuid}`)
+            } catch (error: any) {
+              console.error("Error converting numeric ID to UUID:", error)
+              throw new Error(`Failed to convert user ID: ${error?.message || "Unknown error"}`)
+            }
+          } else {
+            // It's already a UUID, use it directly
+            console.log("Using UUID directly:", userIdToFetch)
+          }
+          
+          // Verify we have a UUID to fetch
+          if (!userIdToFetch) {
+            throw new Error("Invalid user ID format")
+          }
+          
+          // Store the UUID for later use
+          setUserUuid(userIdToFetch)
+          
+          // Fetch from API using UUID
+          console.log("Fetching user with UUID:", userIdToFetch)
+          const apiUser = await usersApi.getById(userIdToFetch)
           // Transform to frontend format
           userData = {
             id: parseInt(apiUser.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
@@ -88,34 +198,75 @@ export default function EditUser() {
   }
 
   const handleSave = async () => {
-    if (!userDetails || !id) return
+    if (!userDetails || !userUuid) return
+    
+    // Basic validation
+    if (!formData.email || !formData.email.includes('@')) {
+      alert('Please enter a valid email address')
+      return
+    }
+    
+    if (formData.phone && formData.phone.length > 0 && formData.phone.length < 10) {
+      alert('Please enter a valid phone number')
+      return
+    }
     
     try {
-      // Update user via API
-      await usersApi.update(id, {
-        email: formData.email,
-        phone: formData.phone,
-        status: isActive ? 'active' : 'blocked',
-      })
+      // Prepare update data - only include fields that can be updated
+      const updateData: any = {}
       
-      // Navigate back to user details
-      navigate(`/users/${id}`)
-    } catch (error) {
+      if (formData.email !== userDetails.email) {
+        updateData.email = formData.email
+      }
+      
+      if (formData.phone !== userDetails.phone) {
+        updateData.phone = formData.phone || null
+      }
+      
+      const newStatus = isActive ? 'active' : 'blocked'
+      if (newStatus !== userDetails.status) {
+        updateData.status = newStatus
+      }
+      
+      // Only make API call if there are changes
+      if (Object.keys(updateData).length > 0) {
+        await usersApi.update(userUuid, updateData)
+        
+        // Show success message
+        alert('User updated successfully!')
+        
+        // Navigate back to user details with updated data
+        navigate(`/users/${userUuid}`, { 
+          state: { 
+            user: {
+              ...userDetails,
+              email: formData.email,
+              phone: formData.phone,
+              status: newStatus,
+            }
+          } 
+        })
+      } else {
+        // No changes made
+        alert('No changes to save')
+      }
+    } catch (error: any) {
       console.error('Error updating user:', error)
-      alert('Failed to update user. Please try again.')
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update user. Please try again.'
+      alert(`Error: ${errorMessage}`)
     }
   }
 
   const handleCancel = () => {
-    navigate(`/users/${userDetails?.id || id}`)
+    navigate(`/users/${userUuid || userDetails?.id || id}`)
   }
 
   const handleBlock = async () => {
-    if (!userDetails || !id) return
+    if (!userDetails || !userUuid) return
     
     try {
-      await usersApi.toggleBlock(id, true)
-      navigate(`/users/${id}`)
+      await usersApi.toggleBlock(userUuid, true)
+      navigate(`/users/${userUuid}`)
     } catch (error) {
       console.error('Error blocking user:', error)
       alert('Failed to block user. Please try again.')

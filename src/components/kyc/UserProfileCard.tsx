@@ -32,11 +32,19 @@ export default function UserProfileCard({ user, kycStatus }: UserProfileCardProp
       <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
         {/* Left: Profile Picture */}
         <div className="flex-shrink-0">
-          <img
-            src={user.avatar}
-            alt={user.name}
-            className="h-24 w-24 rounded-full object-cover"
-          />
+          {user.avatar ? (
+            <img
+              src={user.avatar}
+              alt={user.name}
+              className="h-24 w-24 rounded-full object-cover"
+            />
+          ) : (
+            <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center">
+              <span className="text-gray-500 text-lg font-semibold">
+                {user.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
         </div>
         
         {/* Right: User Information - Three Column Grid */}

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { usersApi } from '../services/users.api'
 import { kycApi } from '../services/kyc.api'
 import type { UserDetails } from '../types/userDetails'
-import type { KYCData } from '../types/kyc'
+import type { KYCData, KYCStatus } from '../types/kyc'
 import UserProfileCard from '../components/kyc/UserProfileCard'
 import KYCInformationCard from '../components/kyc/KYCInformationCard'
 import BankInformationCard from '../components/kyc/BankInformationCard'
@@ -107,11 +107,8 @@ export default function ViewKYC() {
           // Store the UUID for later use (for approve, reject, etc.)
           setUserUuid(userIdToFetch)
 
-          // Fetch user details and KYC data from API using UUID
-          const [apiUserData, apiKycData] = await Promise.all([
-            usersApi.getById(userIdToFetch),
-            kycApi.getByUserId(userIdToFetch),
-          ])
+          // Fetch user details first
+          const apiUserData = await usersApi.getById(userIdToFetch)
           
           // Transform user to frontend format
           const transformedUser: UserDetails = {
@@ -137,7 +134,74 @@ export default function ViewKYC() {
             orders: [],
           }
           
-          // Transform KYC data
+          // Try to fetch KYC data - it might not exist
+          let apiKycData
+          try {
+            apiKycData = await kycApi.getByUserId(userIdToFetch)
+          } catch (kycError: any) {
+            // If KYC not found (404), create a default KYC data object
+            if (kycError?.response?.status === 404) {
+              console.log('KYC data not found for user, showing "No KYC submission" state')
+              // Create default KYC data for users without KYC submission
+              const defaultKyc: KYCData = {
+                userId: parseInt(apiUserData.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+                kycId: '',
+                kycType: 'individual',
+                status: 'pending' as KYCStatus,
+                submissionDate: '',
+                submissionTime: '',
+                referenceNumber: '',
+                documents: [],
+                bankInfo: {
+                  iban: '',
+                  swiftCode: '',
+                  bankName: '',
+                  accountNumber: '',
+                  nameOnCard: '',
+                  bankCountry: '',
+                },
+                adminNotes: '',
+                activityHistory: [],
+              }
+              setUser(transformedUser)
+              setKycData(defaultKyc)
+              setLoading(false)
+              return
+            } else {
+              // For other errors, throw to be caught by outer catch
+              throw kycError
+            }
+          }
+          
+          // Transform KYC data - KYC exists
+          if (!apiKycData || !apiKycData.kyc) {
+            // Fallback - should not happen if API returned success
+            const defaultKyc: KYCData = {
+              userId: parseInt(apiUserData.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+              kycId: '',
+              kycType: 'individual',
+              status: 'pending' as KYCStatus,
+              submissionDate: '',
+              submissionTime: '',
+              referenceNumber: '',
+              documents: [],
+              bankInfo: {
+                iban: '',
+                swiftCode: '',
+                bankName: '',
+                accountNumber: '',
+                nameOnCard: '',
+                bankCountry: '',
+              },
+              adminNotes: '',
+              activityHistory: [],
+            }
+            setUser(transformedUser)
+            setKycData(defaultKyc)
+            setLoading(false)
+            return
+          }
+          
           const docsUrls = Array.isArray(apiKycData.kyc.docsUrls) ? apiKycData.kyc.docsUrls : 
                           typeof apiKycData.kyc.docsUrls === 'object' && apiKycData.kyc.docsUrls !== null ? Object.values(apiKycData.kyc.docsUrls) : []
           
@@ -210,7 +274,30 @@ export default function ViewKYC() {
     
     try {
       await kycApi.approve(userUuid)
-      // Reload KYC data
+      
+      // Reload KYC data to get updated status
+      try {
+        const updatedKycData = await kycApi.getByUserId(userUuid)
+        
+        const updatedKyc: KYCData = {
+          ...kycData,
+          status: updatedKycData.kyc.status === 'approved' ? 'approved' : 
+                  updatedKycData.kyc.status === 'rejected' ? 'rejected' : 'pending',
+          activityHistory: (updatedKycData.auditLogs || []).map((log: any, index: number) => ({
+            id: log.id || String(index),
+            event: log.action,
+            description: log.details?.reason || log.action,
+            date: new Date(log.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: new Date(log.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            icon: (log.action?.toLowerCase().includes('approve') ? 'check' : log.action?.toLowerCase().includes('reject') ? 'x' : 'note') as any,
+            isCurrent: index === 0,
+          })),
+        }
+        setKycData(updatedKyc)
+        alert('KYC approved successfully!')
+      } catch (reloadError) {
+        console.error('Error reloading KYC data:', reloadError)
+        // Still update local state even if reload fails
     setKycData({
       ...kycData,
       status: 'approved',
@@ -227,9 +314,12 @@ export default function ViewKYC() {
         },
       ],
     })
-    } catch (error) {
+        alert('KYC approved successfully!')
+      }
+    } catch (error: any) {
       console.error('Error approving KYC:', error)
-      alert('Failed to approve KYC. Please try again.')
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to approve KYC. Please try again.'
+      alert(`Error: ${errorMessage}`)
     }
   }
 
@@ -237,21 +327,48 @@ export default function ViewKYC() {
     if (!kycData || !userUuid) return
     
     const reason = prompt('Please enter rejection reason:')
-    if (!reason) return
+    if (!reason || reason.trim() === '') {
+      alert('Rejection reason is required')
+      return
+    }
     
     try {
       await kycApi.reject(userUuid, reason)
-      // Reload KYC data
+      
+      // Reload KYC data to get updated status
+      try {
+        const updatedKycData = await kycApi.getByUserId(userUuid)
+        
+        const updatedKyc: KYCData = {
+          ...kycData,
+          status: updatedKycData.kyc.status === 'approved' ? 'approved' : 
+                  updatedKycData.kyc.status === 'rejected' ? 'rejected' : 'pending',
+          adminNotes: updatedKycData.kyc.reason || reason,
+          activityHistory: (updatedKycData.auditLogs || []).map((log: any, index: number) => ({
+            id: log.id || String(index),
+            event: log.action,
+            description: log.details?.reason || log.action,
+            date: new Date(log.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: new Date(log.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            icon: (log.action?.toLowerCase().includes('approve') ? 'check' : log.action?.toLowerCase().includes('reject') ? 'x' : 'note') as any,
+            isCurrent: index === 0,
+          })),
+        }
+        setKycData(updatedKyc)
+        alert('KYC rejected successfully!')
+      } catch (reloadError) {
+        console.error('Error reloading KYC data:', reloadError)
+        // Still update local state even if reload fails
     setKycData({
       ...kycData,
       status: 'rejected',
-        adminNotes: reason,
+          adminNotes: reason,
       activityHistory: [
         ...kycData.activityHistory.filter(item => !item.isCurrent),
         {
           id: String(Date.now()),
           event: 'Status: Rejected',
-            description: `KYC has been rejected by admin: ${reason}`,
+              description: `KYC has been rejected by admin: ${reason}`,
           date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
           icon: 'x',
@@ -259,9 +376,12 @@ export default function ViewKYC() {
         },
       ],
     })
-    } catch (error) {
+        alert('KYC rejected successfully!')
+      }
+    } catch (error: any) {
       console.error('Error rejecting KYC:', error)
-      alert('Failed to reject KYC. Please try again.')
+      const errorMessage = error?.response?.data?.message || error?.message || 'Failed to reject KYC. Please try again.'
+      alert(`Error: ${errorMessage}`)
     }
   }
 
