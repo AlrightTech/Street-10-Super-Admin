@@ -30,7 +30,9 @@ export default function FinanceFilterTabs({ tabs, activeTab, onTabChange, classN
             key={tab.key}
             type="button"
             onClick={() => onTabChange(tab.key)}
-            className={`inline-flex items-center px-2 sm:px-2.5 pt-1.5 pb-3 text-sm font-medium transition-colors duration-150 ${
+            className={`inline-flex items-center p-2
+               text-sm font-medium transition-colors
+                duration-150 cursor-pointer ${
               isActive 
                 ? 'text-black border-b-2 border-black relative z-10 -mb-px' 
                 : 'text-gray-600 hover:text-gray-900 border-b-2 border-transparent'
@@ -39,7 +41,8 @@ export default function FinanceFilterTabs({ tabs, activeTab, onTabChange, classN
             {tab.icon}
             <span className={tab.icon ? 'ml-1 sm:ml-1.5' : ''}>{tab.label}</span>
             {typeof tab.count === 'number' && (
-              <span className={`ml-1 sm:ml-1.5 rounded-lg px-1.5 sm:px-2 py-1 text-xs sm:text-sm font-semibold ${resolveBadgeClasses(tab.badgeClassName, isActive)}`}>
+              <span className={`ml-1 sm:ml-1.5 rounded-md
+               px-1.5 sm:px-2 py-1 text-xs sm:text-xs font-semibold ${resolveBadgeClasses(tab.badgeClassName, isActive)}`}>
                 {tab.count}
               </span>
             )}

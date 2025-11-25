@@ -66,7 +66,7 @@ export default function FilterDropdown({ label, options = [], onSelect, classNam
                 key={option}
                 type="button"
                 onClick={() => handleSelect(option)}
-                className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
+                className={`block w-full px-4 py-2 text-left text-sm transition-colors cursor-pointer ${
                   selectedValue === option
                     ? 'bg-gray-100 text-gray-900 font-medium'
                     : 'text-gray-700 hover:bg-gray-50'

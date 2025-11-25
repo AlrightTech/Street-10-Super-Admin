@@ -13,7 +13,8 @@ const UserDetails = lazy(() => import('./pages/UserDetails'))
 const EditUser = lazy(() => import('./pages/EditUser'))
 const Vendors = lazy(() => import('./pages/Vendors'))
 const Orders = lazy(() => import('./pages/Orders'))
-const OrderDetails = lazy(() => import('./pages/OrderDetails'))
+const OrderDetail = lazy(() => import('./pages/OrderDetail'))
+const OrderDetailView = lazy(() => import('./pages/OrderDetailView'))
 const EcommerceOrderView = lazy(() => import('./pages/EcommerceOrderView'))
 const BidDetailPage = lazy(() => import('./pages/BidDetailPage'))
 const ViewKYC = lazy(() => import('./pages/ViewKYC'))
@@ -25,6 +26,8 @@ const EditUserDetail = lazy(() => import('./pages/EditUserDetail'))
 const ProductDetail = lazy(() => import('./pages/ProductDetail'))
 const VendorRequestDetail = lazy(() => import('./pages/VendorRequestDetail'))
 const Finance = lazy(() => import('./pages/Finance'))
+const AllTransactions = lazy(() => import('./pages/AllTransactions'))
+const VendorFinanceDetail = lazy(() => import('./pages/VendorFinanceDetail'))
 const Marketing = lazy(() => import('./pages/Marketing'))
 const AddStoryHighlight = lazy(() => import('./pages/AddStoryHighlight'))
 const AddBanner = lazy(() => import('./pages/AddBanner'))
@@ -53,7 +56,6 @@ const ScheduledDetailRoute = lazy(() => import('./pages/bidding/ScheduledDetailR
 const EditBiddingProduct = lazy(() => import('./pages/EditBiddingProduct'))
 const BiddingHistory = lazy(() => import('./pages/bidding/BiddingHistory'))
 const Wallet = lazy(() => import('./pages/Wallet'))
-const AllTransactions = lazy(() => import('./pages/AllTransactions'))
 const TransactionDetails = lazy(() => import('./pages/TransactionDetails'))
 const UserWallets = lazy(() => import('./pages/UserWallets'))
 const Withdrawals = lazy(() => import('./pages/Withdrawals'))
@@ -102,11 +104,14 @@ function App() {
             <Route path="vendor/product/:productId" element={<ProductDetail />} />
             <Route path="vendor-request-detail/:id" element={<VendorRequestDetail />} />
             <Route path="orders" element={<Orders />} />
-            <Route path="orders/:orderId" element={<OrderDetails />} />
+            <Route path="orders/:orderId/view" element={<OrderDetailView />} />
+            <Route path="orders/:orderId" element={<OrderDetail />} />
             <Route path="biddings/:bidId" element={<BidDetailPage />} />
             <Route path="view-kyc/:id" element={<ViewKYC />} />
             <Route path="refund-request/:id" element={<RefundRequest />} />
             <Route path="finance" element={<Finance />} />
+            <Route path="finance/all-transactions" element={<AllTransactions />} />
+            <Route path="finance/vendor/:vendorId" element={<VendorFinanceDetail />} />
             <Route path="marketing" element={<Marketing />} />
             <Route path="marketing/add-story" element={<AddStoryHighlight />} />
             <Route path="marketing/edit-story/:id" element={<AddStoryHighlight />} />

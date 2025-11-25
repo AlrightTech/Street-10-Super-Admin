@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import FinanceSummaryCard from '../components/finance/FinanceSummaryCard'
 import VendorUsersToggle from '../components/finance/VendorUsersToggle'
 import FinanceFilterTabs, { type FinanceFilterKey } from '../components/finance/FinanceFilterTabs'
 import FinanceTable from '../components/finance/FinanceTable'
-import UserTransactionsTable from '../components/finance/UserTransactionsTable'
 import VendorTransactionDetail from '../components/finance/VendorTransactionDetail'
 import UserTransactionDetail from '../components/finance/UserTransactionDetail'
 import FilterDropdown from '../components/finance/FilterDropdown'
 import type { FinanceActionType } from '../components/finance/FinanceActionMenu'
 import SearchBar from '../components/ui/SearchBar'
-import { DollarSignIcon, WalletIcon, ShoppingCartIcon, DownloadIcon, BarChart3Icon, CalendarIcon } from '../components/icons/Icons'
+import { DollarSignIcon, WalletIcon, ShoppingCartIcon, ExportIcon, BarChart3Icon, CalendarIcon } from '../components/icons/Icons'
 import type { FinanceStatus } from '../components/finance/FinanceStatusBadge'
 
 export interface FinanceTransaction {
@@ -70,40 +70,6 @@ const FILTER_OPTIONS: { key: FinanceFilterKey; label: string }[] = [
   { key: 'completed', label: 'Completed' },
 ]
 
-const USER_FILTER_OPTIONS: { key: 'all' | 'completed' | 'pending' | 'failed'; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'failed', label: 'Failed' },
-]
-
-// Mock data for user transactions
-const MOCK_USER_TRANSACTIONS: UserTransaction[] = [
-  { id: '1', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'pending' },
-  { id: '2', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'completed' },
-  { id: '3', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Credit Card', date: '2024-01-20', status: 'pending' },
-  { id: '4', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'failed' },
-  { id: '5', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'completed' },
-  { id: '6', transactionId: 'TXN-2024-002', userName: 'Sarah Williams', userEmail: 'sarah.w@email.com', type: 'credit', amount: '$200.00', paymentMethod: 'Credit Card', date: '2024-01-21', status: 'completed' },
-  { id: '7', transactionId: 'TXN-2024-003', userName: 'David Brown', userEmail: 'david.b@email.com', type: 'debit', amount: '$175.00', paymentMethod: 'Wallet Balance', date: '2024-01-22', status: 'pending' },
-  { id: '8', transactionId: 'TXN-2024-004', userName: 'Emily Davis', userEmail: 'emily.d@email.com', type: 'credit', amount: '$125.00', paymentMethod: 'Bank Transfer', date: '2024-01-23', status: 'failed' },
-  { id: '9', transactionId: 'TXN-2024-005', userName: 'James Wilson', userEmail: 'james.w@email.com', type: 'credit', amount: '$300.00', paymentMethod: 'Credit Card', date: '2024-01-24', status: 'completed' },
-  { id: '10', transactionId: 'TXN-2024-006', userName: 'Lisa Anderson', userEmail: 'lisa.a@email.com', type: 'debit', amount: '$100.00', paymentMethod: 'Wallet Balance', date: '2024-01-25', status: 'pending' },
-  { id: '11', transactionId: 'TXN-2024-007', userName: 'Robert Taylor', userEmail: 'robert.t@email.com', type: 'credit', amount: '$250.00', paymentMethod: 'Bank Transfer', date: '2024-01-26', status: 'completed' },
-  { id: '12', transactionId: 'TXN-2024-008', userName: 'Jennifer Martinez', userEmail: 'jennifer.m@email.com', type: 'debit', amount: '$180.00', paymentMethod: 'Credit Card', date: '2024-01-27', status: 'failed' },
-  { id: '13', transactionId: 'TXN-2024-009', userName: 'Christopher Lee', userEmail: 'christopher.l@email.com', type: 'credit', amount: '$220.00', paymentMethod: 'Wallet Balance', date: '2024-01-28', status: 'completed' },
-  { id: '14', transactionId: 'TXN-2024-010', userName: 'Amanda White', userEmail: 'amanda.w@email.com', type: 'credit', amount: '$190.00', paymentMethod: 'Bank Transfer', date: '2024-01-29', status: 'pending' },
-  { id: '15', transactionId: 'TXN-2024-011', userName: 'Daniel Harris', userEmail: 'daniel.h@email.com', type: 'debit', amount: '$160.00', paymentMethod: 'Credit Card', date: '2024-01-30', status: 'completed' },
-  { id: '16', transactionId: 'TXN-2024-012', userName: 'Jessica Clark', userEmail: 'jessica.c@email.com', type: 'credit', amount: '$140.00', paymentMethod: 'Wallet Balance', date: '2024-02-01', status: 'failed' },
-  { id: '17', transactionId: 'TXN-2024-013', userName: 'Matthew Lewis', userEmail: 'matthew.l@email.com', type: 'credit', amount: '$270.00', paymentMethod: 'Bank Transfer', date: '2024-02-02', status: 'completed' },
-  { id: '18', transactionId: 'TXN-2024-014', userName: 'Ashley Walker', userEmail: 'ashley.w@email.com', type: 'debit', amount: '$130.00', paymentMethod: 'Credit Card', date: '2024-02-03', status: 'pending' },
-  { id: '19', transactionId: 'TXN-2024-015', userName: 'Ryan Hall', userEmail: 'ryan.h@email.com', type: 'credit', amount: '$210.00', paymentMethod: 'Wallet Balance', date: '2024-02-04', status: 'completed' },
-  { id: '20', transactionId: 'TXN-2024-016', userName: 'Nicole Young', userEmail: 'nicole.y@email.com', type: 'debit', amount: '$165.00', paymentMethod: 'Bank Transfer', date: '2024-02-05', status: 'failed' },
-  { id: '21', transactionId: 'TXN-2024-017', userName: 'Kevin King', userEmail: 'kevin.k@email.com', type: 'credit', amount: '$240.00', paymentMethod: 'Credit Card', date: '2024-02-06', status: 'completed' },
-  { id: '22', transactionId: 'TXN-2024-018', userName: 'Michelle Wright', userEmail: 'michelle.w@email.com', type: 'credit', amount: '$155.00', paymentMethod: 'Wallet Balance', date: '2024-02-07', status: 'pending' },
-  { id: '23', transactionId: 'TXN-2024-019', userName: 'Brandon Lopez', userEmail: 'brandon.l@email.com', type: 'debit', amount: '$185.00', paymentMethod: 'Bank Transfer', date: '2024-02-08', status: 'completed' },
-  { id: '24', transactionId: 'TXN-2024-020', userName: 'Stephanie Hill', userEmail: 'stephanie.h@email.com', type: 'credit', amount: '$195.00', paymentMethod: 'Credit Card', date: '2024-02-09', status: 'failed' },
-]
 
 const STATUS_BADGE_CLASS: Record<FinanceFilterKey, { active: string; inactive: string }> = {
   all: {
@@ -136,9 +102,9 @@ const STATUS_BADGE_CLASS: Record<FinanceFilterKey, { active: string; inactive: s
  * Finance page component
  */
 export default function Finance() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'vendor' | 'users'>('vendor')
   const [activeFilter, setActiveFilter] = useState<FinanceFilterKey>('all')
-  const [userActiveFilter, setUserActiveFilter] = useState<'all' | 'completed' | 'pending' | 'failed'>('all')
   const [searchValue, setSearchValue] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState('Sort By Date')
@@ -255,8 +221,9 @@ export default function Finance() {
   const handleTransactionAction = (transaction: FinanceTransaction | UserTransaction, action: FinanceActionType) => {
     if (action === 'view') {
       if ('orderId' in transaction) {
-        // Vendor transaction
-        setViewingTransaction(transaction as FinanceTransaction)
+        // Vendor transaction - navigate to vendor finance detail page
+        const vendorName = (transaction as FinanceTransaction).user.toLowerCase().replace(/\s+/g, '-')
+        navigate(`/finance/vendor/${vendorName}`)
       } else {
         // User transaction
         setViewingUserTransaction(transaction as UserTransaction)
@@ -268,102 +235,6 @@ export default function Finance() {
     }
   }
 
-  // User transactions filtering and pagination
-  const userFilterTabsWithCounts = useMemo(
-    () =>
-      USER_FILTER_OPTIONS.map((tab) => ({
-        ...tab,
-        count:
-          tab.key === 'all'
-            ? MOCK_USER_TRANSACTIONS.length
-            : MOCK_USER_TRANSACTIONS.filter((t) => t.status === tab.key).length,
-        badgeClassName: {
-          active: tab.key === 'all' ? 'bg-[#4C50A2] text-white' : 
-                  tab.key === 'completed' ? 'bg-[#DCF6E5] text-[#118D57]' :
-                  tab.key === 'pending' ? 'bg-[#FFF2D6] text-[#B76E00]' :
-                  'bg-[#FFE4DE] text-[#B71D18]',
-          inactive: tab.key === 'all' ? 'bg-[#4C50A2] text-white' : 
-                    tab.key === 'completed' ? 'bg-[#DCF6E5] text-[#118D57]' :
-                    tab.key === 'pending' ? 'bg-[#FFF2D6] text-[#B76E00]' :
-                    'bg-[#FFE4DE] text-[#B71D18]',
-        },
-      })),
-    [],
-  )
-
-  const filteredUserTransactions = useMemo(() => {
-    let result = [...MOCK_USER_TRANSACTIONS]
-
-    if (userActiveFilter !== 'all') {
-      result = result.filter((transaction) => transaction.status === userActiveFilter)
-    }
-
-    if (searchValue.trim()) {
-      const query = searchValue.toLowerCase()
-      result = result.filter(
-        (transaction) =>
-          transaction.transactionId.toLowerCase().includes(query) ||
-          transaction.userName.toLowerCase().includes(query) ||
-          transaction.userEmail.toLowerCase().includes(query),
-      )
-    }
-
-    return result
-  }, [userActiveFilter, searchValue])
-
-  const userTotalPages = Math.max(1, Math.ceil(filteredUserTransactions.length / PAGE_SIZE))
-
-  const paginatedUserTransactions = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return filteredUserTransactions.slice(start, start + PAGE_SIZE)
-  }, [filteredUserTransactions, currentPage])
-
-  const getUserPageNumbers = () => {
-    const pages: (number | string)[] = []
-    const totalPagesToUse = activeTab === 'users' ? userTotalPages : totalPages
-    
-    if (totalPagesToUse <= 8) {
-      for (let i = 1; i <= totalPagesToUse; i++) {
-        pages.push(i)
-      }
-    } else {
-      pages.push(1)
-      
-      if (currentPage > 3) {
-        pages.push('...')
-      }
-      
-      const start = Math.max(2, currentPage - 1)
-      const end = Math.min(totalPagesToUse - 1, currentPage + 1)
-      
-      for (let i = start; i <= end; i++) {
-        if (i !== 1 && i !== totalPagesToUse) {
-          pages.push(i)
-        }
-      }
-      
-      if (currentPage < totalPagesToUse - 2) {
-        pages.push('...')
-      }
-      
-      if (totalPagesToUse > 1) {
-        pages.push(totalPagesToUse)
-      }
-    }
-    
-    return pages
-  }
-
-  const handleUserFilterChange = (filterKey: 'all' | 'completed' | 'pending' | 'failed') => {
-    setUserActiveFilter(filterKey)
-    setCurrentPage(1)
-  }
-
-  const handleUserPageChange = (page: number) => {
-    const maxPages = activeTab === 'users' ? userTotalPages : totalPages
-    if (page < 1 || page > maxPages) return
-    setCurrentPage(page)
-  }
 
   // Summary card data
   const summaryCards = [
@@ -398,7 +269,7 @@ export default function Finance() {
   ]
 
   // If viewing vendor transaction detail, show detail view
-  if (viewingTransaction && activeTab === 'vendor') {
+  if (viewingTransaction && activeTab === 'users') {
     return (
       <div className="space-y-6">
         {/* Page Header */}
@@ -416,7 +287,7 @@ export default function Finance() {
   }
 
   // If viewing user transaction detail, show detail view
-  if (viewingUserTransaction && activeTab === 'users') {
+  if (viewingUserTransaction && activeTab === 'vendor') {
     return (
       <div className="space-y-6">
         {/* Page Header */}
@@ -460,19 +331,28 @@ export default function Finance() {
       {/* Vendor/Users Toggle */}
       <div className="mt-6">
         <div className="bg-white rounded-lg pt-1 px-1 pb-0">
-          <VendorUsersToggle 
-            activeTab={activeTab} 
-            onTabChange={(tab) => {
-              setActiveTab(tab)
-              setCurrentPage(1)
-              setSearchValue('')
-            }} 
-          />
+          <div className="flex items-center justify-between">
+            <VendorUsersToggle 
+              activeTab={activeTab} 
+              onTabChange={(tab) => {
+                setActiveTab(tab)
+                setCurrentPage(1)
+                setSearchValue('')
+              }} 
+            />
+            <button
+              type="button"
+              onClick={() => navigate('/finance/all-transactions')}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#E8840D] cursor-pointer"
+            >
+              See All Transaction History
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* User Filters - Only show when Users tab is active, on second line, right-aligned */}
-      {activeTab === 'users' && (
+      {/* User Filters - Only show when Vendor tab is active, on second line, right-aligned */}
+      {activeTab === 'vendor' && (
         <div className="mt-4 flex justify-end">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
             <FilterDropdown
@@ -496,28 +376,35 @@ export default function Finance() {
         </div>
       )}
 
-      {/* Transactions Section - Vendor View */}
+      {/* Transactions Section - Vendor View (shows FinanceTable) */}
       {activeTab === 'vendor' && (
         <>
           {/* Transactions Heading */}
           <div className="mt-6 mb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Transactions</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">All Transactions</h2>
           </div>
 
           <section className="rounded-xl bg-white shadow-sm">
             {/* Filters and Controls */}
             <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-gray-100 px-4 pt-4 pb-4 sm:px-6">
               <div className="flex items-center flex-shrink-0">
-                <FinanceFilterTabs tabs={filterTabsWithCounts} activeTab={activeFilter} onTabChange={handleFilterChange} />
+                <FinanceFilterTabs 
+                  tabs={filterTabsWithCounts} 
+                  activeTab={activeFilter} 
+                  onTabChange={handleFilterChange} 
+                />
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 flex-shrink-0">
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap"
+                  className="inline-flex items-center justify-center 
+                  gap-2 rounded-lg border border-gray-200 
+                  px-3 py-2.5 text-xs font-medium text-gray-700 
+                  transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
                 >
-                  <DownloadIcon className="h-4 w-4" />
                   Export
+                  <ExportIcon className="h-4 w-4" />
                 </button>
                 <SearchBar
                   placeholder="Search Order"
@@ -527,7 +414,8 @@ export default function Finance() {
                 />
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap"
+                  className="inline-flex items-center 
+                  justify-center gap-2  px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -543,11 +431,15 @@ export default function Finance() {
             </header>
 
             {/* Table */}
-            <div className="px-4 py-4 sm:px-6">
+            <div className="py-4">
               <FinanceTable
                 transactions={paginatedTransactions}
                 startIndex={(currentPage - 1) * PAGE_SIZE}
                 onActionSelect={handleTransactionAction}
+                onRowClick={(transaction) => {
+                  const vendorName = transaction.user.toLowerCase().replace(/\s+/g, '-')
+                  navigate(`/finance/vendor/${vendorName}`)
+                }}
               />
             </div>
 
@@ -605,32 +497,68 @@ export default function Finance() {
         </>
       )}
 
-      {/* Transactions Section - Users View */}
+      {/* Transactions Section - Users View (shows FinanceTable) */}
       {activeTab === 'users' && (
         <>
           {/* Transactions Heading */}
-          <div className="mt-6 mb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">All Transactions</h2>
+          <div className="">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Transactions</h2>
           </div>
 
           <section className="rounded-xl bg-white shadow-sm">
             {/* Filters and Controls */}
-            <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-gray-100 px-4 pt-4 pb-4 sm:px-6">
+            <header className="flex flex-col gap-3 
+            md:flex-row md:items-center md:justify-between
+             border-b border-gray-100 px-4 pt-4  sm:px-6">
               <div className="flex items-center flex-shrink-0">
-                <FinanceFilterTabs 
-                  tabs={userFilterTabsWithCounts.map(tab => ({ ...tab, key: tab.key as FinanceFilterKey }))} 
-                  activeTab={userActiveFilter as FinanceFilterKey} 
-                  onTabChange={(key) => handleUserFilterChange(key as 'all' | 'completed' | 'pending' | 'failed')} 
+                <FinanceFilterTabs tabs={filterTabsWithCounts} activeTab={activeFilter} onTabChange={handleFilterChange} />
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center 
+                  gap-2 rounded-lg border border-gray-200 
+                  px-3 py-2.5 text-xs font-medium text-gray-700 
+                  transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                >
+                  Export
+                  <ExportIcon className="h-4 w-4" />
+                </button>
+                <SearchBar
+                  placeholder="Search Order"
+                  value={searchValue}
+                  onChange={handleSearchChange}
+                  className="min-w-[180px] sm:min-w-[200px]"
                 />
+                <button
+                  type="button"
+                  className="inline-flex items-center 
+                  justify-center gap-2  px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6l-4.2 5.6a2 2 0 00-.4 1.2v5.6a1 1 0 01-1.447.894L12 16.618l-2.753 1.676A1 1 0 017.8 16.4v-5.6a2 2 0 00-.4-1.2L3.2 5.6A1 1 0 013 4z"
+                    />
+                  </svg>
+                  Filter
+                </button>
               </div>
             </header>
 
             {/* Table */}
-            <div className="px-4 py-4 sm:px-6">
-              <UserTransactionsTable
-                transactions={paginatedUserTransactions}
+            <div className="py-4">
+              <FinanceTable
+                transactions={paginatedTransactions}
                 startIndex={(currentPage - 1) * PAGE_SIZE}
                 onActionSelect={handleTransactionAction}
+                onRowClick={(transaction) => {
+                  const vendorName = transaction.user.toLowerCase().replace(/\s+/g, '-')
+                  navigate(`/finance/vendor/${vendorName}`)
+                }}
               />
             </div>
 
@@ -639,14 +567,14 @@ export default function Finance() {
               <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => handleUserPageChange(currentPage - 1)}
+                  onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
                   className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Back
                 </button>
                 <div className="flex items-center gap-0.5 sm:gap-1">
-                  {getUserPageNumbers().map((page, index) => {
+                  {getPageNumbers().map((page, index) => {
                     if (page === '...') {
                       return (
                         <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
@@ -662,7 +590,7 @@ export default function Finance() {
                       <button
                         key={pageNum}
                         type="button"
-                        onClick={() => handleUserPageChange(pageNum)}
+                        onClick={() => handlePageChange(pageNum)}
                         className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
                           isActive
                             ? 'bg-[#4C50A2] text-white'
@@ -676,8 +604,8 @@ export default function Finance() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleUserPageChange(currentPage + 1)}
-                  disabled={currentPage === userTotalPages}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
                   className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next

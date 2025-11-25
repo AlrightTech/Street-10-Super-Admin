@@ -1,687 +1,605 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { MoreVerticalIcon, CalendarIcon, PencilIcon, TrashIcon } from '../components/icons/Icons'
+import { useMemo, useState } from 'react'
+import VendorUsersToggle from '../components/finance/VendorUsersToggle'
+import FinanceFilterTabs, { type FinanceFilterKey } from '../components/finance/FinanceFilterTabs'
+import FinanceTable from '../components/finance/FinanceTable'
+import UserTransactionsTable from '../components/finance/UserTransactionsTable'
+import UserTransactionDetail from '../components/finance/UserTransactionDetail'
+import VendorTransactionDetail from '../components/finance/VendorTransactionDetail'
+import FilterDropdown from '../components/finance/FilterDropdown'
+import type { FinanceActionType } from '../components/finance/FinanceActionMenu'
 import SearchBar from '../components/ui/SearchBar'
-import Pagination from '../components/ui/Pagination'
-import ConfirmModal from '../components/ui/ConfirmModal'
-import { mockWalletTransactions } from '../data/mockWallet'
-import type { WalletTransaction, TransactionStatus, PaymentMethod } from '../types/wallet'
-import { useNavigate } from 'react-router-dom'
+import { CalendarIcon, ExportIcon } from '../components/icons/Icons'
+import type { UserTransaction, FinanceTransaction } from './Finance'
 
-/**
- * Input-style Dropdown Component
- */
-interface CustomDropdownProps {
-  value: string
-  options: { label: string; value: string }[]
-  onChange: (value: string) => void
-  placeholder: string
-  icon?: React.ReactNode
-  className?: string
-}
+// Mock data for all transactions
+const MOCK_ALL_TRANSACTIONS: UserTransaction[] = [
+  { id: '1', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'pending' },
+  { id: '2', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'completed' },
+  { id: '3', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Credit Card', date: '2024-01-20', status: 'pending' },
+  { id: '4', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'failed' },
+  { id: '5', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'completed' },
+  { id: '6', transactionId: 'TXN-2024-002', userName: 'Sarah Williams', userEmail: 'sarah.w@email.com', type: 'credit', amount: '$200.00', paymentMethod: 'Credit Card', date: '2024-01-21', status: 'completed' },
+  { id: '7', transactionId: 'TXN-2024-003', userName: 'David Brown', userEmail: 'david.b@email.com', type: 'debit', amount: '$175.00', paymentMethod: 'Wallet Balance', date: '2024-01-22', status: 'pending' },
+  { id: '8', transactionId: 'TXN-2024-004', userName: 'Emily Davis', userEmail: 'emily.d@email.com', type: 'credit', amount: '$125.00', paymentMethod: 'Bank Transfer', date: '2024-01-23', status: 'failed' },
+  { id: '9', transactionId: 'TXN-2024-005', userName: 'James Wilson', userEmail: 'james.w@email.com', type: 'credit', amount: '$300.00', paymentMethod: 'Credit Card', date: '2024-01-24', status: 'completed' },
+  { id: '10', transactionId: 'TXN-2024-006', userName: 'Lisa Anderson', userEmail: 'lisa.a@email.com', type: 'debit', amount: '$100.00', paymentMethod: 'Wallet Balance', date: '2024-01-25', status: 'pending' },
+  { id: '11', transactionId: 'TXN-2024-007', userName: 'Robert Taylor', userEmail: 'robert.t@email.com', type: 'credit', amount: '$250.00', paymentMethod: 'Bank Transfer', date: '2024-01-26', status: 'completed' },
+  { id: '12', transactionId: 'TXN-2024-008', userName: 'Jennifer Martinez', userEmail: 'jennifer.m@email.com', type: 'debit', amount: '$180.00', paymentMethod: 'Credit Card', date: '2024-01-27', status: 'failed' },
+  { id: '13', transactionId: 'TXN-2024-009', userName: 'Christopher Lee', userEmail: 'christopher.l@email.com', type: 'credit', amount: '$220.00', paymentMethod: 'Wallet Balance', date: '2024-01-28', status: 'completed' },
+  { id: '14', transactionId: 'TXN-2024-010', userName: 'Amanda White', userEmail: 'amanda.w@email.com', type: 'credit', amount: '$190.00', paymentMethod: 'Bank Transfer', date: '2024-01-29', status: 'pending' },
+  { id: '15', transactionId: 'TXN-2024-011', userName: 'Daniel Harris', userEmail: 'daniel.h@email.com', type: 'debit', amount: '$160.00', paymentMethod: 'Credit Card', date: '2024-01-30', status: 'completed' },
+  { id: '16', transactionId: 'TXN-2024-012', userName: 'Jessica Clark', userEmail: 'jessica.c@email.com', type: 'credit', amount: '$140.00', paymentMethod: 'Wallet Balance', date: '2024-02-01', status: 'failed' },
+  { id: '17', transactionId: 'TXN-2024-013', userName: 'Matthew Lewis', userEmail: 'matthew.l@email.com', type: 'credit', amount: '$270.00', paymentMethod: 'Bank Transfer', date: '2024-02-02', status: 'completed' },
+  { id: '18', transactionId: 'TXN-2024-014', userName: 'Ashley Walker', userEmail: 'ashley.w@email.com', type: 'debit', amount: '$130.00', paymentMethod: 'Credit Card', date: '2024-02-03', status: 'pending' },
+  { id: '19', transactionId: 'TXN-2024-015', userName: 'Ryan Hall', userEmail: 'ryan.h@email.com', type: 'credit', amount: '$210.00', paymentMethod: 'Wallet Balance', date: '2024-02-04', status: 'completed' },
+  { id: '20', transactionId: 'TXN-2024-016', userName: 'Nicole Young', userEmail: 'nicole.y@email.com', type: 'debit', amount: '$165.00', paymentMethod: 'Bank Transfer', date: '2024-02-05', status: 'failed' },
+  { id: '21', transactionId: 'TXN-2024-017', userName: 'Kevin King', userEmail: 'kevin.k@email.com', type: 'credit', amount: '$240.00', paymentMethod: 'Credit Card', date: '2024-02-06', status: 'completed' },
+  { id: '22', transactionId: 'TXN-2024-018', userName: 'Michelle Wright', userEmail: 'michelle.w@email.com', type: 'credit', amount: '$155.00', paymentMethod: 'Wallet Balance', date: '2024-02-07', status: 'pending' },
+  { id: '23', transactionId: 'TXN-2024-019', userName: 'Brandon Lopez', userEmail: 'brandon.l@email.com', type: 'debit', amount: '$185.00', paymentMethod: 'Bank Transfer', date: '2024-02-08', status: 'completed' },
+  { id: '24', transactionId: 'TXN-2024-020', userName: 'Stephanie Hill', userEmail: 'stephanie.h@email.com', type: 'credit', amount: '$195.00', paymentMethod: 'Credit Card', date: '2024-02-09', status: 'failed' },
+]
 
-function CustomDropdown({ value, options, onChange, placeholder, icon, className = '' }: CustomDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+const PAGE_SIZE = 10
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+// Mock data for vendor transactions
+const MOCK_VENDOR_TRANSACTIONS: FinanceTransaction[] = [
+  { id: '1', transactionId: 'TX-1001', user: 'Farhan', orderId: '#1001', amountPaid: '$160', commission: '$16', paymentMethod: 'Credit Card', status: 'paid', orderDate: '12 Aug 2025' },
+  { id: '2', transactionId: 'TX-1001', user: 'Hammad', orderId: '#1001', amountPaid: '$160', commission: '$16', paymentMethod: 'PayPal', status: 'pending', orderDate: '12 Aug 2025' },
+  { id: '3', transactionId: 'TX-1001', user: 'Ubaid', orderId: '#1001', amountPaid: '$160', commission: '$16', paymentMethod: 'Bank Transfer', status: 'refunded', orderDate: '12 Aug 2025' },
+  { id: '4', transactionId: 'TX-1002', user: 'Ahmed', orderId: '#1002', amountPaid: '$200', commission: '$20', paymentMethod: 'Credit Card', status: 'paid', orderDate: '13 Aug 2025' },
+  { id: '5', transactionId: 'TX-1003', user: 'Ali', orderId: '#1003', amountPaid: '$150', commission: '$15', paymentMethod: 'PayPal', status: 'refunded', orderDate: '14 Aug 2025' },
+  { id: '6', transactionId: 'TX-1004', user: 'Hassan', orderId: '#1004', amountPaid: '$180', commission: '$18', paymentMethod: 'Bank Transfer', status: 'pending', orderDate: '15 Aug 2025' },
+  { id: '7', transactionId: 'TX-1005', user: 'Usman', orderId: '#1005', amountPaid: '$220', commission: '$22', paymentMethod: 'Credit Card', status: 'paid', orderDate: '16 Aug 2025' },
+  { id: '8', transactionId: 'TX-1006', user: 'Bilal', orderId: '#1006', amountPaid: '$140', commission: '$14', paymentMethod: 'PayPal', status: 'completed', orderDate: '17 Aug 2025' },
+  { id: '9', transactionId: 'TX-1007', user: 'Zain', orderId: '#1007', amountPaid: '$190', commission: '$19', paymentMethod: 'Bank Transfer', status: 'paid', orderDate: '18 Aug 2025' },
+  { id: '10', transactionId: 'TX-1008', user: 'Hamza', orderId: '#1008', amountPaid: '$170', commission: '$17', paymentMethod: 'Credit Card', status: 'refunded', orderDate: '19 Aug 2025' },
+]
+
+const USER_FILTER_OPTIONS: { key: 'all' | 'completed' | 'pending' | 'failed'; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'failed', label: 'Failed' },
+]
+
+const VENDOR_FILTER_OPTIONS: { key: FinanceFilterKey; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'refunded', label: 'Refunded' },
+  { key: 'paid', label: 'Paid' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'completed', label: 'Completed' },
+]
+
+export default function AllTransactions() {
+  const [activeTab, setActiveTab] = useState<'vendor' | 'users'>('users')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'completed' | 'pending' | 'failed'>('all')
+  const [vendorActiveFilter, setVendorActiveFilter] = useState<FinanceFilterKey>('all')
+  const [searchValue, setSearchValue] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [sortBy, setSortBy] = useState('Sort By Date')
+  const [statusFilter, setStatusFilter] = useState('All Status')
+  const [viewingTransaction, setViewingTransaction] = useState<UserTransaction | null>(null)
+  const [viewingVendorTransaction, setViewingVendorTransaction] = useState<FinanceTransaction | null>(null)
+
+  const userFilterTabsWithCounts = useMemo(
+    () =>
+      USER_FILTER_OPTIONS.map((tab) => ({
+        ...tab,
+        count:
+          tab.key === 'all'
+            ? MOCK_ALL_TRANSACTIONS.length
+            : MOCK_ALL_TRANSACTIONS.filter((t) => t.status === tab.key).length,
+        badgeClassName: {
+          active: tab.key === 'all' ? 'bg-[#4C50A2] text-white' : 
+                  tab.key === 'completed' ? 'bg-[#DCF6E5] text-[#118D57]' :
+                  tab.key === 'pending' ? 'bg-[#FFF2D6] text-[#B76E00]' :
+                  'bg-[#FFE4DE] text-[#B71D18]',
+          inactive: tab.key === 'all' ? 'bg-[#4C50A2] text-white' : 
+                    tab.key === 'completed' ? 'bg-[#DCF6E5] text-[#118D57]' :
+                    tab.key === 'pending' ? 'bg-[#FFF2D6] text-[#B76E00]' :
+                    'bg-[#FFE4DE] text-[#B71D18]',
+        },
+      })),
+    [],
+  )
+
+  const vendorFilterTabsWithCounts = useMemo(
+    () =>
+      VENDOR_FILTER_OPTIONS.map((tab) => ({
+        ...tab,
+        count:
+          tab.key === 'all'
+            ? MOCK_VENDOR_TRANSACTIONS.length
+            : MOCK_VENDOR_TRANSACTIONS.filter((t) => {
+                if (tab.key === 'refunded') return t.status === 'refunded'
+                if (tab.key === 'paid') return t.status === 'paid'
+                if (tab.key === 'pending') return t.status === 'pending'
+                if (tab.key === 'completed') return t.status === 'completed'
+                return false
+              }).length,
+        badgeClassName: {
+          active: tab.key === 'all' ? 'bg-[#4C50A2] text-white' : 
+                  tab.key === 'refunded' ? 'bg-[#FFE4DE] text-[#B71D18]' :
+                  tab.key === 'paid' ? 'bg-[#DCF6E5] text-[#118D57]' :
+                  tab.key === 'pending' ? 'bg-[#FFF2D6] text-[#B76E00]' :
+                  'bg-[#FFF2D6] text-[#B76E00]',
+          inactive: tab.key === 'all' ? 'bg-[#4C50A2] text-white' : 
+                    tab.key === 'refunded' ? 'bg-[#FFE4DE] text-[#B71D18]' :
+                    tab.key === 'paid' ? 'bg-[#DCF6E5] text-[#118D57]' :
+                    tab.key === 'pending' ? 'bg-[#FFF2D6] text-[#B76E00]' :
+                    'bg-[#FFF2D6] text-[#B76E00]',
+        },
+      })),
+    [],
+  )
+
+  const filteredUserTransactions = useMemo(() => {
+    let result = [...MOCK_ALL_TRANSACTIONS]
+
+    // Apply status filter from dropdown
+    if (statusFilter !== 'All Status') {
+      const statusMap: Record<string, 'completed' | 'pending' | 'failed'> = {
+        'Completed': 'completed',
+        'Pending': 'pending',
+        'Failed': 'failed',
+      }
+      const status = statusMap[statusFilter]
+      if (status) {
+        result = result.filter((transaction) => transaction.status === status)
       }
     }
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
-
-  const selectedOption = options.find((opt) => opt.value === value)
-  const displayText = selectedOption ? selectedOption.label : placeholder
-  const textColorClass = selectedOption ? 'text-gray-700' : 'text-gray-400'
-
-  return (
-    <div ref={dropdownRef} className={`relative ${className}`}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm outline-none hover:bg-gray-50 focus:border-[#FF8C00] focus:ring-1 focus:ring-[#FF8C00]"
-      >
-        <div className="flex items-center gap-2">
-          {icon && <span className="flex-shrink-0 text-gray-400">{icon}</span>}
-          <span className={`block truncate text-left ${textColorClass}`}>{displayText}</span>
-        </div>
-        <svg
-          className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {isOpen && (
-        <div className="absolute left-0 z-50 mt-1 w-full min-w-[160px] origin-top-left rounded-lg border border-gray-200 bg-white shadow-lg">
-          <div className="max-h-60 overflow-auto py-1" role="menu">
-            {options.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  onChange(option.value)
-                  setIsOpen(false)
-                }}
-                className={`block w-full px-4 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 ${
-                  value === option.value ? 'bg-gray-50 font-medium' : ''
-                }`}
-                role="menuitem"
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/**
- * Get status badge color class
- */
-function getStatusBadgeColor(status: TransactionStatus): string {
-  switch (status) {
-    case 'completed':
-      return 'bg-green-100 text-green-800'
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800'
-    case 'failed':
-      return 'bg-red-100 text-red-800'
-    default:
-      return 'bg-gray-100 text-gray-800'
-  }
-}
-
-/**
- * All Transactions Page Component
- */
-export default function AllTransactions() {
-  const navigate = useNavigate()
-  const [transactions, setTransactions] = useState<WalletTransaction[]>(
-    mockWalletTransactions.map((t) => ({
-      ...t,
-      paymentMethod:
-        t.paymentMethod ||
-        (['Bank Transfer', 'Wallet Balance', 'Credit Card', 'Debit Card'][
-          Math.floor(Math.random() * 4)
-        ] as PaymentMethod),
-    }))
-  )
-  const [sortBy, setSortBy] = useState<string>('newest')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [activeFilter, setActiveFilter] = useState<'all' | TransactionStatus>('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null)
-  const [transactionToEdit, setTransactionToEdit] = useState<WalletTransaction | null>(null)
-  const [editModalOpen, setEditModalOpen] = useState(false)
-  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null)
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const itemsPerPage = 10
-
-  // Filter and sort transactions
-  const filteredAndSortedTransactions = useMemo(() => {
-    let filtered = [...transactions]
-
-    // Apply status filter from tabs
+    // Apply tab filter
     if (activeFilter !== 'all') {
-      filtered = filtered.filter((t) => t.status === activeFilter)
+      result = result.filter((transaction) => transaction.status === activeFilter)
     }
 
-    // Apply status filter from dropdown
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((t) => t.status === statusFilter)
-    }
-
-    // Apply search filter (search by Transaction ID or User name/email)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
-      filtered = filtered.filter(
-        (t) =>
-          t.transactionId.toLowerCase().includes(query) ||
-          t.userName.toLowerCase().includes(query) ||
-          t.userEmail.toLowerCase().includes(query)
+    // Apply search filter
+    if (searchValue.trim()) {
+      const query = searchValue.toLowerCase()
+      result = result.filter(
+        (transaction) =>
+          transaction.transactionId.toLowerCase().includes(query) ||
+          transaction.userName.toLowerCase().includes(query) ||
+          transaction.userEmail.toLowerCase().includes(query),
       )
     }
 
     // Apply sorting
-    const sorted = [...filtered].sort((a, b) => {
-      const dateA = new Date(a.date).getTime()
-      const dateB = new Date(b.date).getTime()
-      return sortBy === 'newest' ? dateB - dateA : dateA - dateB
-    })
-
-    return sorted
-  }, [transactions, activeFilter, statusFilter, searchQuery, sortBy])
-
-  // Calculate filter counts
-  const counts = useMemo(() => {
-    return {
-      all: transactions.length,
-      completed: transactions.filter((t) => t.status === 'completed').length,
-      pending: transactions.filter((t) => t.status === 'pending').length,
-      failed: transactions.filter((t) => t.status === 'failed').length,
+    const parseDate = (dateStr: string) => {
+      // Handle YYYY-MM-DD format
+      const date = new Date(dateStr)
+      return isNaN(date.getTime()) ? 0 : date.getTime()
     }
-  }, [transactions])
-
-  // Paginate transactions
-  const paginatedTransactions = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const endIndex = startIndex + itemsPerPage
-    return filteredAndSortedTransactions.slice(startIndex, endIndex)
-  }, [filteredAndSortedTransactions, currentPage])
-
-  // Calculate total pages
-  const totalPages = useMemo(() => {
-    return Math.ceil(filteredAndSortedTransactions.length / itemsPerPage)
-  }, [filteredAndSortedTransactions.length])
-
-  // Reset to page 1 when filter or search changes
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [activeFilter, statusFilter, searchQuery])
-
-  // Reset to page 1 if current page is greater than total pages
-  useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
-      setCurrentPage(1)
+    
+    if (sortBy === 'Newest First') {
+      result.sort((a, b) => parseDate(b.date) - parseDate(a.date))
+    } else if (sortBy === 'Oldest First') {
+      result.sort((a, b) => parseDate(a.date) - parseDate(b.date))
+    } else {
+      // Sort By Date (default) - newest first
+      result.sort((a, b) => parseDate(b.date) - parseDate(a.date))
     }
-  }, [totalPages, currentPage])
 
-  // Close action menu when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (actionMenuOpen) {
-        const target = event.target as HTMLElement
-        if (!target.closest('[data-action-menu]')) {
-          setActionMenuOpen(null)
+    return result
+  }, [activeFilter, searchValue, statusFilter, sortBy])
+
+  const filteredVendorTransactions = useMemo(() => {
+    let result = [...MOCK_VENDOR_TRANSACTIONS]
+
+    // Apply tab filter
+    if (vendorActiveFilter !== 'all') {
+      result = result.filter((transaction) => {
+        if (vendorActiveFilter === 'refunded') return transaction.status === 'refunded'
+        if (vendorActiveFilter === 'paid') return transaction.status === 'paid'
+        if (vendorActiveFilter === 'pending') return transaction.status === 'pending'
+        if (vendorActiveFilter === 'completed') return transaction.status === 'completed'
+        return false
+      })
+    }
+
+    // Apply search filter
+    if (searchValue.trim()) {
+      const query = searchValue.toLowerCase()
+      result = result.filter(
+        (transaction) =>
+          transaction.transactionId.toLowerCase().includes(query) ||
+          transaction.user.toLowerCase().includes(query) ||
+          transaction.orderId.toLowerCase().includes(query),
+      )
+    }
+
+    // Apply sorting
+    const parseVendorDate = (dateStr: string) => {
+      // Handle "12 Aug 2025" format
+      const months: Record<string, number> = {
+        'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+        'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+      }
+      const parts = dateStr.split(' ')
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10)
+        const month = months[parts[1]] ?? 0
+        const year = parseInt(parts[2], 10)
+        const date = new Date(year, month, day)
+        return isNaN(date.getTime()) ? 0 : date.getTime()
+      }
+      return 0
+    }
+    
+    if (sortBy === 'Newest First') {
+      result.sort((a, b) => parseVendorDate(b.orderDate) - parseVendorDate(a.orderDate))
+    } else if (sortBy === 'Oldest First') {
+      result.sort((a, b) => parseVendorDate(a.orderDate) - parseVendorDate(b.orderDate))
+    } else {
+      // Sort By Date (default) - newest first
+      result.sort((a, b) => parseVendorDate(b.orderDate) - parseVendorDate(a.orderDate))
+    }
+
+    return result
+  }, [vendorActiveFilter, searchValue, sortBy])
+
+  const userTotalPages = Math.max(1, Math.ceil(filteredUserTransactions.length / PAGE_SIZE))
+  const vendorTotalPages = Math.max(1, Math.ceil(filteredVendorTransactions.length / PAGE_SIZE))
+
+  const paginatedUserTransactions = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredUserTransactions.slice(start, start + PAGE_SIZE)
+  }, [filteredUserTransactions, currentPage])
+
+  const paginatedVendorTransactions = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredVendorTransactions.slice(start, start + PAGE_SIZE)
+  }, [filteredVendorTransactions, currentPage])
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    const totalPagesToUse = activeTab === 'users' ? userTotalPages : vendorTotalPages
+    
+    if (totalPagesToUse <= 8) {
+      for (let i = 1; i <= totalPagesToUse; i++) {
+        pages.push(i)
+      }
+    } else {
+      pages.push(1)
+      
+      if (currentPage > 3) {
+        pages.push('...')
+      }
+      
+      const start = Math.max(2, currentPage - 1)
+      const end = Math.min(totalPagesToUse - 1, currentPage + 1)
+      
+      for (let i = start; i <= end; i++) {
+        if (i !== 1 && i !== totalPagesToUse) {
+          pages.push(i)
         }
       }
+      
+      if (currentPage < totalPagesToUse - 2) {
+        pages.push('...')
+      }
+      
+      if (totalPagesToUse > 1) {
+        pages.push(totalPagesToUse)
+      }
     }
-
-    if (actionMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [actionMenuOpen])
-
-  /**
-   * Handle edit transaction
-   */
-  const handleEdit = (transactionId: string) => {
-    const transaction = transactions.find((t) => t.id === transactionId)
-    if (transaction) {
-      setTransactionToEdit({ ...transaction })
-      setEditModalOpen(true)
-      setActionMenuOpen(null)
-    }
+    
+    return pages
   }
 
-  /**
-   * Handle delete transaction
-   */
-  const handleDelete = (transactionId: string) => {
-    setTransactionToDelete(transactionId)
-    setDeleteModalOpen(true)
-    setActionMenuOpen(null)
+  const handleUserFilterChange = (filterKey: FinanceFilterKey) => {
+    setActiveFilter(filterKey as 'all' | 'completed' | 'pending' | 'failed')
+    setCurrentPage(1)
   }
 
-  /**
-   * Confirm delete transaction
-   */
-  const confirmDelete = () => {
-    if (transactionToDelete) {
-      setTransactions((prevTransactions) => prevTransactions.filter((t) => t.id !== transactionToDelete))
-      setDeleteModalOpen(false)
-      setTransactionToDelete(null)
-    }
+  const handleVendorFilterChange = (filterKey: FinanceFilterKey) => {
+    setVendorActiveFilter(filterKey)
+    setCurrentPage(1)
   }
 
-  /**
-   * Cancel delete transaction
-   */
-  const cancelDelete = () => {
-    setDeleteModalOpen(false)
-    setTransactionToDelete(null)
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value)
+    setCurrentPage(1)
   }
 
-  /**
-   * Handle save edit transaction
-   */
-  const handleSaveEdit = () => {
-    if (transactionToEdit) {
-      setTransactions((prevTransactions) =>
-        prevTransactions.map((t) => (t.id === transactionToEdit.id ? transactionToEdit : t))
-      )
-      setEditModalOpen(false)
-      setTransactionToEdit(null)
-    }
-  }
-
-  /**
-   * Cancel edit transaction
-   */
-  const cancelEdit = () => {
-    setEditModalOpen(false)
-    setTransactionToEdit(null)
-  }
-
-  /**
-   * Handle filter change
-   */
-  const handleFilterChange = (filter: 'all' | TransactionStatus) => {
-    setActiveFilter(filter)
-  }
-
-  /**
-   * Handle page change
-   */
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+    const maxPages = activeTab === 'users' ? userTotalPages : vendorTotalPages
+    if (page < 1 || page > maxPages) return
+    setCurrentPage(page)
+  }
+
+  const handleTransactionAction = (transaction: UserTransaction | FinanceTransaction, action: FinanceActionType) => {
+    if (action === 'view') {
+      if ('orderId' in transaction) {
+        // Vendor transaction
+        setViewingVendorTransaction(transaction as FinanceTransaction)
+      } else {
+        // User transaction
+        setViewingTransaction(transaction as UserTransaction)
+      }
+    } else {
+      console.log(`Action "${action}" selected for transaction ${transaction.transactionId}`)
     }
   }
 
-  /**
-   * Toggle action menu for a specific transaction
-   */
-  const toggleActionMenu = (transactionId: string) => {
-    setActionMenuOpen(actionMenuOpen === transactionId ? null : transactionId)
+  // If viewing user transaction detail, show detail view
+  if (viewingTransaction && activeTab === 'users') {
+    return (
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">All Transactions</h1>
+          <p className="text-sm text-gray-600 mt-1">Dashboard - Finance - All Transactions</p>
+        </div>
+        <UserTransactionDetail
+          transaction={viewingTransaction}
+          onClose={() => setViewingTransaction(null)}
+        />
+      </div>
+    )
+  }
+
+  // If viewing vendor transaction detail, show detail view
+  if (viewingVendorTransaction && activeTab === 'vendor') {
+    return (
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">All Transactions</h1>
+          <p className="text-sm text-gray-600 mt-1">Dashboard - Finance - All Transactions</p>
+        </div>
+        <VendorTransactionDetail
+          transaction={viewingVendorTransaction}
+          onClose={() => setViewingVendorTransaction(null)}
+          onActionSelect={handleTransactionAction}
+        />
+      </div>
+    )
   }
 
   return (
-    <div className="max-w-screen w-full overflow-x-hidden">
+    <div className="space-y-6">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Wallet</h1>
-        <p className="text-sm text-gray-600 mt-1">Dashboard • All Transactions</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">All Transactions</h1>
+        <p className="text-sm text-gray-600 mt-1">Dashboard - Finance - All Transactions</p>
       </div>
 
-      {/* All Transactions Section */}
-      <div className="mb-4 sm:mb-6">
-        {/* Section Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
-          <h3 className="text-base sm:text-lg font-bold text-gray-900">All Transactions</h3>
+      {/* Vendor/Users Toggle */}
+      <div className="mt-6">
+        <div className="bg-white rounded-lg pt-1 px-1 pb-0">
+          <VendorUsersToggle 
+            activeTab={activeTab} 
+            onTabChange={(tab) => {
+              setActiveTab(tab)
+              setCurrentPage(1)
+              setSearchValue('')
+            }} 
+          />
+        </div>
+      </div>
 
-          {/* Header Tools - Aligned to right */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center w-full sm:w-auto">
-            {/* Sort By Date */}
-            <CustomDropdown
-              value={sortBy}
-              options={[
-                { label: 'Newest First', value: 'newest' },
-                { label: 'Oldest First', value: 'oldest' },
-              ]}
-              onChange={setSortBy}
-              placeholder="Sort By Date"
+      {/* User Filters - Only show when Users tab is active, on second line, right-aligned */}
+      {activeTab === 'users' && (
+        <div className="mt-4 flex justify-end">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+            <FilterDropdown
+              label={sortBy}
+              options={['Sort By Date', 'Newest First', 'Oldest First']}
+              onSelect={(value) => setSortBy(value)}
               icon={<CalendarIcon className="h-4 w-4" />}
-              className="w-full sm:w-[150px]"
             />
-
-            {/* Status Dropdown */}
-            <CustomDropdown
-              value={statusFilter}
-              options={[
-                { label: 'All Status', value: 'all' },
-                { label: 'Completed', value: 'completed' },
-                { label: 'Pending', value: 'pending' },
-                { label: 'Failed', value: 'failed' },
-              ]}
-              onChange={setStatusFilter}
-              placeholder="All Status"
-              className="w-full sm:w-[140px]"
+            <FilterDropdown
+              label={statusFilter}
+              options={['All Status', 'Completed', 'Pending', 'Failed']}
+              onSelect={(value) => setStatusFilter(value)}
             />
+            <SearchBar
+              placeholder="Transaction ID"
+              value={searchValue}
+              onChange={handleSearchChange}
+              className="min-w-[220px] sm:min-w-[240px]"
+            />
+          </div>
+        </div>
+      )}
 
-            {/* Search Bar */}
-            <div className="w-full sm:w-auto sm:min-w-[250px]">
-              <SearchBar
-                placeholder="Transaction ID"
-                value={searchQuery}
-                onChange={setSearchQuery}
-                className="w-full"
+      {/* Transactions Section - Users View */}
+      {activeTab === 'users' && (
+        <>
+          {/* Transactions Heading */}
+          <div className="mt-6 mb-4">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">All Transactions</h2>
+          </div>
+
+          <section className="rounded-xl bg-white shadow-sm">
+            {/* Filters and Controls */}
+            <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-gray-100 px-4 pt-4 pb-4 sm:px-6">
+              <div className="flex items-center flex-shrink-0">
+                <FinanceFilterTabs 
+                  tabs={userFilterTabsWithCounts.map(tab => ({ ...tab, key: tab.key as FinanceFilterKey }))} 
+                  activeTab={activeFilter as FinanceFilterKey} 
+                  onTabChange={(key) => handleUserFilterChange(key as FinanceFilterKey)} 
+                />
+              </div>
+            </header>
+
+            {/* Table */}
+            <div className="py-4">
+              <UserTransactionsTable
+                transactions={paginatedUserTransactions}
+                startIndex={(currentPage - 1) * PAGE_SIZE}
+                onActionSelect={handleTransactionAction}
               />
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Transactions Table Container */}
-      <div className="mb-4 sm:mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
-        {/* Filter Tabs - Inside table container */}
-        <div className="px-4.5 mt-2 border-b border-gray-200">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6">
-            <button
-              type="button"
-              onClick={() => handleFilterChange('all')}
-              className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity"
-            >
-              <span
-                className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 ${
-                  activeFilter === 'all' ? 'border-b-2 border-gray-900' : ''
-                }`}
-              >
-                All
-              </span>
-              <span
-                className={`inline-flex items-center justify-center rounded-md px-1.5 sm:px-2 py-0.5 text-xs font-medium ${
-                  activeFilter === 'all' ? 'bg-[#6B46C1] text-white' : 'bg-gray-100 text-gray-900'
-                }`}
-              >
-                {counts.all}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleFilterChange('completed')}
-              className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity"
-            >
-              <span
-                className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 ${
-                  activeFilter === 'completed' ? 'border-b-2 border-gray-900' : ''
-                }`}
-              >
-                Completed
-              </span>
-              <span
-                className={`inline-flex items-center justify-center rounded-md px-1.5 sm:px-2 py-0.5 text-xs font-medium ${
-                  activeFilter === 'completed' ? 'bg-[#6B46C1] text-white' : 'bg-green-100 text-gray-900'
-                }`}
-              >
-                {counts.completed}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleFilterChange('pending')}
-              className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity"
-            >
-              <span
-                className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 ${
-                  activeFilter === 'pending' ? 'border-b-2 border-gray-900' : ''
-                }`}
-              >
-                Pending
-              </span>
-              <span
-                className={`inline-flex items-center justify-center rounded-md px-1.5 sm:px-2 py-0.5 text-xs font-medium ${
-                  activeFilter === 'pending' ? 'bg-[#6B46C1] text-white' : 'bg-orange-100 text-gray-900'
-                }`}
-              >
-                {counts.pending}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleFilterChange('failed')}
-              className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity"
-            >
-              <span
-                className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 ${
-                  activeFilter === 'failed' ? 'border-b-2 border-gray-900' : ''
-                }`}
-              >
-                Failed
-              </span>
-              <span
-                className={`inline-flex items-center justify-center rounded-md px-1.5 sm:px-2 py-0.5 text-xs font-medium ${
-                  activeFilter === 'failed' ? 'bg-[#6B46C1] text-white' : 'bg-red-100 text-gray-900'
-                }`}
-              >
-                {counts.failed}
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Transactions Table */}
-        <div className="w-full overflow-x-auto">
-          <table className="w-full min-w-[800px]">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Transaction ID</th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">User/Vendor</th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Type</th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Amount</th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Payment Method</th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Date</th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Status</th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {paginatedTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
-                    No transactions found for the selected filters.
-                  </td>
-                </tr>
-              ) : (
-                paginatedTransactions.map((transaction) => (
-                  <tr key={transaction.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2">
+            {/* Pagination */}
+            <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <div className="flex items-center gap-0.5 sm:gap-1">
+                  {getPageNumbers().map((page, index) => {
+                    if (page === '...') {
+                      return (
+                        <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                          ...
+                        </span>
+                      )
+                    }
+                    
+                    const pageNum = page as number
+                    const isActive = pageNum === currentPage
+                    
+                    return (
                       <button
-                        onClick={() => navigate(`/transactions/detail/${transaction.id}`)}
-                        className="text-xs sm:text-sm text-gray-900 font-mono break-all hover:text-blue-600 hover:underline cursor-pointer"
+                        key={pageNum}
+                        type="button"
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
+                          isActive
+                            ? 'bg-[#4C50A2] text-white'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
                       >
-                        {transaction.transactionId}
+                        {pageNum}
                       </button>
-                    </td>
-                    <td className="px-4 py-2">
-                      <div>
-                        <p className="text-xs sm:text-sm font-medium text-gray-900">{transaction.userName}</p>
-                        <p className="text-xs text-gray-500 break-all">{transaction.userEmail}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`text-xs sm:text-sm font-medium ${
-                          transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                        } capitalize`}
-                      >
-                        {transaction.type}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-xs sm:text-sm text-gray-900">{transaction.amount}</td>
-                    <td className="px-4 py-2 text-xs sm:text-sm text-gray-600">
-                      {transaction.paymentMethod || 'N/A'}
-                    </td>
-                    <td className="px-4 py-2 text-xs sm:text-sm text-gray-600 whitespace-nowrap">
-                      {transaction.date}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeColor(
-                          transaction.status
-                        )}`}
-                      >
-                        {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="relative" data-action-menu>
-                        <button
-                          type="button"
-                          onClick={() => toggleActionMenu(transaction.id)}
-                          className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                          aria-label="More options"
-                        >
-                          <MoreVerticalIcon className="h-5 w-5" />
-                        </button>
-                        {actionMenuOpen === transaction.id && (
-                          <div className="absolute right-0 mt-2 w-40 rounded-lg border border-gray-200 bg-white shadow-lg z-10">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                navigate(`/transactions/detail/${transaction.id}`)
-                              }}
-                              className="flex items-center gap-2 w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                            >
-                              View Details
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleEdit(transaction.id)
-                              }}
-                              className="flex items-center gap-2 w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                            >
-                              <PencilIcon className="h-4 w-4" />
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleDelete(transaction.id)
-                              }}
-                              className="flex items-center gap-2 w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50 transition-colors cursor-pointer"
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    )
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === userTotalPages}
+                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </footer>
+          </section>
+        </>
+      )}
 
-        {/* Pagination */}
-        {totalPages > 0 && (
-          <div className="p-2 sm:p-6 border-t border-gray-200 flex justify-center sm:justify-end overflow-x-auto">
-            <div className="min-w-0">
-              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={deleteModalOpen}
-        title="Delete Transaction"
-        message="Are you sure you want to delete this transaction? This action cannot be undone."
-        confirmText="Delete"
-        cancelText="Cancel"
-        onConfirm={confirmDelete}
-        onCancel={cancelDelete}
-      />
-
-      {/* Edit Modal */}
-      {editModalOpen && transactionToEdit && (
+      {/* Transactions Section - Vendor View */}
+      {activeTab === 'vendor' && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/50" onClick={cancelEdit} aria-hidden="true" />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-              className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">Edit Transaction</h3>
-              <div className="mb-4">
-                <label htmlFor="editTransactionId" className="block text-sm font-medium text-gray-700 mb-1">
-                  Transaction ID
-                </label>
-                <input
-                  type="text"
-                  id="editTransactionId"
-                  value={transactionToEdit.transactionId}
-                  onChange={(e) => setTransactionToEdit({ ...transactionToEdit, transactionId: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#FF8C00] focus:ring-1 focus:ring-[#FF8C00]"
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="editAmount" className="block text-sm font-medium text-gray-700 mb-1">
-                  Amount
-                </label>
-                <input
-                  type="text"
-                  id="editAmount"
-                  value={transactionToEdit.amount}
-                  onChange={(e) => setTransactionToEdit({ ...transactionToEdit, amount: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#FF8C00] focus:ring-1 focus:ring-[#FF8C00]"
-                />
-              </div>
-              <div className="mb-4">
-                <label htmlFor="editPaymentMethod" className="block text-sm font-medium text-gray-700 mb-1">
-                  Payment Method
-                </label>
-                <CustomDropdown
-                  value={transactionToEdit.paymentMethod || 'Bank Transfer'}
-                  options={[
-                    { label: 'Bank Transfer', value: 'Bank Transfer' },
-                    { label: 'Wallet Balance', value: 'Wallet Balance' },
-                    { label: 'Credit Card', value: 'Credit Card' },
-                    { label: 'Debit Card', value: 'Debit Card' },
-                  ]}
-                  onChange={(value) =>
-                    setTransactionToEdit({ ...transactionToEdit, paymentMethod: value as PaymentMethod })
-                  }
-                  placeholder="Select Payment Method"
-                  className="w-full"
-                />
-              </div>
-              <div className="mb-6">
-                <label htmlFor="editStatus" className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <CustomDropdown
-                  value={transactionToEdit.status}
-                  options={[
-                    { label: 'Completed', value: 'completed' },
-                    { label: 'Pending', value: 'pending' },
-                    { label: 'Failed', value: 'failed' },
-                  ]}
-                  onChange={(value) =>
-                    setTransactionToEdit({ ...transactionToEdit, status: value as TransactionStatus })
-                  }
-                  placeholder="Select Status"
-                  className="w-full"
-                />
-              </div>
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={cancelEdit}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveEdit}
-                  className="rounded-lg bg-[#FF8C00] px-4 py-2 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </div>
+          {/* Transactions Heading */}
+          <div className="mt-6 mb-4">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Transactions</h2>
           </div>
+
+          <section className="rounded-xl bg-white shadow-sm">
+            {/* Filters and Controls */}
+            <header className="flex flex-col gap-3 
+            md:flex-row md:items-center md:justify-between
+             border-b border-gray-100 px-4 pt-4  sm:px-6">
+              <div className="flex items-center flex-shrink-0">
+                <FinanceFilterTabs tabs={vendorFilterTabsWithCounts} activeTab={vendorActiveFilter} onTabChange={handleVendorFilterChange} />
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center 
+                  gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                >
+                  Export
+                  <ExportIcon className="h-4 w-4" />
+                </button>
+                <SearchBar
+                  placeholder="Search Order"
+                  value={searchValue}
+                  onChange={handleSearchChange}
+                  className="min-w-[180px] sm:min-w-[200px]"
+                />
+                <button
+                  type="button"
+                  className="inline-flex items-center 
+                  justify-center gap-2  px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6l-4.2 5.6a2 2 0 00-.4 1.2v5.6a1 1 0 01-1.447.894L12 16.618l-2.753 1.676A1 1 0 017.8 16.4v-5.6a2 2 0 00-.4-1.2L3.2 5.6A1 1 0 013 4z"
+                    />
+                  </svg>
+                  Filter
+                </button>
+              </div>
+            </header>
+
+            {/* Table */}
+            <div className="py-4">
+              <FinanceTable
+                transactions={paginatedVendorTransactions}
+                startIndex={(currentPage - 1) * PAGE_SIZE}
+                onActionSelect={handleTransactionAction}
+              />
+            </div>
+
+            {/* Pagination */}
+            <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <div className="flex items-center gap-0.5 sm:gap-1">
+                  {getPageNumbers().map((page, index) => {
+                    if (page === '...') {
+                      return (
+                        <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                          ...
+                        </span>
+                      )
+                    }
+                    
+                    const pageNum = page as number
+                    const isActive = pageNum === currentPage
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
+                          isActive
+                            ? 'bg-[#4C50A2] text-white'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === vendorTotalPages}
+                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </footer>
+          </section>
         </>
       )}
     </div>
   )
 }
-

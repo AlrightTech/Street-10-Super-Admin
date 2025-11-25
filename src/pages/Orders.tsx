@@ -7,7 +7,7 @@ import SearchBar from '../components/ui/SearchBar'
 import Pagination from '../components/ui/Pagination'
 import OrderDetailsView from '../components/orders/OrderDetailsView'
 import OrderDetailView from '../components/orders/OrderDetailView'
-import { ordersApi } from '../services/orders.api'
+import { mockOrders } from '../data/mockOrders'
 
 export type OrderStatus = 'completed' | 'pending' | 'cancelled'
 
@@ -20,8 +20,6 @@ export interface OrderRecord {
   status: OrderStatus
   orderDate: string
 }
-
-// Removed mock data - using API now
 
 const TAB_OPTIONS: { key: 'all' | OrderStatus; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -63,64 +61,46 @@ export default function Orders() {
   const [totalPages, setTotalPages] = useState(1)
   const [orderCounts, setOrderCounts] = useState({ all: 0, pending: 0, completed: 0, cancelled: 0 })
 
-  // Fetch orders from API
+  // Load mock orders data
   useEffect(() => {
-    const fetchOrders = async () => {
+    const loadOrders = () => {
+      setLoading(true)
+      
       try {
-        setLoading(true)
-        const statusMap: Record<string, string> = {
-          'all': '',
-          'pending': 'created',
-          'completed': 'closed',
-          'cancelled': 'cancelled',
-        }
-        
-        const filters: any = {
-          page: currentPage,
-          limit: PAGE_SIZE,
-        }
+        // Filter orders by active tab
+        let filtered = [...mockOrders]
         
         if (activeTab !== 'all') {
-          filters.status = statusMap[activeTab]
+          filtered = filtered.filter(order => order.status === activeTab)
         }
         
-        const result = await ordersApi.getAll(filters)
+        // Calculate pagination
+        const total = filtered.length
+        const totalPagesCount = Math.ceil(total / PAGE_SIZE)
+        const startIndex = (currentPage - 1) * PAGE_SIZE
+        const endIndex = startIndex + PAGE_SIZE
+        const paginated = filtered.slice(startIndex, endIndex)
         
-        // Transform API orders to frontend format
-        const transformedOrders: OrderRecord[] = result.data.map((order: any) => ({
-          id: order.orderNumber,
-          customerName: order.user?.email?.split('@')[0] || 'Customer',
-          product: order.items?.[0]?.product?.title || 'Product',
-          amount: parseFloat(order.totalMinor?.toString() || '0') / 100,
-          paymentMethod: order.paymentMethod === 'card' ? 'Credit Card' : 
-                        order.paymentMethod === 'wallet' ? 'Wallet' : 
-                        order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Unknown',
-          status: order.status === 'closed' || order.status === 'delivered' ? 'completed' :
-                 order.status === 'cancelled' ? 'cancelled' : 'pending',
-          orderDate: new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-        }))
+        setOrders(paginated)
+        setTotalPages(totalPagesCount)
         
-        setOrders(transformedOrders)
-        setTotalPages(result.pagination.totalPages)
-        
-        // Update counts for tabs
-        const allResult = await ordersApi.getAll({ limit: 1000 })
+        // Calculate counts for tabs
         const counts = {
-          all: allResult.pagination.total,
-          pending: allResult.data.filter((o: any) => !['closed', 'delivered', 'cancelled'].includes(o.status)).length,
-          completed: allResult.data.filter((o: any) => ['closed', 'delivered'].includes(o.status)).length,
-          cancelled: allResult.data.filter((o: any) => o.status === 'cancelled').length,
+          all: mockOrders.length,
+          pending: mockOrders.filter(o => o.status === 'pending').length,
+          completed: mockOrders.filter(o => o.status === 'completed').length,
+          cancelled: mockOrders.filter(o => o.status === 'cancelled').length,
         }
         setOrderCounts(counts)
       } catch (error) {
-        console.error('Error fetching orders:', error)
+        console.error('Error loading orders:', error)
         setOrders([])
       } finally {
         setLoading(false)
       }
     }
 
-    fetchOrders()
+    loadOrders()
   }, [activeTab, currentPage])
 
   const tabOptionsWithCounts = useMemo(
@@ -170,7 +150,8 @@ export default function Orders() {
 
   const handleOrderAction = (order: OrderRecord, action: OrderActionType) => {
     if (action === 'view') {
-      setViewingOrder(order)
+      // Navigate to order details page
+      navigate(`/orders/${order.id.replace('#', '')}`)
     } else if (action === 'view-order') {
       // Navigate to order details page
       navigate(`/orders/${order.id.replace('#', '')}`)

@@ -323,12 +323,14 @@ interface TableHeaderProps {
 }
 
 function TableHeader({ children, align = 'left' }: TableHeaderProps) {
-  const textAlign = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+  const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-left'
   
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-2 sm:px-2.5 md:px-3 py-2 sm:py-3 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b-2 border-gray-300 bg-white ${textAlign}`}
+      className={`whitespace-nowrap px-2 sm:px-2.
+         md:px-3 py-2 sm:py-3 text-xs sm:text-sm font-semibold 
+         tracking-wide text-gray-700 border-b-2 border-gray-300 bg-white ${textAlign}`}
     >
       {children}
     </th>
@@ -342,7 +344,7 @@ interface TableCellProps {
 }
 
 function TableCell({ children, className = '', align = 'left' }: TableCellProps) {
-  const textAlign = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+  const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-left'
   const hasCustomTextSize = className.match(/\btext-(xs|sm|base|lg|xl)\b/)
   const textSizeClass = hasCustomTextSize ? hasCustomTextSize[0] : 'text-sm'
   

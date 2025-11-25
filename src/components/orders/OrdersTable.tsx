@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { OrderRecord } from '../../pages/Orders'
 import OrderStatusBadge from './OrderStatusBadge'
 import OrdersActionMenu, { type OrderActionType } from './OrdersActionMenu'
@@ -12,6 +13,8 @@ interface OrdersTableProps {
 }
 
 export default function OrdersTable({ orders, onActionSelect, onNameClick, emptyState, startIndex = 0 }: OrdersTableProps) {
+  const navigate = useNavigate()
+  
   if (orders.length === 0) {
     return (
       <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
@@ -53,9 +56,19 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                 return (
                   <tr 
                     key={order.id} 
-                    className={`${isHighlighted ? 'bg-gray-50' : ''} hover:bg-gray-50 transition-colors ${!isLastRow ? 'border-b border-gray-200' : ''}`}
+                    className={`${isHighlighted ? 'bg-gray-50' : ''} 
+                    hover:bg-gray-50 transition-colors
+                     ${!isLastRow ? 'border-b border-gray-200' : ''}`}
                   >
-                    <TableCell>{orderNumber}</TableCell>
+                    <TableCell>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/orders/${order.id.replace('#', '')}`)}
+                        className="text-sm text-gray-900 hover:text-[#F7931E] cursor-pointer"
+                      >
+                        {order.id}
+                      </button>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2.5">
                         <Avatar name={order.customerName} />
@@ -103,12 +116,15 @@ interface TableHeaderProps {
 }
 
 function TableHeader({ children, align = 'left', withIcon = false }: TableHeaderProps) {
-  const textAlign = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+  const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-left'
   
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600 border-b border-gray-200 bg-white ${textAlign}`}
+      className={`whitespace-nowrap px-2 py-2 
+        text-sm font-semibold 
+        tracking-wide text-gray-600 
+        border-b border-gray-200 bg-white ${textAlign}`}
     >
       <span className="inline-flex items-center gap-1.5">
         {children}
@@ -129,7 +145,7 @@ interface TableCellProps {
 }
 
 function TableCell({ children, className = '', align = 'left' }: TableCellProps) {
-  const textAlign = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+  const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-left'
   
   // Extract custom padding from className if provided, otherwise use default
   const hasCustomPadding = className.match(/\bpy-\d+/)
@@ -137,7 +153,8 @@ function TableCell({ children, className = '', align = 'left' }: TableCellProps)
   
   return (
     <td
-      className={`px-4 ${paddingClass} text-sm text-gray-700 ${textAlign} ${className}`}
+      className={`px-2 ${paddingClass} text-sm
+       text-gray-700 ${textAlign} ${className}`}
     >
       {children}
     </td>

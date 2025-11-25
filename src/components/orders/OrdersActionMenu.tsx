@@ -49,7 +49,7 @@ export default function OrdersActionMenu({ onSelect, className = '', align = 'ri
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
-        className="rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4C50A2]"
+        className="rounded-full text-gray-400 transition hover:text-gray-600 focus:outline-none cursor-pointer"
       >
         <MoreVerticalIcon className="h-5 w-5" />
       </button>
@@ -67,7 +67,7 @@ export default function OrdersActionMenu({ onSelect, className = '', align = 'ri
               type="button"
               onClick={() => handleSelect(action.key)}
               role="menuitem"
-              className={`flex w-full items-center px-4 py-2 text-sm transition hover:bg-gray-50 ${
+              className={`flex w-full items-center px-4 py-2 text-sm transition hover:bg-gray-50 cursor-pointer ${
                 action.key === 'delete' ? 'text-[#B71D18] hover:text-[#B71D18]' : 'text-gray-600 hover:text-gray-900'
               }`}
             >

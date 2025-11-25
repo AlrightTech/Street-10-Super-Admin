@@ -87,7 +87,7 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-2 sm:px-2.5 md:px-3 py-2 sm:py-3 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b-2 border-gray-300 bg-white ${textAlign}`}
+      className={`whitespace-nowrap py-2 sm:py-3 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-300 bg-white ${textAlign} first:pl-4 sm:first:pl-6 last:pr-4 sm:last:pr-6`}
     >
       {children}
     </th>
@@ -107,7 +107,7 @@ function TableCell({ children, className = '', align = 'left' }: TableCellProps)
   
   return (
     <td
-      className={`px-2 sm:px-2.5 md:px-3 py-2 text-gray-700 ${textAlign} ${textSizeClass} ${className}`}
+      className={`py-2 text-gray-700 ${textAlign} ${textSizeClass} first:pl-4 sm:first:pl-6 last:pr-4 sm:last:pr-6 ${className}`}
     >
       {children}
     </td>
