@@ -415,8 +415,10 @@ export default function AllTransactions() {
 
           <section className="rounded-xl bg-white shadow-sm">
             {/* Filters and Controls */}
-            <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-gray-100 px-4 pt-4 pb-4 sm:px-6">
-              <div className="flex items-center flex-shrink-0">
+            <header className="flex flex-col gap-3 
+            md:flex-row md:items-center md:justify-between border-b border-gray-100
+             px-4  sm:px-6">
+              <div className="flex items-center flex-shrink-0 overflow-x-auto sm:overflow-x-visible">
                 <FinanceFilterTabs 
                   tabs={userFilterTabsWithCounts.map(tab => ({ ...tab, key: tab.key as FinanceFilterKey }))} 
                   activeTab={activeFilter as FinanceFilterKey} 
@@ -426,7 +428,7 @@ export default function AllTransactions() {
             </header>
 
             {/* Table */}
-            <div className="py-4">
+            <div className="">
               <UserTransactionsTable
                 transactions={paginatedUserTransactions}
                 startIndex={(currentPage - 1) * PAGE_SIZE}
@@ -435,13 +437,20 @@ export default function AllTransactions() {
             </div>
 
             {/* Pagination */}
-            <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-6">
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
+            <footer className="flex flex-col sm:flex-row justify-end
+             items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap
+               justify-center sm:justify-end">
                 <button
                   type="button"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="cursor-pointer rounded-lg border
+                   border-gray-200 px-3 py-1.5
+                    sm:px-4 sm:py-2 text-xs sm:text-sm 
+                    font-medium text-gray-600 transition
+                     hover:border-gray-900 hover:text-gray-900
+                      disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Back
                 </button>
@@ -501,15 +510,19 @@ export default function AllTransactions() {
             <header className="flex flex-col gap-3 
             md:flex-row md:items-center md:justify-between
              border-b border-gray-100 px-4 pt-4  sm:px-6">
-              <div className="flex items-center flex-shrink-0">
+              <div className="flex items-center flex-shrink-0
+               overflow-x-auto sm:overflow-x-visible">
                 <FinanceFilterTabs tabs={vendorFilterTabsWithCounts} activeTab={vendorActiveFilter} onTabChange={handleVendorFilterChange} />
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 flex-shrink-0">
+              <div className="flex flex-col gap-2 sm:flex-row
+               sm:items-center sm:gap-2 flex-shrink-0">
                 <button
                   type="button"
                   className="inline-flex items-center justify-center 
-                  gap-2 rounded-lg border border-gray-200 px-3 py-2.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  gap-2 rounded-lg border border-gray-200 px-3 py-2.5 
+                  text-xs font-medium text-gray-700 transition hover:bg-gray-50
+                   whitespace-nowrap cursor-pointer"
                 >
                   Export
                   <ExportIcon className="h-4 w-4" />

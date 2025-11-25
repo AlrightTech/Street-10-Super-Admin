@@ -241,7 +241,8 @@ export default function VendorTransactionDetail({ transaction, onClose, onAction
                 </thead>
                 <tbody>
                   {paginatedHistory.map((history) => (
-                    <tr key={history.id} className="border-b border-gray-200 last:border-b-0">
+                    <tr key={history.id} className="border-b
+                     border-gray-200 last:border-b-0">
                       <TableCell>{history.transactionId}</TableCell>
                       <TableCell>{history.orderId}</TableCell>
                       <TableCell align="right" className="font-medium">{history.amountPaid}</TableCell>

@@ -15,6 +15,7 @@ const Vendors = lazy(() => import('./pages/Vendors'))
 const Orders = lazy(() => import('./pages/Orders'))
 const OrderDetail = lazy(() => import('./pages/OrderDetail'))
 const OrderDetailView = lazy(() => import('./pages/OrderDetailView'))
+const ProcessRefundOrder = lazy(() => import('./pages/ProcessRefundOrder'))
 const EcommerceOrderView = lazy(() => import('./pages/EcommerceOrderView'))
 const BidDetailPage = lazy(() => import('./pages/BidDetailPage'))
 const ViewKYC = lazy(() => import('./pages/ViewKYC'))
@@ -28,6 +29,7 @@ const VendorRequestDetail = lazy(() => import('./pages/VendorRequestDetail'))
 const Finance = lazy(() => import('./pages/Finance'))
 const AllTransactions = lazy(() => import('./pages/AllTransactions'))
 const VendorFinanceDetail = lazy(() => import('./pages/VendorFinanceDetail'))
+const UserFinanceDetail = lazy(() => import('./pages/UserFinanceDetail'))
 const Marketing = lazy(() => import('./pages/Marketing'))
 const AddStoryHighlight = lazy(() => import('./pages/AddStoryHighlight'))
 const AddBanner = lazy(() => import('./pages/AddBanner'))
@@ -105,6 +107,7 @@ function App() {
             <Route path="vendor-request-detail/:id" element={<VendorRequestDetail />} />
             <Route path="orders" element={<Orders />} />
             <Route path="orders/:orderId/view" element={<OrderDetailView />} />
+            <Route path="orders/:orderId/process-refund" element={<ProcessRefundOrder />} />
             <Route path="orders/:orderId" element={<OrderDetail />} />
             <Route path="biddings/:bidId" element={<BidDetailPage />} />
             <Route path="view-kyc/:id" element={<ViewKYC />} />
@@ -112,6 +115,7 @@ function App() {
             <Route path="finance" element={<Finance />} />
             <Route path="finance/all-transactions" element={<AllTransactions />} />
             <Route path="finance/vendor/:vendorId" element={<VendorFinanceDetail />} />
+            <Route path="finance/user/:userId" element={<UserFinanceDetail />} />
             <Route path="marketing" element={<Marketing />} />
             <Route path="marketing/add-story" element={<AddStoryHighlight />} />
             <Route path="marketing/edit-story/:id" element={<AddStoryHighlight />} />

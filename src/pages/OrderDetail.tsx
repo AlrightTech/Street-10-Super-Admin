@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { mockOrders } from '../data/mockOrders'
 import type { OrderRecord } from './Orders'
 import OrderStatusBadge from '../components/orders/OrderStatusBadge'
@@ -21,7 +21,16 @@ export default function OrderDetail() {
   const [filteredOrders, setFilteredOrders] = useState<OrderRecord[]>([])
   const [timeFilter, setTimeFilter] = useState('All Time')
   const [currentPage, setCurrentPage] = useState(1)
+  const [isTimeFilterDropdownOpen, setIsTimeFilterDropdownOpen] = useState(false)
+  const timeFilterDropdownRef = useRef<HTMLDivElement>(null)
   const ordersPerPage = 3
+
+  const timeFilterOptions = [
+    'All Time',
+    'Last 7 Days',
+    'Last 30 Days',
+    'Last 90 Days',
+  ]
 
   useEffect(() => {
     // Find the order by ID
@@ -131,7 +140,11 @@ export default function OrderDetail() {
 
 
   const handleViewAllOrders = () => {
-    navigate('/orders')
+    if (orderId) {
+      navigate(`/orders/${orderId}/view`)
+    } else {
+      navigate('/orders')
+    }
   }
 
   const handleTimeFilterChange = (value: string) => {
@@ -324,16 +337,42 @@ export default function OrderDetail() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <h3 className="text-base font-semibold text-gray-900">Order History</h3>
           <div className="flex items-center gap-3">
-            <select
-              value={timeFilter}
-              onChange={(e) => handleTimeFilterChange(e.target.value)}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#F7931E] focus:outline-none focus:ring-1 focus:ring-[#F7931E] cursor-pointer"
-            >
-              <option>All Time</option>
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-              <option>Last 90 Days</option>
-            </select>
+            <div className="relative" ref={timeFilterDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsTimeFilterDropdownOpen(!isTimeFilterDropdownOpen)}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#F7931E] focus:outline-none focus:ring-1 focus:ring-[#F7931E] cursor-pointer flex items-center justify-between gap-2 hover:border-gray-400 transition-colors min-w-[140px]"
+              >
+                <span>{timeFilter}</span>
+                <svg
+                  className={`h-4 w-4 text-gray-400 transition-transform ${isTimeFilterDropdownOpen ? 'transform rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {isTimeFilterDropdownOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
+                  {timeFilterOptions.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => {
+                        handleTimeFilterChange(option)
+                        setIsTimeFilterDropdownOpen(false)
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors cursor-pointer first:rounded-t-lg last:rounded-b-lg ${
+                        timeFilter === option ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={handleViewAllOrders}

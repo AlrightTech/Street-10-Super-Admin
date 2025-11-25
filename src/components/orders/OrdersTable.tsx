@@ -39,9 +39,9 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
               <tr>
                 <TableHeader>Order ID</TableHeader>
                 <TableHeader withIcon>Name</TableHeader>
-                <TableHeader>Product/Service</TableHeader>
+                <TableHeader>Product/S</TableHeader>
                 <TableHeader align="right">Amount</TableHeader>
-                <TableHeader>Payment Method</TableHeader>
+                <TableHeader>Payment/M</TableHeader>
                 <TableHeader>Status</TableHeader>
                 <TableHeader align="right">Order Date</TableHeader>
                 <TableHeader align="center">Action</TableHeader>
@@ -56,18 +56,15 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                 return (
                   <tr 
                     key={order.id} 
+                    onClick={() => navigate(`/orders/${order.id.replace('#', '')}`)}
                     className={`${isHighlighted ? 'bg-gray-50' : ''} 
-                    hover:bg-gray-50 transition-colors
+                    hover:bg-gray-50 transition-colors cursor-pointer
                      ${!isLastRow ? 'border-b border-gray-200' : ''}`}
                   >
                     <TableCell>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/orders/${order.id.replace('#', '')}`)}
-                        className="text-sm text-gray-900 hover:text-[#F7931E] cursor-pointer"
-                      >
+                      <span className="text-sm text-gray-900">
                         {order.id}
-                      </button>
+                      </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2.5">
@@ -95,7 +92,7 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                       <OrderStatusBadge status={order.status} />
                     </TableCell>
                     <TableCell align="right">{order.orderDate}</TableCell>
-                    <TableCell align="center">
+                    <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                       <OrdersActionMenu onSelect={(action) => onActionSelect?.(order, action)} />
                     </TableCell>
                   </tr>
@@ -142,9 +139,10 @@ interface TableCellProps {
   children: React.ReactNode
   className?: string
   align?: 'left' | 'right' | 'center'
+  onClick?: (e: React.MouseEvent<HTMLTableCellElement>) => void
 }
 
-function TableCell({ children, className = '', align = 'left' }: TableCellProps) {
+function TableCell({ children, className = '', align = 'left', onClick }: TableCellProps) {
   const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-left'
   
   // Extract custom padding from className if provided, otherwise use default
@@ -153,6 +151,7 @@ function TableCell({ children, className = '', align = 'left' }: TableCellProps)
   
   return (
     <td
+      onClick={onClick}
       className={`px-2 ${paddingClass} text-sm
        text-gray-700 ${textAlign} ${className}`}
     >

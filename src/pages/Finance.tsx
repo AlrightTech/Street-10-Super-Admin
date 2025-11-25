@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import FinanceSummaryCard from '../components/finance/FinanceSummaryCard'
 import VendorUsersToggle from '../components/finance/VendorUsersToggle'
 import FinanceFilterTabs, { type FinanceFilterKey } from '../components/finance/FinanceFilterTabs'
-import FinanceTable from '../components/finance/FinanceTable'
+import VendorPayoutTable, { type VendorPayout } from '../components/finance/VendorPayoutTable'
+import UserTransactionsTable from '../components/finance/UserTransactionsTable'
 import VendorTransactionDetail from '../components/finance/VendorTransactionDetail'
 import UserTransactionDetail from '../components/finance/UserTransactionDetail'
 import FilterDropdown from '../components/finance/FilterDropdown'
@@ -36,28 +37,113 @@ export interface UserTransaction {
   status: 'pending' | 'completed' | 'failed'
 }
 
-// Mock data for transactions
-const MOCK_TRANSACTIONS: FinanceTransaction[] = [
-  { id: '1', transactionId: 'TX-1001', user: 'Farhan', orderId: '#1001', amountPaid: '$160', commission: '$16', paymentMethod: 'Credit Card', status: 'paid', orderDate: '12 Aug 2025' },
-  { id: '2', transactionId: 'TX-1001', user: 'Hammad', orderId: '#1001', amountPaid: '$160', commission: '$16', paymentMethod: 'PayPal', status: 'pending', orderDate: '12 Aug 2025' },
-  { id: '3', transactionId: 'TX-1001', user: 'Ubaid', orderId: '#1001', amountPaid: '$160', commission: '$16', paymentMethod: 'Bank Transfer', status: 'refunded', orderDate: '12 Aug 2025' },
-  { id: '4', transactionId: 'TX-1002', user: 'Ahmed', orderId: '#1002', amountPaid: '$200', commission: '$20', paymentMethod: 'Credit Card', status: 'paid', orderDate: '13 Aug 2025' },
-  { id: '5', transactionId: 'TX-1003', user: 'Ali', orderId: '#1003', amountPaid: '$150', commission: '$15', paymentMethod: 'PayPal', status: 'refunded', orderDate: '14 Aug 2025' },
-  { id: '6', transactionId: 'TX-1004', user: 'Hassan', orderId: '#1004', amountPaid: '$180', commission: '$18', paymentMethod: 'Bank Transfer', status: 'pending', orderDate: '15 Aug 2025' },
-  { id: '7', transactionId: 'TX-1005', user: 'Usman', orderId: '#1005', amountPaid: '$220', commission: '$22', paymentMethod: 'Credit Card', status: 'paid', orderDate: '16 Aug 2025' },
-  { id: '8', transactionId: 'TX-1006', user: 'Bilal', orderId: '#1006', amountPaid: '$140', commission: '$14', paymentMethod: 'PayPal', status: 'completed', orderDate: '17 Aug 2025' },
-  { id: '9', transactionId: 'TX-1007', user: 'Zain', orderId: '#1007', amountPaid: '$190', commission: '$19', paymentMethod: 'Bank Transfer', status: 'paid', orderDate: '18 Aug 2025' },
-  { id: '10', transactionId: 'TX-1008', user: 'Hamza', orderId: '#1008', amountPaid: '$170', commission: '$17', paymentMethod: 'Credit Card', status: 'refunded', orderDate: '19 Aug 2025' },
-  { id: '11', transactionId: 'TX-1009', user: 'Tariq', orderId: '#1009', amountPaid: '$210', commission: '$21', paymentMethod: 'PayPal', status: 'pending', orderDate: '20 Aug 2025' },
-  { id: '12', transactionId: 'TX-1010', user: 'Saeed', orderId: '#1010', amountPaid: '$165', commission: '$16.50', paymentMethod: 'Bank Transfer', status: 'paid', orderDate: '21 Aug 2025' },
-  { id: '13', transactionId: 'TX-1011', user: 'Rehman', orderId: '#1011', amountPaid: '$195', commission: '$19.50', paymentMethod: 'Credit Card', status: 'refunded', orderDate: '22 Aug 2025' },
-  { id: '14', transactionId: 'TX-1012', user: 'Khalid', orderId: '#1012', amountPaid: '$175', commission: '$17.50', paymentMethod: 'PayPal', status: 'completed', orderDate: '23 Aug 2025' },
-  { id: '15', transactionId: 'TX-1013', user: 'Nadeem', orderId: '#1013', amountPaid: '$185', commission: '$18.50', paymentMethod: 'Bank Transfer', status: 'paid', orderDate: '24 Aug 2025' },
-  { id: '16', transactionId: 'TX-1014', user: 'Waseem', orderId: '#1014', amountPaid: '$155', commission: '$15.50', paymentMethod: 'Credit Card', status: 'pending', orderDate: '25 Aug 2025' },
-  { id: '17', transactionId: 'TX-1015', user: 'Faisal', orderId: '#1015', amountPaid: '$205', commission: '$20.50', paymentMethod: 'PayPal', status: 'refunded', orderDate: '26 Aug 2025' },
-  { id: '18', transactionId: 'TX-1016', user: 'Junaid', orderId: '#1016', amountPaid: '$145', commission: '$14.50', paymentMethod: 'Bank Transfer', status: 'paid', orderDate: '27 Aug 2025' },
-  { id: '19', transactionId: 'TX-1017', user: 'Rashid', orderId: '#1017', amountPaid: '$225', commission: '$22.50', paymentMethod: 'Credit Card', status: 'completed', orderDate: '28 Aug 2025' },
-  { id: '20', transactionId: 'TX-1018', user: 'Yasir', orderId: '#1018', amountPaid: '$160', commission: '$16', paymentMethod: 'PayPal', status: 'pending', orderDate: '29 Aug 2025' },
+// Mock data for vendor payouts
+const MOCK_VENDOR_PAYOUTS: VendorPayout[] = [
+  { id: 1, name: 'Touseef Ahmed', businessName: 'ABC Mart', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'active', totalPayout: '$11,250', paymentStatus: 'paid' },
+  { id: 2, name: 'Qasim Muneer', businessName: 'Fresh Foods', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'pending', totalPayout: '$11,250', paymentStatus: 'pending' },
+  { id: 3, name: 'Yasir Hafeez', businessName: 'TechWorld', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'active', totalPayout: '$11,250', paymentStatus: 'paid' },
+  { id: 4, name: 'Junaid Akhtar Butt', businessName: 'Fashion Hub', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'blocked', totalPayout: '$11,250', paymentStatus: 'unpaid' },
+  { id: 5, name: 'Tariq Iqbal', businessName: 'GreenGrocers', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'active', totalPayout: '$11,250', paymentStatus: 'paid' },
+  { id: 6, name: 'Muhammed Saeed', businessName: 'ABC Mart', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'pending', totalPayout: '$11,250', paymentStatus: 'pending' },
+  { id: 7, name: 'Abdurrehman', businessName: 'Fresh Foods', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'active', totalPayout: '$11,250', paymentStatus: 'paid' },
+  { id: 8, name: 'Yasir Hafeez', businessName: 'TechWorld', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'blocked', totalPayout: '$11,250', paymentStatus: 'unpaid' },
+  { id: 9, name: 'Touseef Ahmed', businessName: 'Fashion Hub', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'active', totalPayout: '$11,250', paymentStatus: 'paid' },
+  { id: 10, name: 'Qasim Muneer', businessName: 'GreenGrocers', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'pending', totalPayout: '$11,250', paymentStatus: 'pending' },
+  { id: 11, name: 'Yasir Hafeez', businessName: 'ABC Mart', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'active', totalPayout: '$11,250', paymentStatus: 'pending' },
+  { id: 12, name: 'Junaid Akhtar Butt', businessName: 'Fresh Foods', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'active', totalPayout: '$11,250', paymentStatus: 'paid' },
+  { id: 13, name: 'Tariq Iqbal', businessName: 'TechWorld', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'blocked', totalPayout: '$11,250', paymentStatus: 'unpaid' },
+  { id: 14, name: 'Muhammed Saeed', businessName: 'Fashion Hub', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'active', totalPayout: '$11,250', paymentStatus: 'paid' },
+  { id: 15, name: 'Abdurrehman', businessName: 'GreenGrocers', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'pending', totalPayout: '$11,250', paymentStatus: 'unpaid' },
+  { id: 16, name: 'Yasir Hafeez', businessName: 'ABC Mart', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'active', totalPayout: '$11,250', paymentStatus: 'paid' },
+  { id: 17, name: 'Touseef Ahmed', businessName: 'Fresh Foods', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'pending', totalPayout: '$11,250', paymentStatus: 'pending' },
+  { id: 18, name: 'Qasim Muneer', businessName: 'TechWorld', totalSales: '$12,500', commissionRate: '10%', totalCommission: '$1,250', status: 'active', totalPayout: '$11,250', paymentStatus: 'unpaid' },
+]
+
+// Mock data for user transactions
+const MOCK_USER_TRANSACTIONS: UserTransaction[] = [
+  { id: '1', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'pending' },
+  { id: '2', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'completed' },
+  { id: '3', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Credit Card', date: '2024-01-20', status: 'pending' },
+  { id: '4', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'failed' },
+  { id: '5', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'completed' },
+  { id: '6', transactionId: 'TXN-2024-002', userName: 'Sarah Williams', userEmail: 'sarahw@email.com', type: 'credit', amount: '$200.00', paymentMethod: 'Credit Card', date: '2024-01-21', status: 'completed' },
+  { id: '7', transactionId: 'TXN-2024-003', userName: 'David Brown', userEmail: 'davidb@email.com', type: 'debit', amount: '$175.00', paymentMethod: 'Wallet Balance', date: '2024-01-22', status: 'pending' },
+  { id: '8', transactionId: 'TXN-2024-004', userName: 'Emily Davis', userEmail: 'emilyd@email.com', type: 'credit', amount: '$125.00', paymentMethod: 'Bank Transfer', date: '2024-01-23', status: 'failed' },
+  { id: '9', transactionId: 'TXN-2024-005', userName: 'James Wilson', userEmail: 'jamesw@email.com', type: 'credit', amount: '$300.00', paymentMethod: 'Credit Card', date: '2024-01-24', status: 'completed' },
+  { id: '10', transactionId: 'TXN-2024-006', userName: 'Lisa Anderson', userEmail: 'lisaa@email.com', type: 'debit', amount: '$100.00', paymentMethod: 'Wallet Balance', date: '2024-01-25', status: 'pending' },
+  { id: '11', transactionId: 'TXN-2024-007', userName: 'Robert Taylor', userEmail: 'robertt@email.com', type: 'credit', amount: '$250.00', paymentMethod: 'Bank Transfer', date: '2024-01-26', status: 'completed' },
+  { id: '12', transactionId: 'TXN-2024-008', userName: 'Jennifer Martinez', userEmail: 'jenniferm@email.com', type: 'debit', amount: '$180.00', paymentMethod: 'Credit Card', date: '2024-01-27', status: 'failed' },
+  { id: '13', transactionId: 'TXN-2024-009', userName: 'Christopher Lee', userEmail: 'christopherl@email.com', type: 'credit', amount: '$220.00', paymentMethod: 'Wallet Balance', date: '2024-01-28', status: 'completed' },
+  { id: '14', transactionId: 'TXN-2024-010', userName: 'Amanda White', userEmail: 'amandaw@email.com', type: 'credit', amount: '$190.00', paymentMethod: 'Bank Transfer', date: '2024-01-29', status: 'pending' },
+  { id: '15', transactionId: 'TXN-2024-011', userName: 'Daniel Harris', userEmail: 'danielh@email.com', type: 'debit', amount: '$160.00', paymentMethod: 'Credit Card', date: '2024-01-30', status: 'completed' },
+  { id: '16', transactionId: 'TXN-2024-012', userName: 'Jessica Clark', userEmail: 'jessicac@email.com', type: 'credit', amount: '$140.00', paymentMethod: 'Wallet Balance', date: '2024-02-01', status: 'failed' },
+  { id: '17', transactionId: 'TXN-2024-013', userName: 'Matthew Lewis', userEmail: 'matthewl@email.com', type: 'credit', amount: '$270.00', paymentMethod: 'Bank Transfer', date: '2024-02-02', status: 'completed' },
+  { id: '18', transactionId: 'TXN-2024-014', userName: 'Ashley Walker', userEmail: 'ashleyw@email.com', type: 'debit', amount: '$130.00', paymentMethod: 'Credit Card', date: '2024-02-03', status: 'pending' },
+  { id: '19', transactionId: 'TXN-2024-015', userName: 'Ryan Hall', userEmail: 'ryanh@email.com', type: 'credit', amount: '$210.00', paymentMethod: 'Wallet Balance', date: '2024-02-04', status: 'completed' },
+  { id: '20', transactionId: 'TXN-2024-016', userName: 'Nicole Young', userEmail: 'nicoley@email.com', type: 'debit', amount: '$165.00', paymentMethod: 'Bank Transfer', date: '2024-02-05', status: 'failed' },
+  { id: '21', transactionId: 'TXN-2024-017', userName: 'Kevin King', userEmail: 'kevink@email.com', type: 'credit', amount: '$240.00', paymentMethod: 'Credit Card', date: '2024-02-06', status: 'completed' },
+  { id: '22', transactionId: 'TXN-2024-018', userName: 'Michelle Wright', userEmail: 'michellew@email.com', type: 'credit', amount: '$155.00', paymentMethod: 'Wallet Balance', date: '2024-02-07', status: 'pending' },
+  { id: '23', transactionId: 'TXN-2024-019', userName: 'Brandon Lopez', userEmail: 'brandonl@email.com', type: 'debit', amount: '$185.00', paymentMethod: 'Bank Transfer', date: '2024-02-08', status: 'completed' },
+  { id: '24', transactionId: 'TXN-2024-020', userName: 'Stephanie Hill', userEmail: 'stephanieh@email.com', type: 'credit', amount: '$195.00', paymentMethod: 'Credit Card', date: '2024-02-09', status: 'failed' },
+  { id: '25', transactionId: 'TXN-2024-021', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'completed' },
+  { id: '26', transactionId: 'TXN-2024-022', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'completed' },
+  { id: '27', transactionId: 'TXN-2024-023', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Credit Card', date: '2024-01-20', status: 'pending' },
+  { id: '28', transactionId: 'TXN-2024-024', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'failed' },
+  { id: '29', transactionId: 'TXN-2024-025', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'completed' },
+  { id: '30', transactionId: 'TXN-2024-026', userName: 'Sarah Williams', userEmail: 'sarahw@email.com', type: 'credit', amount: '$200.00', paymentMethod: 'Credit Card', date: '2024-01-21', status: 'completed' },
+  { id: '31', transactionId: 'TXN-2024-027', userName: 'David Brown', userEmail: 'davidb@email.com', type: 'debit', amount: '$175.00', paymentMethod: 'Wallet Balance', date: '2024-01-22', status: 'pending' },
+  { id: '32', transactionId: 'TXN-2024-028', userName: 'Emily Davis', userEmail: 'emilyd@email.com', type: 'credit', amount: '$125.00', paymentMethod: 'Bank Transfer', date: '2024-01-23', status: 'failed' },
+  { id: '33', transactionId: 'TXN-2024-029', userName: 'James Wilson', userEmail: 'jamesw@email.com', type: 'credit', amount: '$300.00', paymentMethod: 'Credit Card', date: '2024-01-24', status: 'completed' },
+  { id: '34', transactionId: 'TXN-2024-030', userName: 'Lisa Anderson', userEmail: 'lisaa@email.com', type: 'debit', amount: '$100.00', paymentMethod: 'Wallet Balance', date: '2024-01-25', status: 'pending' },
+  { id: '35', transactionId: 'TXN-2024-031', userName: 'Robert Taylor', userEmail: 'robertt@email.com', type: 'credit', amount: '$250.00', paymentMethod: 'Bank Transfer', date: '2024-01-26', status: 'completed' },
+  { id: '36', transactionId: 'TXN-2024-032', userName: 'Jennifer Martinez', userEmail: 'jenniferm@email.com', type: 'debit', amount: '$180.00', paymentMethod: 'Credit Card', date: '2024-01-27', status: 'failed' },
+  { id: '37', transactionId: 'TXN-2024-033', userName: 'Christopher Lee', userEmail: 'christopherl@email.com', type: 'credit', amount: '$220.00', paymentMethod: 'Wallet Balance', date: '2024-01-28', status: 'completed' },
+  { id: '38', transactionId: 'TXN-2024-034', userName: 'Amanda White', userEmail: 'amandaw@email.com', type: 'credit', amount: '$190.00', paymentMethod: 'Bank Transfer', date: '2024-01-29', status: 'pending' },
+  { id: '39', transactionId: 'TXN-2024-035', userName: 'Daniel Harris', userEmail: 'danielh@email.com', type: 'debit', amount: '$160.00', paymentMethod: 'Credit Card', date: '2024-01-30', status: 'completed' },
+  { id: '40', transactionId: 'TXN-2024-036', userName: 'Jessica Clark', userEmail: 'jessicac@email.com', type: 'credit', amount: '$140.00', paymentMethod: 'Wallet Balance', date: '2024-02-01', status: 'failed' },
+  { id: '41', transactionId: 'TXN-2024-037', userName: 'Matthew Lewis', userEmail: 'matthewl@email.com', type: 'credit', amount: '$270.00', paymentMethod: 'Bank Transfer', date: '2024-02-02', status: 'completed' },
+  { id: '42', transactionId: 'TXN-2024-038', userName: 'Ashley Walker', userEmail: 'ashleyw@email.com', type: 'debit', amount: '$130.00', paymentMethod: 'Credit Card', date: '2024-02-03', status: 'pending' },
+  { id: '43', transactionId: 'TXN-2024-039', userName: 'Ryan Hall', userEmail: 'ryanh@email.com', type: 'credit', amount: '$210.00', paymentMethod: 'Wallet Balance', date: '2024-02-04', status: 'completed' },
+  { id: '44', transactionId: 'TXN-2024-040', userName: 'Nicole Young', userEmail: 'nicoley@email.com', type: 'debit', amount: '$165.00', paymentMethod: 'Bank Transfer', date: '2024-02-05', status: 'failed' },
+  { id: '45', transactionId: 'TXN-2024-041', userName: 'Kevin King', userEmail: 'kevink@email.com', type: 'credit', amount: '$240.00', paymentMethod: 'Credit Card', date: '2024-02-06', status: 'completed' },
+  { id: '46', transactionId: 'TXN-2024-042', userName: 'Michelle Wright', userEmail: 'michellew@email.com', type: 'credit', amount: '$155.00', paymentMethod: 'Wallet Balance', date: '2024-02-07', status: 'pending' },
+  { id: '47', transactionId: 'TXN-2024-043', userName: 'Brandon Lopez', userEmail: 'brandonl@email.com', type: 'debit', amount: '$185.00', paymentMethod: 'Bank Transfer', date: '2024-02-08', status: 'completed' },
+  { id: '48', transactionId: 'TXN-2024-044', userName: 'Stephanie Hill', userEmail: 'stephanieh@email.com', type: 'credit', amount: '$195.00', paymentMethod: 'Credit Card', date: '2024-02-09', status: 'failed' },
+  { id: '49', transactionId: 'TXN-2024-045', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'completed' },
+  { id: '50', transactionId: 'TXN-2024-046', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'completed' },
+  { id: '51', transactionId: 'TXN-2024-047', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Credit Card', date: '2024-01-20', status: 'pending' },
+  { id: '52', transactionId: 'TXN-2024-048', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'failed' },
+  { id: '53', transactionId: 'TXN-2024-049', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'completed' },
+  { id: '54', transactionId: 'TXN-2024-050', userName: 'Sarah Williams', userEmail: 'sarahw@email.com', type: 'credit', amount: '$200.00', paymentMethod: 'Credit Card', date: '2024-01-21', status: 'completed' },
+  { id: '55', transactionId: 'TXN-2024-051', userName: 'David Brown', userEmail: 'davidb@email.com', type: 'debit', amount: '$175.00', paymentMethod: 'Wallet Balance', date: '2024-01-22', status: 'pending' },
+  { id: '56', transactionId: 'TXN-2024-052', userName: 'Emily Davis', userEmail: 'emilyd@email.com', type: 'credit', amount: '$125.00', paymentMethod: 'Bank Transfer', date: '2024-01-23', status: 'failed' },
+  { id: '57', transactionId: 'TXN-2024-053', userName: 'James Wilson', userEmail: 'jamesw@email.com', type: 'credit', amount: '$300.00', paymentMethod: 'Credit Card', date: '2024-01-24', status: 'completed' },
+  { id: '58', transactionId: 'TXN-2024-054', userName: 'Lisa Anderson', userEmail: 'lisaa@email.com', type: 'debit', amount: '$100.00', paymentMethod: 'Wallet Balance', date: '2024-01-25', status: 'pending' },
+  { id: '59', transactionId: 'TXN-2024-055', userName: 'Robert Taylor', userEmail: 'robertt@email.com', type: 'credit', amount: '$250.00', paymentMethod: 'Bank Transfer', date: '2024-01-26', status: 'completed' },
+  { id: '60', transactionId: 'TXN-2024-056', userName: 'Jennifer Martinez', userEmail: 'jenniferm@email.com', type: 'debit', amount: '$180.00', paymentMethod: 'Credit Card', date: '2024-01-27', status: 'failed' },
+  { id: '61', transactionId: 'TXN-2024-057', userName: 'Christopher Lee', userEmail: 'christopherl@email.com', type: 'credit', amount: '$220.00', paymentMethod: 'Wallet Balance', date: '2024-01-28', status: 'completed' },
+  { id: '62', transactionId: 'TXN-2024-058', userName: 'Amanda White', userEmail: 'amandaw@email.com', type: 'credit', amount: '$190.00', paymentMethod: 'Bank Transfer', date: '2024-01-29', status: 'pending' },
+  { id: '63', transactionId: 'TXN-2024-059', userName: 'Daniel Harris', userEmail: 'danielh@email.com', type: 'debit', amount: '$160.00', paymentMethod: 'Credit Card', date: '2024-01-30', status: 'completed' },
+  { id: '64', transactionId: 'TXN-2024-060', userName: 'Jessica Clark', userEmail: 'jessicac@email.com', type: 'credit', amount: '$140.00', paymentMethod: 'Wallet Balance', date: '2024-02-01', status: 'failed' },
+  { id: '65', transactionId: 'TXN-2024-061', userName: 'Matthew Lewis', userEmail: 'matthewl@email.com', type: 'credit', amount: '$270.00', paymentMethod: 'Bank Transfer', date: '2024-02-02', status: 'completed' },
+  { id: '66', transactionId: 'TXN-2024-062', userName: 'Ashley Walker', userEmail: 'ashleyw@email.com', type: 'debit', amount: '$130.00', paymentMethod: 'Credit Card', date: '2024-02-03', status: 'pending' },
+  { id: '67', transactionId: 'TXN-2024-063', userName: 'Ryan Hall', userEmail: 'ryanh@email.com', type: 'credit', amount: '$210.00', paymentMethod: 'Wallet Balance', date: '2024-02-04', status: 'completed' },
+  { id: '68', transactionId: 'TXN-2024-064', userName: 'Nicole Young', userEmail: 'nicoley@email.com', type: 'debit', amount: '$165.00', paymentMethod: 'Bank Transfer', date: '2024-02-05', status: 'failed' },
+  { id: '69', transactionId: 'TXN-2024-065', userName: 'Kevin King', userEmail: 'kevink@email.com', type: 'credit', amount: '$240.00', paymentMethod: 'Credit Card', date: '2024-02-06', status: 'completed' },
+  { id: '70', transactionId: 'TXN-2024-066', userName: 'Michelle Wright', userEmail: 'michellew@email.com', type: 'credit', amount: '$155.00', paymentMethod: 'Wallet Balance', date: '2024-02-07', status: 'pending' },
+  { id: '71', transactionId: 'TXN-2024-067', userName: 'Brandon Lopez', userEmail: 'brandonl@email.com', type: 'debit', amount: '$185.00', paymentMethod: 'Bank Transfer', date: '2024-02-08', status: 'completed' },
+  { id: '72', transactionId: 'TXN-2024-068', userName: 'Stephanie Hill', userEmail: 'stephanieh@email.com', type: 'credit', amount: '$195.00', paymentMethod: 'Credit Card', date: '2024-02-09', status: 'failed' },
+  { id: '73', transactionId: 'TXN-2024-069', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'completed' },
+  { id: '74', transactionId: 'TXN-2024-070', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'completed' },
+  { id: '75', transactionId: 'TXN-2024-071', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Credit Card', date: '2024-01-20', status: 'pending' },
+  { id: '76', transactionId: 'TXN-2024-072', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'failed' },
+  { id: '77', transactionId: 'TXN-2024-073', userName: 'Michael Johnson', userEmail: 'michaelj@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'completed' },
+  { id: '78', transactionId: 'TXN-2024-074', userName: 'Sarah Williams', userEmail: 'sarahw@email.com', type: 'credit', amount: '$200.00', paymentMethod: 'Credit Card', date: '2024-01-21', status: 'completed' },
+  { id: '79', transactionId: 'TXN-2024-075', userName: 'David Brown', userEmail: 'davidb@email.com', type: 'debit', amount: '$175.00', paymentMethod: 'Wallet Balance', date: '2024-01-22', status: 'pending' },
+  { id: '80', transactionId: 'TXN-2024-076', userName: 'Emily Davis', userEmail: 'emilyd@email.com', type: 'credit', amount: '$125.00', paymentMethod: 'Bank Transfer', date: '2024-01-23', status: 'failed' },
+  { id: '81', transactionId: 'TXN-2024-077', userName: 'James Wilson', userEmail: 'jamesw@email.com', type: 'credit', amount: '$300.00', paymentMethod: 'Credit Card', date: '2024-01-24', status: 'completed' },
+  { id: '82', transactionId: 'TXN-2024-078', userName: 'Lisa Anderson', userEmail: 'lisaa@email.com', type: 'debit', amount: '$100.00', paymentMethod: 'Wallet Balance', date: '2024-01-25', status: 'pending' },
+  { id: '83', transactionId: 'TXN-2024-079', userName: 'Robert Taylor', userEmail: 'robertt@email.com', type: 'credit', amount: '$250.00', paymentMethod: 'Bank Transfer', date: '2024-01-26', status: 'completed' },
 ]
 
 const PAGE_SIZE = 10
@@ -67,7 +153,13 @@ const FILTER_OPTIONS: { key: FinanceFilterKey; label: string }[] = [
   { key: 'refunded', label: 'Refunded' },
   { key: 'paid', label: 'Paid' },
   { key: 'pending', label: 'Pending' },
+]
+
+const USER_FILTER_OPTIONS: { key: FinanceFilterKey; label: string }[] = [
+  { key: 'all', label: 'All' },
   { key: 'completed', label: 'Completed' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'failed', label: 'Failed' },
 ]
 
 
@@ -89,8 +181,8 @@ const STATUS_BADGE_CLASS: Record<FinanceFilterKey, { active: string; inactive: s
     inactive: 'bg-[#FFF2D6] text-[#B76E00]',
   },
   completed: {
-    active: 'bg-[#FFF2D6] text-[#B76E00]',
-    inactive: 'bg-[#FFF2D6] text-[#B76E00]',
+    active: 'bg-[#DCF6E5] text-[#118D57]',
+    inactive: 'bg-[#DCF6E5] text-[#118D57]',
   },
   failed: {
     active: 'bg-[#FFE4DE] text-[#B71D18]',
@@ -113,33 +205,86 @@ export default function Finance() {
   const [viewingUserTransaction, setViewingUserTransaction] = useState<UserTransaction | null>(null)
 
   const filterTabsWithCounts = useMemo(
-    () =>
-      FILTER_OPTIONS.map((tab) => ({
-        ...tab,
-        count:
-          tab.key === 'all'
-            ? MOCK_TRANSACTIONS.length
-            : MOCK_TRANSACTIONS.filter((t) => {
-                if (tab.key === 'refunded') return t.status === 'refunded'
-                if (tab.key === 'paid') return t.status === 'paid'
-                if (tab.key === 'pending') return t.status === 'pending'
-                if (tab.key === 'completed') return t.status === 'completed'
-                return false
-              }).length,
-        badgeClassName: STATUS_BADGE_CLASS[tab.key],
-      })),
-    [],
+    () => {
+      if (activeTab === 'vendor') {
+        return FILTER_OPTIONS.map((tab) => ({
+          ...tab,
+          count:
+            tab.key === 'all'
+              ? MOCK_VENDOR_PAYOUTS.length
+              : MOCK_VENDOR_PAYOUTS.filter((p) => {
+                  if (tab.key === 'refunded') return p.paymentStatus === 'unpaid'
+                  if (tab.key === 'paid') return p.paymentStatus === 'paid'
+                  if (tab.key === 'pending') return p.paymentStatus === 'pending'
+                  return false
+                }).length,
+          badgeClassName: STATUS_BADGE_CLASS[tab.key],
+        }))
+      } else {
+        return USER_FILTER_OPTIONS.map((tab) => ({
+          ...tab,
+          count:
+            tab.key === 'all'
+              ? MOCK_USER_TRANSACTIONS.length
+              : MOCK_USER_TRANSACTIONS.filter((t) => {
+                  if (tab.key === 'completed') return t.status === 'completed'
+                  if (tab.key === 'pending') return t.status === 'pending'
+                  if (tab.key === 'failed') return t.status === 'failed'
+                  return false
+                }).length,
+          badgeClassName: STATUS_BADGE_CLASS[tab.key],
+        }))
+      }
+    },
+    [activeTab],
   )
 
-  const filteredTransactions = useMemo(() => {
-    let result = [...MOCK_TRANSACTIONS]
+  const filteredVendorPayouts = useMemo(() => {
+    let result = [...MOCK_VENDOR_PAYOUTS]
 
     if (activeFilter !== 'all') {
+      result = result.filter((payout) => {
+        if (activeFilter === 'refunded') return payout.paymentStatus === 'unpaid'
+        if (activeFilter === 'paid') return payout.paymentStatus === 'paid'
+        if (activeFilter === 'pending') return payout.paymentStatus === 'pending'
+        return false
+      })
+    }
+
+    if (searchValue.trim()) {
+      const query = searchValue.toLowerCase()
+      result = result.filter(
+        (payout) =>
+          payout.name.toLowerCase().includes(query) ||
+          payout.businessName.toLowerCase().includes(query),
+      )
+    }
+
+    return result
+  }, [activeFilter, searchValue, activeTab])
+
+  const filteredUserTransactions = useMemo(() => {
+    let result = [...MOCK_USER_TRANSACTIONS]
+
+    // Apply status filter from dropdown
+    if (statusFilter !== 'All Status') {
+      const statusMap: Record<string, 'completed' | 'pending' | 'failed'> = {
+        'Completed': 'completed',
+        'Pending': 'pending',
+        'Failed': 'failed',
+      }
+      const status = statusMap[statusFilter]
+      if (status) {
+        result = result.filter((transaction) => transaction.status === status)
+      }
+    }
+
+    // Apply tab filter
+    if (activeFilter !== 'all') {
       result = result.filter((transaction) => {
-        if (activeFilter === 'refunded') return transaction.status === 'refunded'
-        if (activeFilter === 'paid') return transaction.status === 'paid'
-        if (activeFilter === 'pending') return transaction.status === 'pending'
         if (activeFilter === 'completed') return transaction.status === 'completed'
+        if (activeFilter === 'pending') return transaction.status === 'pending'
+        if (activeFilter === 'failed') return transaction.status === 'failed'
         return false
       })
     }
@@ -149,20 +294,27 @@ export default function Finance() {
       result = result.filter(
         (transaction) =>
           transaction.transactionId.toLowerCase().includes(query) ||
-          transaction.user.toLowerCase().includes(query) ||
-          transaction.orderId.toLowerCase().includes(query),
+          transaction.userName.toLowerCase().includes(query) ||
+          transaction.userEmail.toLowerCase().includes(query),
       )
     }
 
     return result
-  }, [activeFilter, searchValue])
+  }, [activeFilter, searchValue, activeTab, statusFilter])
 
-  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / PAGE_SIZE))
+  const vendorTotalPages = Math.max(1, Math.ceil(filteredVendorPayouts.length / PAGE_SIZE))
+  const userTotalPages = Math.max(1, Math.ceil(filteredUserTransactions.length / PAGE_SIZE))
+  const totalPages = activeTab === 'vendor' ? vendorTotalPages : userTotalPages
 
-  const paginatedTransactions = useMemo(() => {
+  const paginatedVendorPayouts = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE
-    return filteredTransactions.slice(start, start + PAGE_SIZE)
-  }, [filteredTransactions, currentPage])
+    return filteredVendorPayouts.slice(start, start + PAGE_SIZE)
+  }, [filteredVendorPayouts, currentPage])
+
+  const paginatedUserTransactions = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredUserTransactions.slice(start, start + PAGE_SIZE)
+  }, [filteredUserTransactions, currentPage])
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = []
@@ -218,6 +370,15 @@ export default function Finance() {
     setCurrentPage(page)
   }
 
+  const handleVendorPayoutAction = (payout: VendorPayout, action: FinanceActionType) => {
+    if (action === 'view') {
+      const vendorName = payout.name.toLowerCase().replace(/\s+/g, '-')
+      navigate(`/finance/vendor/${vendorName}`)
+    } else {
+      console.log(`Action "${action}" selected for payout ${payout.id}`)
+    }
+  }
+
   const handleTransactionAction = (transaction: FinanceTransaction | UserTransaction, action: FinanceActionType) => {
     if (action === 'view') {
       if ('orderId' in transaction) {
@@ -225,8 +386,10 @@ export default function Finance() {
         const vendorName = (transaction as FinanceTransaction).user.toLowerCase().replace(/\s+/g, '-')
         navigate(`/finance/vendor/${vendorName}`)
       } else {
-        // User transaction
-        setViewingUserTransaction(transaction as UserTransaction)
+        // User transaction - navigate to user finance detail page
+        const userTransaction = transaction as UserTransaction
+        const userId = userTransaction.userName.toLowerCase().replace(/\s+/g, '-')
+        navigate(`/finance/user/${userId}`)
       }
     } else {
       // Placeholder callback for other actions
@@ -304,34 +467,32 @@ export default function Finance() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Finance</h1>
-        <p className="text-sm text-gray-600 mt-1">Dashboard - Finance</p>
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Finance</h1>
+        <p className="text-xs sm:text-sm text-gray-600 mt-1">Dashboard - Finance</p>
       </div>
 
       {/* Summary Cards */}
-      <div className=" flex justify-between bg-white p-4 rounded-md">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-md">
         {summaryCards.map((card, index) => (
-          
-          <FinanceSummaryCard
-            key={index}
-            icon={card.icon}
-            title={card.title}
-            value={card.value}
-            subtext={card.subtext}
-            iconBgColor={card.iconBgColor}
-          />
-          
+          <div key={index} className={index > 0 ? 'lg:border-l lg:border-gray-200 lg:pl-4' : ''}>
+            <FinanceSummaryCard
+              icon={card.icon}
+              title={card.title}
+              value={card.value}
+              subtext={card.subtext}
+              iconBgColor={card.iconBgColor}
+            />
+          </div>
         ))}
-        
       </div>
 
       {/* Vendor/Users Toggle */}
-      <div className="mt-6">
+      <div className="mt-4 sm:mt-6">
         <div className="bg-white rounded-lg pt-1 px-1 pb-0">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
             <VendorUsersToggle 
               activeTab={activeTab} 
               onTabChange={(tab) => {
@@ -343,7 +504,7 @@ export default function Finance() {
             <button
               type="button"
               onClick={() => navigate('/finance/all-transactions')}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#E8840D] cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-[#E8840D] cursor-pointer w-full sm:w-auto"
             >
               See All Transaction History
             </button>
@@ -353,8 +514,8 @@ export default function Finance() {
 
       {/* User Filters - Only show when Vendor tab is active, on second line, right-aligned */}
       {activeTab === 'vendor' && (
-        <div className="mt-4 flex justify-end">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+        <div className="mt-3 sm:mt-4 flex justify-end">
+          <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center w-full sm:w-auto">
             <FilterDropdown
               label={sortBy}
               options={['Sort By Date', 'Newest First', 'Oldest First']}
@@ -370,7 +531,7 @@ export default function Finance() {
               placeholder="Transaction ID"
               value={searchValue}
               onChange={handleSearchChange}
-              className="min-w-[220px] sm:min-w-[240px]"
+              className="w-full sm:min-w-[220px] sm:min-w-[240px]"
             />
           </div>
         </div>
@@ -380,14 +541,16 @@ export default function Finance() {
       {activeTab === 'vendor' && (
         <>
           {/* Transactions Heading */}
-          <div className="mt-6 mb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">All Transactions</h2>
+          <div className="mt-4 sm:mt-6 mb-3 sm:mb-4">
+            <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">All Transactions</h2>
           </div>
 
           <section className="rounded-xl bg-white shadow-sm">
             {/* Filters and Controls */}
-            <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-gray-100 px-4 pt-4 pb-4 sm:px-6">
-              <div className="flex items-center flex-shrink-0">
+            <header className="flex flex-col gap-3
+             md:flex-row md:items-center md:justify-between 
+             border-b border-gray-100 px-3 sm:px-4">
+              <div className="flex items-center flex-shrink-0 overflow-x-auto overflow-y-hidden">
                 <FinanceFilterTabs 
                   tabs={filterTabsWithCounts} 
                   activeTab={activeFilter} 
@@ -395,29 +558,25 @@ export default function Finance() {
                 />
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 flex-shrink-0">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 flex-shrink-0 w-full sm:w-auto">
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center 
-                  gap-2 rounded-lg border border-gray-200 
-                  px-3 py-2.5 text-xs font-medium text-gray-700 
-                  transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border border-gray-200 px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer w-full sm:w-auto"
                 >
                   Export
-                  <ExportIcon className="h-4 w-4" />
+                  <ExportIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
                 <SearchBar
-                  placeholder="Search Order"
+                  placeholder="Search"
                   value={searchValue}
                   onChange={handleSearchChange}
-                  className="min-w-[180px] sm:min-w-[200px]"
+                  className="w-full sm:min-w-[180px] sm:min-w-[200px]"
                 />
                 <button
                   type="button"
-                  className="inline-flex items-center 
-                  justify-center gap-2  px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer w-full sm:w-auto"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -431,26 +590,26 @@ export default function Finance() {
             </header>
 
             {/* Table */}
-            <div className="py-4">
-              <FinanceTable
-                transactions={paginatedTransactions}
+            <div>
+              <VendorPayoutTable
+                payouts={paginatedVendorPayouts}
                 startIndex={(currentPage - 1) * PAGE_SIZE}
-                onActionSelect={handleTransactionAction}
-                onRowClick={(transaction) => {
-                  const vendorName = transaction.user.toLowerCase().replace(/\s+/g, '-')
+                onActionSelect={handleVendorPayoutAction}
+                onRowClick={(payout) => {
+                  const vendorName = payout.name.toLowerCase().replace(/\s+/g, '-')
                   navigate(`/finance/vendor/${vendorName}`)
                 }}
               />
             </div>
 
             {/* Pagination */}
-            <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-6">
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
+            <footer className="flex flex-col sm:flex-row justify-end items-center gap-2 sm:gap-3 border-t border-gray-100 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+              <div className="flex items-center gap-1 sm:gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="cursor-pointer rounded-lg border border-gray-200 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Back
                 </button>
@@ -458,7 +617,7 @@ export default function Finance() {
                   {getPageNumbers().map((page, index) => {
                     if (page === '...') {
                       return (
-                        <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                        <span key={`ellipsis-${index}`} className="px-1 sm:px-2 text-xs sm:text-sm text-gray-500">
                           ...
                         </span>
                       )
@@ -472,7 +631,7 @@ export default function Finance() {
                         key={pageNum}
                         type="button"
                         onClick={() => handlePageChange(pageNum)}
-                        className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
+                        className={`h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
                           isActive
                             ? 'bg-[#4C50A2] text-white'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -487,7 +646,7 @@ export default function Finance() {
                   type="button"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="cursor-pointer rounded-lg border border-gray-200 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -501,42 +660,38 @@ export default function Finance() {
       {activeTab === 'users' && (
         <>
           {/* Transactions Heading */}
-          <div className="">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Transactions</h2>
+          <div className="mb-3 sm:mb-4">
+            <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">All Transactions</h2>
           </div>
 
           <section className="rounded-xl bg-white shadow-sm">
             {/* Filters and Controls */}
-            <header className="flex flex-col gap-3 
-            md:flex-row md:items-center md:justify-between
-             border-b border-gray-100 px-4 pt-4  sm:px-6">
-              <div className="flex items-center flex-shrink-0">
+            <header className="flex flex-col gap-3 md:flex-row
+             md:items-center md:justify-between border-b border-gray-100 
+             px-3 sm:px-4">
+              <div className="flex items-center flex-shrink-0 overflow-x-auto overflow-y-hidden">
                 <FinanceFilterTabs tabs={filterTabsWithCounts} activeTab={activeFilter} onTabChange={handleFilterChange} />
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 flex-shrink-0">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 flex-shrink-0 w-full sm:w-auto">
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center 
-                  gap-2 rounded-lg border border-gray-200 
-                  px-3 py-2.5 text-xs font-medium text-gray-700 
-                  transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border border-gray-200 px-2.5 sm:px-3 py-2 sm:py-2.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer w-full sm:w-auto"
                 >
                   Export
-                  <ExportIcon className="h-4 w-4" />
+                  <ExportIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
                 <SearchBar
-                  placeholder="Search Order"
+                  placeholder="Search"
                   value={searchValue}
                   onChange={handleSearchChange}
-                  className="min-w-[180px] sm:min-w-[200px]"
+                  className="w-full sm:min-w-[180px] sm:min-w-[200px]"
                 />
                 <button
                   type="button"
-                  className="inline-flex items-center 
-                  justify-center gap-2  px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer w-full sm:w-auto"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -551,25 +706,21 @@ export default function Finance() {
 
             {/* Table */}
             <div className="py-4">
-              <FinanceTable
-                transactions={paginatedTransactions}
+              <UserTransactionsTable
+                transactions={paginatedUserTransactions}
                 startIndex={(currentPage - 1) * PAGE_SIZE}
                 onActionSelect={handleTransactionAction}
-                onRowClick={(transaction) => {
-                  const vendorName = transaction.user.toLowerCase().replace(/\s+/g, '-')
-                  navigate(`/finance/vendor/${vendorName}`)
-                }}
               />
             </div>
 
             {/* Pagination */}
-            <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-6">
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
+            <footer className="flex flex-col sm:flex-row justify-end items-center gap-2 sm:gap-3 border-t border-gray-100 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+              <div className="flex items-center gap-1 sm:gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="cursor-pointer rounded-lg border border-gray-200 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Back
                 </button>
@@ -577,7 +728,7 @@ export default function Finance() {
                   {getPageNumbers().map((page, index) => {
                     if (page === '...') {
                       return (
-                        <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                        <span key={`ellipsis-${index}`} className="px-1 sm:px-2 text-xs sm:text-sm text-gray-500">
                           ...
                         </span>
                       )
@@ -591,7 +742,7 @@ export default function Finance() {
                         key={pageNum}
                         type="button"
                         onClick={() => handlePageChange(pageNum)}
-                        className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
+                        className={`h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
                           isActive
                             ? 'bg-[#4C50A2] text-white'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -606,7 +757,7 @@ export default function Finance() {
                   type="button"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="cursor-pointer rounded-lg border border-gray-200 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </button>

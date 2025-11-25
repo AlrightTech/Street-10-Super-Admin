@@ -138,6 +138,42 @@ export default function VendorFinanceDetail() {
     // Navigate to vendor profile page
   }
 
+  const handleExport = () => {
+    // Create CSV content
+    const headers = ['Transaction ID', 'Order ID', 'Amount Paid', 'Commission', 'Total Earning', 'Status', 'Date']
+    const rows = filteredTransactions.map((transaction) => {
+      const amountPaid = parseFloat(transaction.amountPaid.replace('$', '').replace(',', ''))
+      const commission = parseFloat(transaction.commission.replace('$', '').replace(',', ''))
+      const totalEarning = amountPaid - commission
+      
+      return [
+        transaction.transactionId,
+        transaction.orderId,
+        transaction.amountPaid,
+        transaction.commission,
+        `$${totalEarning.toFixed(0)}`,
+        transaction.status,
+        transaction.orderDate,
+      ]
+    })
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
+    ].join('\n')
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `vendor-transactions-${vendor?.name || 'export'}-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   // Calculate finance summary
   const totalEarnings = transactions.reduce((sum, t) => {
     const amount = parseFloat(t.amountPaid.replace('$', '').replace(',', ''))
@@ -182,35 +218,35 @@ export default function VendorFinanceDetail() {
 
       {/* Vendor Profile Section */}
       <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-[#F7931E]/8 via-[#F7931E]/3 to-white p-6">
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
           <img
             src={vendor.avatar}
             alt={vendor.name}
-            className="h-20 w-20 rounded-full object-cover border-2 border-[#F7931E]"
+            className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover border-2 border-[#F7931E] mx-auto sm:mx-0"
           />
-          <div className="flex-1 flex items-start justify-between gap-8">
-            <div className="flex-1">
+          <div className="flex-1 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-8">
+            <div className="flex-1 text-center sm:text-left">
               <h2 className="text-lg font-semibold text-gray-900">{vendor.name}</h2>
               <p className="text-sm text-gray-600 mt-1">Vendor</p>
               <div className="mt-3 space-y-1.5">
                 <p className="text-sm text-gray-600">{vendor.email}</p>
                 <p className="text-sm text-gray-600">{vendor.phone}</p>
               </div>
-              <div className="mt-3">
+              <div className="mt-3 flex justify-center sm:justify-start">
                 <span className="inline-flex items-center justify-center rounded-full bg-green-500 px-3 py-1.5 text-sm font-medium text-white">
                   Active
                 </span>
               </div>
             </div>
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+              <div className="flex-shrink-0 text-center sm:text-left">
                 <p className="text-sm font-semibold text-gray-900">Business Name</p>
                 <p className="text-base font-semibold text-gray-900 mt-1">{vendor.businessName}</p>
               </div>
               <button
                 type="button"
                 onClick={handleViewProfile}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#E8840D] cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#E8840D] cursor-pointer w-full sm:w-auto"
               >
                 View Profile
               </button>
@@ -224,7 +260,7 @@ export default function VendorFinanceDetail() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Finance Summary</h2>
         <div className="rounded-xl border border-gray-200 bg-white p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="pr-6 border-r border-gray-200 last:border-r-0">
+            <div className="pr-0 sm:pr-6 border-r-0 sm:border-r border-gray-200 pb-4 sm:pb-0 border-b sm:border-b-0 last:border-b-0 last:border-r-0 sm:last:border-r-0">
               <div className="text-sm text-gray-600">
                 <p>Total</p>
                 <p>Earnings</p>
@@ -232,21 +268,21 @@ export default function VendorFinanceDetail() {
               </div>
               <p className="text-xl font-bold text-gray-900 mt-1">$ {totalEarnings.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="px-6 border-r border-gray-200 last:border-r-0">
+            <div className="px-0 sm:px-6 border-r-0 sm:border-r border-gray-200 pb-4 sm:pb-0 border-b sm:border-b-0 last:border-b-0 last:border-r-0 sm:last:border-r-0">
               <div className="text-sm text-gray-600">
                 <p>Pending</p>
                 <p>Payouts</p>
               </div>
               <p className="text-xl font-bold text-gray-900 mt-1">$ {pendingPayouts.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="px-6 border-r border-gray-200 last:border-r-0">
+            <div className="px-0 sm:px-6 border-r-0 sm:border-r border-gray-200 pb-4 sm:pb-0 border-b sm:border-b-0 last:border-b-0 last:border-r-0 sm:last:border-r-0">
               <div className="text-sm text-gray-600">
                 <p>Commission Paid</p>
                 <p>to Platform</p>
               </div>
               <p className="text-xl font-bold text-gray-900 mt-1">$ {commissionPaid.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="pl-6">
+            <div className="pl-0 sm:pl-6">
               <div className="text-sm text-gray-600">
                 <p>Refunds</p>
                 <p>Processed</p>
@@ -259,9 +295,9 @@ export default function VendorFinanceDetail() {
 
       {/* Transaction History Section */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Transaction History</h2>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <FilterDropdown
               label={sortBy}
               options={['By Date', 'Newest First', 'Oldest First']}
@@ -283,6 +319,7 @@ export default function VendorFinanceDetail() {
             </button>
             <button
               type="button"
+              onClick={handleExport}
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 cursor-pointer"
             >
               Export
@@ -293,20 +330,20 @@ export default function VendorFinanceDetail() {
 
         <div className="rounded-xl border border-gray-200 bg-white p-6">
           {/* Table */}
-          <div className="py-4 -mx-6">
+          <div className="-mx-4 sm:-mx-6">
             <div className="w-full">
-              <div className="overflow-x-auto md:overflow-x-visible">
+              <div className="overflow-x-auto">
                 <table className="min-w-[900px] md:min-w-full w-full border-collapse text-sm">
                   <thead className="bg-transparent">
                     <tr>
-                      <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left pl-6 pr-4">Transaction ID</th>
-                      <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-4">Order ID</th>
-                      <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-4">Amount Paid</th>
-                      <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-4">Commission</th>
-                      <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-4">Total Earning</th>
-                      <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-4">Status</th>
-                      <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-4">Date</th>
-                      <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left pl-4 pr-6">Action</th>
+                    <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left pl-4 sm:pl-6 pr-2 sm:pr-4">Transaction ID</th>
+                    <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-2 sm:px-4">Order ID</th>
+                    <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-2 sm:px-4">Amount Paid</th>
+                    <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-2 sm:px-4">Commission</th>
+                    <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-2 sm:px-4">Total Earning</th>
+                    <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-2 sm:px-4">Status</th>
+                    <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left px-2 sm:px-4">Date</th>
+                    <th className="whitespace-nowrap py-2 text-xs sm:text-sm font-semibold tracking-wide text-gray-700 border-b border-gray-200 bg-white text-left pl-2 sm:pl-4 pr-4 sm:pr-6">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -317,16 +354,16 @@ export default function VendorFinanceDetail() {
                       
                       return (
                         <tr key={transaction.id} className="border-b border-gray-200 last:border-b-0">
-                          <td className="py-2 text-gray-700 text-sm pl-6 pr-4">{transaction.transactionId}</td>
-                          <td className="py-2 text-gray-700 text-sm px-4">{transaction.orderId}</td>
-                          <td className="py-2 text-gray-700 text-sm text-left px-4">{transaction.amountPaid}</td>
-                          <td className="py-2 text-gray-700 text-sm text-left px-4">{transaction.commission}</td>
-                          <td className="py-2 text-gray-700 text-sm text-left font-medium px-4">${totalEarning.toFixed(0)}</td>
-                          <td className="py-2 text-gray-700 text-sm px-4">
+                          <td className="py-2 text-gray-700 text-xs sm:text-sm pl-4 sm:pl-6 pr-2 sm:pr-4">{transaction.transactionId}</td>
+                          <td className="py-2 text-gray-700 text-xs sm:text-sm px-2 sm:px-4">{transaction.orderId}</td>
+                          <td className="py-2 text-gray-700 text-xs sm:text-sm text-left px-2 sm:px-4">{transaction.amountPaid}</td>
+                          <td className="py-2 text-gray-700 text-xs sm:text-sm text-left px-2 sm:px-4">{transaction.commission}</td>
+                          <td className="py-2 text-gray-700 text-xs sm:text-sm text-left font-medium px-2 sm:px-4">${totalEarning.toFixed(0)}</td>
+                          <td className="py-2 text-gray-700 text-xs sm:text-sm px-2 sm:px-4">
                             <FinanceStatusBadge status={transaction.status} />
                           </td>
-                          <td className="py-2 text-gray-700 text-xs text-left px-4">{transaction.orderDate}</td>
-                          <td className="py-2 text-gray-700 text-sm text-left pl-4 pr-6">
+                          <td className="py-2 text-gray-700 text-xs px-2 sm:px-4">{transaction.orderDate}</td>
+                          <td className="py-2 text-gray-700 text-xs sm:text-sm text-left pl-2 sm:pl-4 pr-4 sm:pr-6">
                             <FinanceActionMenu onSelect={() => {}} />
                           </td>
                         </tr>
@@ -340,7 +377,7 @@ export default function VendorFinanceDetail() {
 
           {/* Pagination */}
           <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 pt-4 mt-4">
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
+            <div className="flex items-center gap-1 sm:gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => handlePageChange(currentPage - 1)}

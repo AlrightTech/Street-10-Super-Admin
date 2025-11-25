@@ -121,9 +121,8 @@ export default function OrderDetailView() {
   }
 
   const handleProcessRefund = () => {
-    if (window.confirm('Are you sure you want to process a refund for this order?')) {
-      console.log('Process refund clicked')
-      // Add process refund functionality
+    if (orderId) {
+      navigate(`/orders/${orderId}/process-refund`)
     }
   }
 
