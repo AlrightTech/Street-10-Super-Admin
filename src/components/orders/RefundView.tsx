@@ -44,7 +44,7 @@ const getRefundOrderData = (order: OrderRecord) => {
     customerName: order.customerName,
     orderDate: formattedDate,
     paymentMethod: `****-${getLastFour(order.paymentMethod)}`,
-    paymentStatus: order.status === 'completed' ? 'Paid' : 'Pending',
+    paymentStatus: order.status === 'active' ? 'Paid' : 'Pending',
     totalAmount: order.amount,
   }
 }
@@ -126,7 +126,7 @@ export default function RefundView({ order, onClose, onConfirm }: RefundViewProp
             <div>
               <p className="text-xs font-medium text-gray-600">Payment Status</p>
               <div className="mt-1">
-                <OrderStatusBadge status="completed" />
+                <OrderStatusBadge status="active" />
               </div>
             </div>
             <div>

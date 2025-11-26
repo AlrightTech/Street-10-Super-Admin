@@ -1,9 +1,9 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { mockOrders } from '../data/mockOrders'
 import type { OrderRecord } from './Orders'
 import OrderStatusBadge from '../components/orders/OrderStatusBadge'
-import { ShoppingBagIcon, CheckCircleIcon, XCircleIcon, RefreshCwIcon, PhoneIcon, MailIcon, CalendarIcon, MapPinIcon, CheckIcon, PlusIcon } from '../components/icons/Icons'
+import { ShoppingBagIcon, CheckCircleIcon, XCircleIcon, RefreshCwIcon, PhoneIcon, MailIcon, CalendarIcon, MapPinIcon, CheckIcon, PlusIcon, UserIcon } from '../components/icons/Icons'
 
 interface CustomerNote {
   id: string
@@ -16,6 +16,8 @@ interface CustomerNote {
 export default function OrderDetail() {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isDetailRoute = location.pathname.includes('/detail')
   const [order, setOrder] = useState<OrderRecord | null>(null)
   const [customerOrders, setCustomerOrders] = useState<OrderRecord[]>([])
   const [filteredOrders, setFilteredOrders] = useState<OrderRecord[]>([])
@@ -91,11 +93,11 @@ export default function OrderDetail() {
 
   // Calculate summary statistics based on filtered orders
   const totalOrders = filteredOrders.length
-  const completedOrders = filteredOrders.filter(o => o.status === 'completed').length
-  const cancelledOrders = filteredOrders.filter(o => o.status === 'cancelled').length
-  const totalRefunds = cancelledOrders // Simplified: assume cancelled orders are refunded
+  const activeOrders = filteredOrders.filter(o => o.status === 'active').length
+  const inactiveOrders = filteredOrders.filter(o => o.status === 'inactive').length
+  const totalRefunds = inactiveOrders // Simplified: assume inactive orders are refunded
   const totalRefundAmount = filteredOrders
-    .filter(o => o.status === 'cancelled')
+    .filter(o => o.status === 'inactive')
     .reduce((sum, o) => sum + o.amount, 0)
 
   // Mock customer data
@@ -172,6 +174,367 @@ export default function OrderDetail() {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
     }
+  }
+
+  // If on detail route, show order detail view matching reference image
+  if (isDetailRoute) {
+    // Mock products for order detail view
+    const orderProducts = [
+      {
+        id: '1',
+        name: 'Wireless Bluetooth Headphones',
+        sku: 'MSH-30',
+        quantity: 2,
+        unitPrice: 89.99,
+        subtotal: 179.98,
+      },
+      {
+        id: '2',
+        name: 'Protective Phone Case',
+        sku: 'PPC-021',
+        quantity: 1,
+        unitPrice: 24.99,
+        subtotal: 24.99,
+      },
+      {
+        id: '3',
+        name: 'Wireless Charging Pad',
+        sku: 'WCP-003',
+        quantity: 1,
+        unitPrice: 39.99,
+        subtotal: 39.99,
+      },
+    ]
+
+    const orderTimeline = [
+      { status: 'Order Placed', date: 'Dec 15, 2024', time: '2:30 PM', completed: true },
+      { status: 'Payment Confirmed', date: 'Dec 15, 2024', time: '3:20 PM', completed: true },
+      { status: 'Processing', date: 'Dec 15, 2024', time: '9:15 AM', completed: false, isCurrent: true },
+      { status: 'Shipped', date: '', time: '', completed: false },
+      { status: 'Delivered', date: '', time: '', completed: false },
+    ]
+
+    // Format order ID
+    const formatOrderId = (id: string) => {
+      const numMatch = id.match(/\d+/)
+      if (numMatch) {
+        return `#${numMatch[0]}`
+      }
+      return id.startsWith('#') ? id : `#${id}`
+    }
+    const formattedOrderId = formatOrderId(order.id)
+    
+    // Format order date
+    const parseDate = (dateStr: string) => {
+      try {
+        const date = new Date(dateStr)
+        if (isNaN(date.getTime())) return { formatted: 'Dec 15, 2024', time: '1:30 PM' }
+        const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        return { formatted, time: '1:30 PM' }
+      } catch {
+        return { formatted: 'Dec 15, 2024', time: '1:30 PM' }
+      }
+    }
+    
+    const { formatted: formattedDate, time: orderTime } = parseDate(order.orderDate)
+    
+    // Calculate totals
+    const subtotal = orderProducts.reduce((sum, p) => sum + p.subtotal, 0)
+    const shipping = 2.54
+    const total = subtotal + shipping
+
+    // Customer data
+    const detailCustomerName = order.customerName === 'Sarah Johnson' ? 'Sarah Johnson' : order.customerName
+    const detailCustomerEmail = 'sarah.johnson@email.com'
+    const detailCustomerPhone = '+1 (240) 123-4567'
+
+    const handleUpdateStatus = () => {
+      console.log('Update status clicked')
+    }
+
+    const handleIssueRefund = () => {
+      if (orderId) {
+        navigate(`/orders/${orderId}/process-refund`)
+      }
+    }
+
+    const handleDownloadInvoice = () => {
+      if (orderId) {
+        navigate(`/orders/${orderId}/invoice`)
+      }
+    }
+
+    const handlePrintOrder = () => {
+      window.print()
+    }
+
+    return (
+      <div className="space-y-4 md:space-y-6 px-4 md:px-0">
+        {/* Page Header */}
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Orders</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            <span className="text-gray-600">Dashboard</span>
+            <span className="mx-1 text-gray-600">&gt;</span>
+            <span className="text-gray-900">Orders</span>
+          </p>
+        </div>
+
+        {/* Order Details Section */}
+        <div>
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Order Details</h2>
+          <div className="rounded-xl border border-gray-200 bg-white p-4 md:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Order ID Card - Light Blue */}
+            <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+              <p className="text-sm text-blue-800 mb-1">Order ID</p>
+              <p className="text-lg font-semibold text-blue-800">{formattedOrderId}</p>
+            </div>
+            
+            {/* Order Date Card - Light Green */}
+            <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+              <p className="text-sm text-green-800 mb-1">Order Date</p>
+              <p className="text-lg font-semibold text-green-800">{formattedDate}</p>
+              <p className="text-sm text-green-800 mt-1">{orderTime}</p>
+            </div>
+            
+            {/* Total Amount Card - Light Purple */}
+            <div className="rounded-lg bg-purple-50 border border-purple-200 p-4">
+              <p className="text-sm text-purple-800 mb-1">Total Amount</p>
+              <p className="text-lg font-semibold text-purple-800">${total.toFixed(2)}</p>
+            </div>
+          </div>
+          </div>
+        </div>
+
+        {/* Customer Information Section */}
+        <div>
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Customer Information</h2>
+          <div className="rounded-xl border border-gray-200 bg-white p-4 md:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                
+                  <UserIcon className="h-4 w-4 text-gray-400" />
+                
+                <div>
+                <p className="text-sm font-medium text-gray-900">Name</p>
+              <p className="text-sm text-gray-600 mb-4">{detailCustomerName}</p>
+                </div>
+
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <PhoneIcon className="h-4 w-4 text-gray-400" />
+                <div>
+                <p className="text-sm font-medium text-gray-900">Phone</p>
+              <p className="text-sm text-gray-600 mb-4">{detailCustomerPhone}</p>
+                </div>
+
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <MailIcon className="h-4 w-4 text-gray-400" />
+                <div>
+                <p className="text-sm font-medium text-gray-900">Email</p>
+              <p className="text-sm text-gray-600">{detailCustomerEmail}</p>
+                </div>
+              </div>
+
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <MapPinIcon className="h-4 w-4 text-gray-400" />
+                <p className="text-sm font-medium text-gray-900">Shipping Address</p>
+              </div>
+              <div className="text-sm text-gray-600 space-y-1">
+                <p>23 Main Street, Apt 4B</p>
+                <p>New York, NY 10012</p>
+                <p>United States</p>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+
+        {/* Order Items Section */}
+        <div>
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Order Items</h2>
+          <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+            <table className="w-full border-collapse min-w-[600px] md:min-w-0">
+              <thead>
+                <tr className='bg-gray-100'>
+                  <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap">Product</th>
+                  <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap">SKU</th>
+                  <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap">Qty</th>
+                  <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap">Unit Price</th>
+                  <th className="px-2 md:px-4 py-2 md:py-3 text-right text-xs md:text-sm font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orderProducts.map((product) => (
+                  <tr key={product.id}>
+                    <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-900 border-b border-gray-200">{product.name}</td>
+                    <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 border-b border-gray-200">{product.sku}</td>
+                    <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 border-b border-gray-200">{product.quantity}</td>
+                    <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 border-b border-gray-200 whitespace-nowrap">${product.unitPrice.toFixed(2)}</td>
+                    <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-900 text-right border-b border-gray-200 whitespace-nowrap">${product.subtotal.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={4} className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 text-right border-t border-gray-200">Shipping:</td>
+                  <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-900 text-right border-t border-gray-200">${shipping.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colSpan={4} className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm font-semibold text-gray-900 text-right">Total:</td>
+                  <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm font-semibold text-gray-900 text-right">${total.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Information and Delivery Information Section */}
+        <div className="p-4 md:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {/* Payment Information */}
+            <div>
+              <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Payment Information</h2>
+              <div className="flex flex-col space-y-4 bg-gray-300 rounded-md p-3">
+                <div className='flex justify-between'>
+                  <p className="text-sm font-medium text-gray-900 mb-2">Payment Method</p>
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <rect width="24" height="16" rx="2" fill="#1A1F71"/>
+                      <path d="M8 8h8v8H8z" fill="#F79E1B"/>
+                    </svg>
+                    <p className="text-sm text-gray-600">--- 4532</p>
+                  </div>
+                </div>
+                <div className='flex justify-between'>
+                  <p className="text-sm font-medium text-gray-900 mb-2">Transaction ID</p>
+                  <p className="text-sm text-gray-600">TXN-789456123</p>
+                </div>
+                <div className='flex justify-between'>
+                  <p className="text-sm font-medium text-gray-900 mb-2">Status</p>
+                  <span className="inline-flex items-center px-4 
+                   rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Paid
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Delivery Information */}
+            <div>
+              <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Delivery Information</h2>
+              <div className="space-y-4 bg-gray-300 rounded-md p-3">
+                <div className=' flex justify-between item-center '>
+                  <p className="text-sm font-medium text-gray-900 mb-2">Shipping Method</p>
+                  <p className="text-sm text-gray-600">Express Delivery</p>
+                </div>
+                <div className='flex justify-between item-center'>
+                  <p className="text-sm font-medium text-gray-900 mb-2">Courier</p>
+                  <p className="text-sm text-gray-600">FedEx</p>
+                </div>
+                <div className='flex justify-between item-center'>
+                  <p className="text-sm font-medium text-gray-900 mb-2">Tracking Number</p>
+                  <a href="#" className="text-sm text-blue-600 hover:text-blue-800 underline">
+                    #IZ999AA1234567890
+                  </a>
+                </div>
+                <div className='flex justify-between item-center'>
+                  <p className="text-sm font-medium text-gray-900 mb-2">Est. Delivery</p>
+                  <p className="text-sm text-gray-600">Dec 18, 2024</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Order Timeline Section */}
+        <div>
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Order Timeline</h2>
+          <div className="rounded-xl border border-gray-200 bg-white p-4 md:p-6">
+            <div className="space-y-4">
+            {orderTimeline.map((item, index) => (
+              <div key={index} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-0">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    {item.completed ? (
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500">
+                        <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    ) : item.isCurrent ? (
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500">
+                        <div className="h-2 w-2 rounded-full bg-white" />
+                      </div>
+                    ) : (
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-gray-300 bg-white">
+                        <div className="h-1.5 w-1.5 rounded-full bg-gray-300" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="font-medium text-gray-900">{item.status}</p>
+                </div>
+                <p className="text-sm text-gray-500 md:ml-auto">
+                  {item.date && item.time ? `${item.date}, ${item.time}` : 'Pending'}
+                </p>
+              </div>
+            ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col md:flex-row md:flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={handleUpdateStatus}
+            className="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#E8840D] cursor-pointer"
+          >
+            <span>Update Status</span>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleIssueRefund}
+            className="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 cursor-pointer"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Issue Refund</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleDownloadInvoice}
+            className="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 cursor-pointer"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Download Invoice</span>
+          </button>
+          <button
+            type="button"
+            onClick={handlePrintOrder}
+            className="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 cursor-pointer"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span>Print Order</span>
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -274,12 +637,12 @@ export default function OrderDetail() {
             <div className="rounded-lg bg-green-100 p-2 w-fit mb-3">
               <CheckCircleIcon className="h-5 w-5 text-green-600" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{completedOrders}</p>
-            <p className="text-sm text-gray-600 mt-1">Completed Orders</p>
+            <p className="text-2xl font-bold text-gray-900">{activeOrders}</p>
+            <p className="text-sm text-gray-600 mt-1">Active Orders</p>
           </div>
         </div>
 
-        {/* Cancelled Orders Card */}
+        {/* Inactive Orders Card */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 relative">
           <div className="flex justify-end absolute top-6 right-6">
             <p className="text-sm font-medium text-red-600">-2%</p>
@@ -288,8 +651,8 @@ export default function OrderDetail() {
             <div className="rounded-lg bg-red-100 p-2 w-fit mb-3">
               <XCircleIcon className="h-5 w-5 text-red-600" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{cancelledOrders}</p>
-            <p className="text-sm text-gray-600 mt-1">Cancelled Orders</p>
+            <p className="text-2xl font-bold text-gray-900">{inactiveOrders}</p>
+            <p className="text-sm text-gray-600 mt-1">Inactive Orders</p>
           </div>
         </div>
 
@@ -415,13 +778,20 @@ export default function OrderDetail() {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{orderItem.paymentMethod}</td>
                   <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/orders/${orderItem.id.replace('#', '')}/view`)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
-                    >
-                      View Order
-                    </button>
+                    {orderItem.status === 'active' ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/orders/${orderItem.id.replace('#', '')}/detail`)
+                        }}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
+                      >
+                        View Detail
+                      </button>
+                    ) : (
+                      <span className="text-sm text-gray-400">--</span>
+                    )}
                   </td>
                 </tr>
               ))}

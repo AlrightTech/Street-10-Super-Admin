@@ -21,7 +21,7 @@ interface MarketingFilterTabsProps {
 
 export default function MarketingFilterTabs({ tabs, activeTab, onTabChange, className = '' }: MarketingFilterTabsProps) {
   return (
-    <nav className={`flex flex-wrap items-center gap-1 sm:gap-2 ${className}`}>
+    <nav className={`flex flex-nowrap items-center gap-1 pt-3 sm:gap-2 overflow-x-auto md:overflow-x-visible md:flex-wrap ${className}`}>
       {tabs.map((tab) => {
         const isActive = tab.key === activeTab
 
@@ -30,7 +30,7 @@ export default function MarketingFilterTabs({ tabs, activeTab, onTabChange, clas
             key={tab.key}
             type="button"
             onClick={() => onTabChange(tab.key)}
-            className={`inline-flex items-center px-2 sm:px-3 pt-1.5 pb-3 text-sm font-medium transition-colors duration-150 ${
+            className={`inline-flex items-center px-2 sm:px-3 pt-1.5 pb-3 text-sm font-medium transition-colors duration-150 cursor-pointer ${
               isActive 
                 ? 'text-black border-b-2 border-black relative z-10 -mb-px' 
                 : 'text-gray-600 hover:text-gray-900 border-b-2 border-transparent'

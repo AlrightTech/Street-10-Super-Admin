@@ -6,15 +6,13 @@ interface OrderStatusBadgeProps {
 }
 
 const STATUS_STYLES: Record<OrderStatus, string> = {
-  completed: 'bg-[#DCF6E5] text-[#118D57]',
-  pending: 'bg-[#FFF2D6] text-[#B76E00]',
-  cancelled: 'bg-[#FFE4DE] text-[#B71D18]',
+  active: 'bg-[#DCF6E5] text-[#118D57]',
+  inactive: 'bg-[#FFE4DE] text-[#B71D18]',
 }
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
-  completed: 'Completed',
-  pending: 'Pending',
-  cancelled: 'Cancelled',
+  active: 'Active',
+  inactive: 'Inactive',
 }
 
 export default function OrderStatusBadge({ status, className = '' }: OrderStatusBadgeProps) {

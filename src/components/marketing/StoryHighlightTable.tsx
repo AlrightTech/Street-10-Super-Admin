@@ -24,7 +24,9 @@ interface StoryHighlightTableProps {
 export default function StoryHighlightTable({ highlights, emptyState, onActionSelect }: StoryHighlightTableProps) {
   if (highlights.length === 0) {
     return (
-      <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
+      <div className="flex min-h-[240px] flex-col 
+      items-center justify-center rounded-2xl border 
+      border-dashed border-gray-200 bg-gray-50 py-12 text-center">
         {emptyState ?? (
           <>
             <p className="text-base font-semibold text-gray-800">No story highlights to show</p>
@@ -39,10 +41,9 @@ export default function StoryHighlightTable({ highlights, emptyState, onActionSe
 
   return (
     <Fragment>
-      <div className="w-full rounded-xl overflow-hidden" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-        <div className="overflow-x-auto">
-          <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-            <table className="min-w-[1000px] w-full border-collapse text-sm">
+      <div className="w-full rounded-xl overflow-hidden">
+        <div className="overflow-x-auto md:overflow-x-visible">
+          <table className="w-full border-collapse text-sm min-w-[600px] md:min-w-0">
               <thead className="bg-transparent sticky top-0 z-10">
                 <tr>
                   <TableHeader>Thumbnail + Title</TableHeader>
@@ -57,15 +58,19 @@ export default function StoryHighlightTable({ highlights, emptyState, onActionSe
               </thead>
               <tbody>
                 {highlights.map((highlight) => (
-                  <tr key={highlight.id} className="border-b border-gray-200 last:border-b-0">
+                  <tr key={highlight.id} className="border-b
+                   border-gray-200 last:border-b-0">
                     <TableCell>
                       <div className="flex items-center gap-2 sm:gap-3">
                         <img 
                           src={highlight.thumbnail} 
                           alt={highlight.title}
-                          className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover ring-1 ring-gray-200 flex-shrink-0"
+                          className="h-8 w-8 sm:h-10 sm:w-10 
+                          rounded-full object-cover ring-1
+                           ring-gray-200 flex-shrink-0"
                         />
-                        <span className="text-gray-700 font-medium text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{highlight.title}</span>
+                        <span className="text-gray-700 font-medium 
+                        text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{highlight.title}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-xs sm:text-sm">{highlight.type}</TableCell>
@@ -89,9 +94,8 @@ export default function StoryHighlightTable({ highlights, emptyState, onActionSe
                     </TableCell>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+            </tbody>
+          </table>
         </div>
       </div>
     </Fragment>
@@ -104,12 +108,14 @@ interface TableHeaderProps {
 }
 
 function TableHeader({ children, align = 'left' }: TableHeaderProps) {
-  const textAlign = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+  const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-left'
   
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-2 sm:px-3 md:px-5 py-2 sm:py-3 text-xs sm:text-sm font-semibold uppercase tracking-wide text-gray-700 border-b-2 border-gray-300 bg-white ${textAlign}`}
+      className={`whitespace-nowrap px-2 sm:px-3  py-2 sm:py-3
+         text-xs sm:text-sm font-semibold 
+          tracking-wide text-gray-700 border-b border-gray-300 bg-white ${textAlign}`}
     >
       {children}
     </th>
@@ -123,11 +129,11 @@ interface TableCellProps {
 }
 
 function TableCell({ children, className = '', align = 'left' }: TableCellProps) {
-  const textAlign = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+  const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-left'
   
   return (
     <td
-      className={`px-2 sm:px-3 md:px-5 py-2 sm:py-3 text-gray-700 ${textAlign} ${className}`}
+      className={`px-2 sm:px-3 py-2 text-gray-700 ${textAlign} ${className}`}
     >
       {children}
     </td>

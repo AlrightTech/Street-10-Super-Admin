@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import MarketingStatusBadge, { type MarketingStatus } from './MarketingStatusBadge'
 import PushNotificationsActionMenu, { type PushNotificationActionType } from './PushNotificationsActionMenu'
 
@@ -22,6 +23,18 @@ interface PushNotificationsTableProps {
 }
 
 export default function PushNotificationsTable({ notifications, emptyState, onActionSelect }: PushNotificationsTableProps) {
+  const navigate = useNavigate()
+
+  const handleRowClick = (notification: PushNotification) => {
+    if (notification.status === 'sent') {
+      navigate(`/marketing/push-notification/send/${notification.id}`)
+    } else if (notification.status === 'pending') {
+      navigate(`/marketing/push-notification/pending/${notification.id}`)
+    } else if (notification.status === 'scheduled') {
+      navigate(`/marketing/push-notification/scheduled/${notification.id}`)
+    }
+  }
+
   if (notifications.length === 0) {
     return (
       <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
@@ -48,10 +61,9 @@ export default function PushNotificationsTable({ notifications, emptyState, onAc
 
   return (
     <Fragment>
-      <div className="w-full rounded-xl overflow-hidden" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-        <div className="overflow-x-auto">
-          <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-            <table className="min-w-[1000px] w-full border-collapse text-sm">
+      <div className="w-full rounded-xl overflow-hidden">
+        <div className="overflow-x-auto md:overflow-x-visible">
+          <table className="w-full border-collapse text-sm min-w-[600px] md:min-w-0">
               <thead className="bg-transparent sticky top-0 z-10">
                 <tr>
                   <TableHeader>Name</TableHeader>
@@ -68,7 +80,8 @@ export default function PushNotificationsTable({ notifications, emptyState, onAc
                 {notifications.map((notification, index) => (
                   <tr 
                     key={notification.id} 
-                    className={`border-b border-gray-200 last:border-b-0 ${
+                    onClick={() => handleRowClick(notification)}
+                    className={`border-b border-gray-200 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
                       index === 4 ? 'bg-gray-50' : ''
                     }`}
                   >
@@ -124,7 +137,7 @@ export default function PushNotificationsTable({ notifications, emptyState, onAc
                         <MarketingStatusBadge status={notification.status as MarketingStatus} />
                       )}
                     </TableCell>
-                    <TableCell align="center">
+                    <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                       <PushNotificationsActionMenu 
                         status={notification.status as 'sent' | 'pending' | 'scheduled' | 'expired'} 
                         onSelect={(action) => onActionSelect?.(notification, action)} 
@@ -132,9 +145,8 @@ export default function PushNotificationsTable({ notifications, emptyState, onAc
                     </TableCell>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+            </tbody>
+          </table>
         </div>
       </div>
     </Fragment>
@@ -152,7 +164,9 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-2 sm:px-3 md:px-5 py-2 sm:py-3 text-xs sm:text-sm font-semibold uppercase tracking-wide text-gray-700 border-b-2 border-gray-300 bg-white ${textAlign}`}
+      className={`whitespace-nowrap
+         px-2 sm:px-3 md:px-5 py-2 sm:py-3 text-xs sm:text-sm font-semibold 
+          tracking-wide text-gray-700 border-b border-gray-300 bg-white ${textAlign}`}
     >
       {children}
     </th>
@@ -163,14 +177,16 @@ interface TableCellProps {
   children: React.ReactNode
   className?: string
   align?: 'left' | 'right' | 'center'
+  onClick?: (e: React.MouseEvent) => void
 }
 
-function TableCell({ children, className = '', align = 'left' }: TableCellProps) {
+function TableCell({ children, className = '', align = 'left', onClick }: TableCellProps) {
   const textAlign = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
   
   return (
     <td
-      className={`px-2 sm:px-3 md:px-5 py-2 sm:py-3 text-gray-700 ${textAlign} ${className}`}
+      onClick={onClick}
+      className={`px-2 sm:px-3 md:px-5 py-2 text-gray-700 ${textAlign} ${className}`}
     >
       {children}
     </td>

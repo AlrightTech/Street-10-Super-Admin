@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import MarketingStatusBadge, { type MarketingStatus } from './MarketingStatusBadge'
 import BannersActionMenu, { type BannerActionType } from './BannersActionMenu'
 
@@ -22,6 +23,8 @@ interface BannersTableProps {
 }
 
 export default function BannersTable({ banners, emptyState, onActionSelect }: BannersTableProps) {
+  const navigate = useNavigate()
+
   if (banners.length === 0) {
     return (
       <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
@@ -39,10 +42,9 @@ export default function BannersTable({ banners, emptyState, onActionSelect }: Ba
 
   return (
     <Fragment>
-      <div className="w-full rounded-xl overflow-hidden" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-        <div className="overflow-x-auto">
-          <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-            <table className="min-w-[1000px] w-full border-collapse text-sm">
+      <div className="w-full rounded-xl overflow-hidden">
+        <div className="overflow-x-auto md:overflow-x-visible">
+          <table className="w-full border-collapse text-sm min-w-[600px] md:min-w-0">
               <thead className="bg-transparent sticky top-0 z-10">
                 <tr>
                   <TableHeader>Thumbnail + Title</TableHeader>
@@ -57,7 +59,11 @@ export default function BannersTable({ banners, emptyState, onActionSelect }: Ba
               </thead>
               <tbody>
                 {banners.map((banner) => (
-                  <tr key={banner.id} className="border-b border-gray-200 last:border-b-0">
+                  <tr 
+                    key={banner.id} 
+                    className="border-b border-gray-200 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => navigate(`/marketing/banner/${banner.id}`)}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-2 sm:gap-3">
                         <img 
@@ -84,14 +90,13 @@ export default function BannersTable({ banners, emptyState, onActionSelect }: Ba
                     <TableCell>
                       <MarketingStatusBadge status={banner.status} />
                     </TableCell>
-                    <TableCell align="center">
+                    <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                       <BannersActionMenu onSelect={(action) => onActionSelect?.(banner, action)} />
                     </TableCell>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+            </tbody>
+          </table>
         </div>
       </div>
     </Fragment>
@@ -109,7 +114,9 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-2 sm:px-3 md:px-5 py-2 sm:py-3 text-xs sm:text-sm font-semibold uppercase tracking-wide text-gray-700 border-b-2 border-gray-300 bg-white ${textAlign}`}
+      className={`whitespace-nowrap px-2 sm:px-3 md:px-5 py-2 sm:py-3 
+        text-xs sm:text-sm font-semibold 
+         tracking-wide text-gray-700 border-b border-gray-300 bg-white ${textAlign}`}
     >
       {children}
     </th>
@@ -120,14 +127,16 @@ interface TableCellProps {
   children: React.ReactNode
   className?: string
   align?: 'left' | 'right' | 'center'
+  onClick?: (e: React.MouseEvent<HTMLTableCellElement>) => void
 }
 
-function TableCell({ children, className = '', align = 'left' }: TableCellProps) {
+function TableCell({ children, className = '', align = 'left', onClick }: TableCellProps) {
   const textAlign = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
   
   return (
     <td
-      className={`px-2 sm:px-3 md:px-5 py-2 sm:py-3 text-gray-700 ${textAlign} ${className}`}
+      className={`px-2 sm:px-3 md:px-5 py-2 text-gray-700 ${textAlign} ${className}`}
+      onClick={onClick}
     >
       {children}
     </td>

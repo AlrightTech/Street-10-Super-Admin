@@ -42,20 +42,24 @@ export default function FilterDropdown({ label, options = [], onSelect, classNam
     setIsOpen(false)
   }
 
+  const isFullWidth = className.includes('w-full')
+  
   return (
     <div ref={dropdownRef} className={`relative ${className}`}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 rounded-lg border 
+        className={`flex items-center justify-between gap-2 rounded-lg border 
         border-gray-200 bg-white px-2 py-2.5 text-xs font-medium
-         text-gray-500 hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer"
+         text-gray-500 hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer ${isFullWidth ? 'w-full' : ''}`}
         aria-label={`Filter by ${label}`}
         aria-expanded={isOpen}
       >
         <span>{selectedValue}</span>
-        {icon && <span className="text-gray-500">{icon}</span>}
-        {!hideArrow && <ChevronDownIcon className="h-4 w-4 text-gray-500" />}
+        <div className="flex items-center gap-2">
+          {icon && <span className="text-gray-500">{icon}</span>}
+          {!hideArrow && <ChevronDownIcon className="h-4 w-4 text-gray-500" />}
+        </div>
       </button>
 
       {isOpen && options.length > 0 && (

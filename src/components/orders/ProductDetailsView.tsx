@@ -97,7 +97,7 @@ const getProductOrderData = (order: OrderRecord) => {
       method: 'Credit Card',
       lastFour: '4532',
       transactionId: 'TXN-7895A23',
-      status: 'completed' as const,
+      status: 'active' as const,
     },
     delivery: {
       method: 'Express Delivery',

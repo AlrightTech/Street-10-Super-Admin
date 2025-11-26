@@ -23,7 +23,7 @@ interface ProductsTableProps {
 export default function ProductsTable({ products, emptyState, onActionSelect }: ProductsTableProps) {
   if (products.length === 0) {
     return (
-      <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
+      <div className="flex min-h-[240px] flex-col  items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
         {emptyState ?? (
           <>
             <p className="text-base font-semibold text-gray-800">No products to show</p>
@@ -38,10 +38,9 @@ export default function ProductsTable({ products, emptyState, onActionSelect }: 
 
   return (
     <Fragment>
-      <div className="w-full rounded-xl overflow-hidden" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-        <div className="overflow-x-auto">
-          <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-            <table className="min-w-[1000px] w-full border-collapse text-sm">
+      <div className="w-full rounded-xl overflow-hidden">
+        <div className="overflow-x-auto md:overflow-x-visible">
+          <table className="w-full border-collapse text-sm min-w-[600px] md:min-w-0">
               <thead className="bg-transparent sticky top-0 z-10">
                 <tr>
                   <TableHeader>Product</TableHeader>
@@ -86,9 +85,8 @@ export default function ProductsTable({ products, emptyState, onActionSelect }: 
                     </TableCell>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+            </tbody>
+          </table>
         </div>
       </div>
     </Fragment>
@@ -106,7 +104,9 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-2 sm:px-3 md:px-5 py-2 sm:py-3 text-xs sm:text-sm font-semibold uppercase tracking-wide text-gray-700 border-b-2 border-gray-300 bg-white ${textAlign}`}
+      className={`whitespace-nowrap px-2 sm:px-3 
+        md:px-5 py-2 sm:py-3 text-xs sm:text-sm font-semibold 
+         tracking-wide text-gray-700 border-b border-gray-300 bg-white ${textAlign}`}
     >
       {children}
     </th>
@@ -124,7 +124,7 @@ function TableCell({ children, className = '', align = 'left' }: TableCellProps)
   
   return (
     <td
-      className={`px-2 sm:px-3 md:px-5 py-2 sm:py-3 text-gray-700 ${textAlign} ${className}`}
+      className={`px-2 sm:px-3 md:px-5 py-2 text-gray-700 ${textAlign} ${className}`}
     >
       {children}
     </td>

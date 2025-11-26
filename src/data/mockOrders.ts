@@ -10,7 +10,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'Apple AirPods Pro (3rd Generation)',
     amount: 399.98,
     paymentMethod: 'Credit Card',
-    status: 'completed',
+    status: 'active',
     orderDate: '15 Mar 2024',
   },
   {
@@ -19,7 +19,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'iPhone 15 Pro Max Case',
     amount: 49.99,
     paymentMethod: 'Wallet',
-    status: 'pending',
+    status: 'active',
     orderDate: '16 Mar 2024',
   },
   {
@@ -28,7 +28,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'Samsung Galaxy Watch',
     amount: 299.99,
     paymentMethod: 'Credit Card',
-    status: 'completed',
+    status: 'active',
     orderDate: '17 Mar 2024',
   },
   {
@@ -37,7 +37,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'MacBook Pro 16"',
     amount: 2499.99,
     paymentMethod: 'Credit Card',
-    status: 'pending',
+    status: 'active',
     orderDate: '18 Mar 2024',
   },
   {
@@ -46,7 +46,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'Sony WH-1000XM5 Headphones',
     amount: 399.99,
     paymentMethod: 'Cash on Delivery',
-    status: 'cancelled',
+    status: 'inactive',
     orderDate: '19 Mar 2024',
   },
   {
@@ -55,7 +55,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'iPad Air',
     amount: 599.99,
     paymentMethod: 'Credit Card',
-    status: 'completed',
+    status: 'active',
     orderDate: '20 Mar 2024',
   },
   {
@@ -64,7 +64,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'AirPods Max',
     amount: 549.99,
     paymentMethod: 'Wallet',
-    status: 'pending',
+    status: 'active',
     orderDate: '21 Mar 2024',
   },
   {
@@ -73,7 +73,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'Apple Watch Series 9',
     amount: 399.99,
     paymentMethod: 'Credit Card',
-    status: 'completed',
+    status: 'active',
     orderDate: '22 Mar 2024',
   },
   {
@@ -82,7 +82,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'Magic Keyboard',
     amount: 149.99,
     paymentMethod: 'Credit Card',
-    status: 'pending',
+    status: 'active',
     orderDate: '23 Mar 2024',
   },
   {
@@ -91,7 +91,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'Magic Mouse',
     amount: 79.99,
     paymentMethod: 'Wallet',
-    status: 'cancelled',
+    status: 'inactive',
     orderDate: '24 Mar 2024',
   },
   {
@@ -100,7 +100,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'USB-C Hub',
     amount: 89.99,
     paymentMethod: 'Credit Card',
-    status: 'completed',
+    status: 'active',
     orderDate: '25 Mar 2024',
   },
   {
@@ -109,7 +109,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'Wireless Charger',
     amount: 29.99,
     paymentMethod: 'Cash on Delivery',
-    status: 'pending',
+    status: 'active',
     orderDate: '26 Mar 2024',
   },
   {
@@ -118,7 +118,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'iPhone 15 Pro',
     amount: 999.99,
     paymentMethod: 'Credit Card',
-    status: 'completed',
+    status: 'active',
     orderDate: '27 Mar 2024',
   },
   {
@@ -127,7 +127,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'AirTag 4-Pack',
     amount: 99.99,
     paymentMethod: 'Wallet',
-    status: 'pending',
+    status: 'active',
     orderDate: '28 Mar 2024',
   },
   {
@@ -136,7 +136,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'Apple Pencil',
     amount: 129.99,
     paymentMethod: 'Credit Card',
-    status: 'completed',
+    status: 'active',
     orderDate: '29 Mar 2024',
   },
   {
@@ -145,7 +145,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'Smart Folio',
     amount: 79.99,
     paymentMethod: 'Credit Card',
-    status: 'cancelled',
+    status: 'inactive',
     orderDate: '30 Mar 2024',
   },
   {
@@ -154,7 +154,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'MagSafe Charger',
     amount: 39.99,
     paymentMethod: 'Wallet',
-    status: 'completed',
+    status: 'active',
     orderDate: '31 Mar 2024',
   },
   {
@@ -163,7 +163,7 @@ export const mockOrders: OrderRecord[] = [
     product: 'Lightning Cable',
     amount: 19.99,
     paymentMethod: 'Credit Card',
-    status: 'pending',
+    status: 'active',
     orderDate: '01 Apr 2024',
   },
 ]

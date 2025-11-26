@@ -850,7 +850,7 @@ export default function Marketing() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Marketing</h1>
@@ -858,11 +858,13 @@ export default function Marketing() {
       </div>
 
       {/* Main Navigation Bar */}
-      <nav className="flex flex-wrap items-center gap-1 sm:gap-2 md:gap-4 border-b border-gray-200 overflow-x-auto pb-1">
+      <nav className="flex flex-nowrap items-center bg-white rounded-lg gap-1 
+      sm:gap-2 md:gap-4 border-b
+       border-gray-200 overflow-x-auto md:overflow-x-visible md:flex-wrap">
         <button
           type="button"
           onClick={() => setActiveTab('story-highlight')}
-          className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+          className={`px-2 p-2 sm:px-3  text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'story-highlight'
               ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
               : 'text-gray-600 hover:text-gray-900'
@@ -873,7 +875,7 @@ export default function Marketing() {
         <button
           type="button"
           onClick={() => setActiveTab('banners')}
-          className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+          className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'banners'
               ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
               : 'text-gray-600 hover:text-gray-900'
@@ -884,7 +886,7 @@ export default function Marketing() {
         <button
           type="button"
           onClick={() => setActiveTab('pop-up')}
-          className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+          className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'pop-up'
               ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
               : 'text-gray-600 hover:text-gray-900'
@@ -895,7 +897,7 @@ export default function Marketing() {
         <button
           type="button"
           onClick={() => setActiveTab('push-notifications')}
-          className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+          className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'push-notifications'
               ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
               : 'text-gray-600 hover:text-gray-900'
@@ -906,7 +908,7 @@ export default function Marketing() {
         <button
           type="button"
           onClick={() => setActiveTab('product')}
-          className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+          className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'product'
               ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
               : 'text-gray-600 hover:text-gray-900'
@@ -918,74 +920,77 @@ export default function Marketing() {
 
       {/* Story Highlight Section */}
       {activeTab === 'story-highlight' && (
-        <div className="space-y-6">
-          {/* Section Title */}
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Story Highlight</h2>
+        <div className="space-y-4 md:space-y-6">
+          {/* Section Title and Filtering Controls */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
+            {/* Section Title */}
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">Story Highlight</h2>
 
-          {/* Filtering and Search Controls */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+            {/* Filtering and Search Controls */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-1">
               <FilterDropdown
                 label={sortBy}
                 options={['Sort By Date', 'Newest First', 'Oldest First']}
                 onSelect={(value) => setSortBy(value)}
                 icon={<CalendarIcon className="h-4 w-4" />}
+                className="w-full sm:w-auto"
               />
               <FilterDropdown
                 label={audienceFilter}
                 options={['All Audience', 'User', 'Vendor']}
                 onSelect={(value) => setAudienceFilter(value)}
+                className="w-full sm:w-auto"
               />
               <FilterDropdown
                 label={statusFilter}
                 options={['All Status', 'Active', 'Scheduled', 'Expired']}
                 onSelect={(value) => setStatusFilter(value)}
+                className="w-full sm:w-auto"
               />
               <SearchBar
                 placeholder="Search by Title"
                 value={searchValue}
                 onChange={setSearchValue}
-                className="min-w-[220px] sm:min-w-[240px]"
+                className="w-full sm:min-w-[220px] sm:min-w-[240px]"
               />
             </div>
+
+            {/* New Highlight Button */}
             <button
               type="button"
               onClick={handleNewHighlightClick}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap flex-shrink-0 cursor-pointer"
             >
               <PlusIcon className="h-4 w-4" />
               New Highlight
             </button>
           </div>
 
-          {/* Status Tabs and Search/Filter Controls - Single Row */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 pb-3">
-            <div className="flex-1">
-              <MarketingFilterTabs tabs={filterTabsWithCounts} activeTab={activeFilter} onTabChange={handleFilterChange} />
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-shrink-0">
-              <SearchBar
-                placeholder="Search Notification #"
-                value={notificationSearch}
-                onChange={setNotificationSearch}
-                className="min-w-[220px] sm:min-w-[240px]"
-              />
-              <button
-                type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap"
-              >
-                <FilterIcon className="h-4 w-4" />
-                Filter
-              </button>
-            </div>
-          </div>
-
           {/* Data Table */}
           <section className="rounded-xl bg-white shadow-sm">
-            <div className="px-4 py-4 sm:px-6">
-              <div className="overflow-x-auto">
-                <StoryHighlightTable highlights={filteredHighlights} onActionSelect={handleStoryAction} />
+            {/* Status Tabs and Search/Filter Controls - Inside Table Section */}
+            <div className="flex flex-col gap-4 border-b border-gray-200 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1 w-full sm:w-auto">
+                <MarketingFilterTabs tabs={filterTabsWithCounts} activeTab={activeFilter} onTabChange={handleFilterChange} />
               </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-shrink-0 w-full sm:w-auto">
+                <SearchBar
+                  placeholder="Search Notification #"
+                  value={notificationSearch}
+                  onChange={setNotificationSearch}
+                  className="w-full sm:min-w-[220px] sm:min-w-[240px]"
+                />
+                <button
+                  type="button"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                >
+                  <FilterIcon className="h-4 w-4" />
+                  Filter
+                </button>
+              </div>
+            </div>
+            <div className="py-2">
+              <StoryHighlightTable highlights={filteredHighlights} onActionSelect={handleStoryAction} />
             </div>
           </section>
         </div>
@@ -993,74 +998,74 @@ export default function Marketing() {
 
       {/* Banners Section */}
       {activeTab === 'banners' && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Section Title */}
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">Banners</h2>
 
           {/* Filtering and Search Controls */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto">
               <FilterDropdown
                 label={bannerSortBy}
                 options={['Sort By Date', 'Newest First', 'Oldest First']}
                 onSelect={(value) => setBannerSortBy(value)}
                 icon={<CalendarIcon className="h-4 w-4" />}
+                className="w-full sm:w-auto"
               />
               <FilterDropdown
                 label={bannerAudienceFilter}
                 options={['All Audience', 'User', 'Vendor']}
                 onSelect={(value) => setBannerAudienceFilter(value)}
+                className="w-full sm:w-auto"
               />
               <FilterDropdown
                 label={bannerStatusFilter}
                 options={['All Status', 'Active', 'Scheduled', 'Expired']}
                 onSelect={(value) => setBannerStatusFilter(value)}
+                className="w-full sm:w-auto"
               />
               <SearchBar
                 placeholder="Search by Title"
                 value={bannerSearchValue}
                 onChange={setBannerSearchValue}
-                className="min-w-[220px] sm:min-w-[240px]"
+                className="w-full sm:min-w-[220px] sm:min-w-[240px]"
               />
             </div>
             <button
               type="button"
               onClick={handleNewBannerClick}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap cursor-pointer"
             >
               <PlusIcon className="h-4 w-4" />
               Add New Banner
             </button>
           </div>
 
-          {/* Status Tabs and Search/Filter Controls - Single Row */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 pb-3">
-            <div className="flex-1">
-              <MarketingFilterTabs tabs={bannerFilterTabsWithCounts} activeTab={bannerActiveFilter} onTabChange={handleBannerFilterChange} />
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-shrink-0">
-              <SearchBar
-                placeholder="Search Notification #"
-                value={bannerNotificationSearch}
-                onChange={setBannerNotificationSearch}
-                className="min-w-[220px] sm:min-w-[240px]"
-              />
-              <button
-                type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap"
-              >
-                <FilterIcon className="h-4 w-4" />
-                Filter
-              </button>
-            </div>
-          </div>
-
           {/* Data Table */}
           <section className="rounded-xl bg-white shadow-sm">
-            <div className="px-4 py-4 sm:px-6">
-              <div className="overflow-x-auto">
-                <BannersTable banners={filteredBanners} onActionSelect={handleBannerAction} />
+            {/* Status Tabs and Search/Filter Controls - Inside Table Section */}
+            <div className="flex flex-col gap-4 border-b border-gray-200 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1 w-full sm:w-auto">
+                <MarketingFilterTabs tabs={bannerFilterTabsWithCounts} activeTab={bannerActiveFilter} onTabChange={handleBannerFilterChange} />
               </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-shrink-0 w-full sm:w-auto">
+                <SearchBar
+                  placeholder="Search Notification #"
+                  value={bannerNotificationSearch}
+                  onChange={setBannerNotificationSearch}
+                  className="w-full sm:min-w-[220px] sm:min-w-[240px]"
+                />
+                <button
+                  type="button"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                >
+                  <FilterIcon className="h-4 w-4" />
+                  Filter
+                </button>
+              </div>
+            </div>
+            <div className="">
+              <BannersTable banners={filteredBanners} onActionSelect={handleBannerAction} />
             </div>
           </section>
         </div>
@@ -1068,7 +1073,7 @@ export default function Marketing() {
 
       {/* Products Section */}
       {activeTab === 'product' && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Section Title */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900">Products</h2>
@@ -1077,7 +1082,7 @@ export default function Marketing() {
               onClick={() => {
                 // Handle create new notification
               }}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap cursor-pointer"
             >
               <PlusIcon className="h-4 w-4" />
               Create New Notification
@@ -1087,20 +1092,20 @@ export default function Marketing() {
           {/* Data Table Section */}
           <section className="rounded-xl bg-white shadow-sm">
             {/* Status Tabs and Search/Filter Controls - Inside Table Section */}
-            <header className="flex flex-col gap-4 border-b border-gray-100 px-4 pt-4 pb-4 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex-1">
+            <header className="flex flex-col gap-4 border-b border-gray-200 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1 w-full sm:w-auto">
                 <MarketingFilterTabs tabs={productFilterTabsWithCounts} activeTab={productActiveFilter} onTabChange={handleProductFilterChange} />
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-shrink-0">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-shrink-0 w-full sm:w-auto">
                 <SearchBar
                   placeholder="Search Notification #"
                   value={productNotificationSearch}
                   onChange={setProductNotificationSearch}
-                  className="min-w-[220px] sm:min-w-[240px]"
+                  className="w-full sm:min-w-[220px] sm:min-w-[240px]"
                 />
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
                 >
                   <FilterIcon className="h-4 w-4" />
                   Filter
@@ -1109,10 +1114,8 @@ export default function Marketing() {
             </header>
 
             {/* Table Content */}
-            <div className="px-4 py-4 sm:px-6">
-              <div className="overflow-x-auto">
-                <ProductsTable products={paginatedProducts} onActionSelect={handleProductAction} />
-              </div>
+            <div className="">
+              <ProductsTable products={paginatedProducts} onActionSelect={handleProductAction} />
             </div>
 
             {/* Pagination */}
@@ -1144,7 +1147,7 @@ export default function Marketing() {
                         key={pageNum}
                         type="button"
                         onClick={() => handleProductPageChange(pageNum)}
-                        className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
+                        className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition cursor-pointer ${
                           isActive
                             ? 'bg-[#4C50A2] text-white'
                             : 'text-gray-600 hover:bg-gray-100'
@@ -1171,7 +1174,7 @@ export default function Marketing() {
 
       {/* Push Notifications Section */}
       {activeTab === 'push-notifications' && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Section Title */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900">Push Notifications</h2>
@@ -1180,7 +1183,7 @@ export default function Marketing() {
               onClick={() => {
                 navigate('/marketing/add-push-notification')
               }}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap cursor-pointer"
             >
               <PlusIcon className="h-4 w-4" />
               Create New Notification
@@ -1190,9 +1193,9 @@ export default function Marketing() {
           {/* Data Table Section */}
           <section className="rounded-xl bg-white shadow-sm">
             {/* Status Tabs and Search/Filter Controls - Inside Table Section */}
-            <header className="flex flex-col gap-4 border-b border-gray-100 px-4 pt-4 pb-4 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex-1">
-                <nav className="flex flex-wrap items-center gap-1 sm:gap-2">
+            <header className="flex flex-col gap-4 border-b border-gray-100 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1 w-full sm:w-auto">
+                <nav className="flex flex-nowrap items-center pt-3 gap-1 sm:gap-2 overflow-x-auto md:overflow-x-visible md:flex-wrap">
                   {pushNotificationFilterTabsWithCounts.map((tab) => {
                     const isActive = tab.key === pushNotificationFilter
 
@@ -1201,7 +1204,7 @@ export default function Marketing() {
                         key={tab.key}
                         type="button"
                         onClick={() => handlePushNotificationFilterChange(tab.key)}
-                        className={`inline-flex items-center px-2 sm:px-3 pt-1.5 pb-3 text-sm font-medium transition-colors duration-150 ${
+                        className={`inline-flex items-center px-2 sm:px-3 pt-1.5 pb-3 text-sm font-medium transition-colors duration-150 cursor-pointer ${
                           isActive 
                             ? 'text-black border-b-2 border-black relative z-10 -mb-px' 
                             : 'text-gray-600 hover:text-gray-900 border-b-2 border-transparent'
@@ -1222,16 +1225,16 @@ export default function Marketing() {
                   })}
                 </nav>
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-shrink-0">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-shrink-0 w-full sm:w-auto">
                 <SearchBar
                   placeholder="Search Notification #"
                   value={pushNotificationSearch}
                   onChange={setPushNotificationSearch}
-                  className="min-w-[220px] sm:min-w-[240px]"
+                  className="w-full sm:min-w-[220px] sm:min-w-[240px]"
                 />
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
                 >
                   <FilterIcon className="h-4 w-4" />
                   Filter
@@ -1240,10 +1243,8 @@ export default function Marketing() {
             </header>
 
             {/* Table Content */}
-            <div className="px-4 py-4 sm:px-6">
-              <div className="overflow-x-auto">
-                <PushNotificationsTable notifications={paginatedPushNotifications} onActionSelect={handlePushNotificationAction} />
-              </div>
+            <div className="">
+              <PushNotificationsTable notifications={paginatedPushNotifications} onActionSelect={handlePushNotificationAction} />
             </div>
 
             {/* Pagination */}
@@ -1275,7 +1276,7 @@ export default function Marketing() {
                         key={pageNum}
                         type="button"
                         onClick={() => handlePushNotificationPageChange(pageNum)}
-                        className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
+                        className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition cursor-pointer ${
                           isActive
                             ? 'bg-[#4C50A2] text-white'
                             : 'text-gray-600 hover:bg-gray-100'

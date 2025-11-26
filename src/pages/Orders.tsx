@@ -9,7 +9,7 @@ import OrderDetailsView from '../components/orders/OrderDetailsView'
 import OrderDetailView from '../components/orders/OrderDetailView'
 import { mockOrders } from '../data/mockOrders'
 
-export type OrderStatus = 'completed' | 'pending' | 'cancelled'
+export type OrderStatus = 'active' | 'inactive'
 
 export interface OrderRecord {
   id: string
@@ -23,9 +23,8 @@ export interface OrderRecord {
 
 const TAB_OPTIONS: { key: 'all' | OrderStatus; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'cancelled', label: 'Cancelled' },
+  { key: 'active', label: 'Active' },
+  { key: 'inactive', label: 'Inactive' },
 ]
 
 const STATUS_BADGE_CLASS: Record<'all' | OrderStatus, { active: string; inactive: string }> = {
@@ -33,15 +32,11 @@ const STATUS_BADGE_CLASS: Record<'all' | OrderStatus, { active: string; inactive
     active: 'bg-[#4C50A2] text-white',
     inactive: 'bg-[#4C50A2] text-white',
   },
-  pending: {
-    active: 'bg-[#FFF2D6] text-[#B76E00]',
-    inactive: 'bg-[#FFF2D6] text-[#B76E00]',
-  },
-  completed: {
+  active: {
     active: 'bg-[#DCF6E5] text-[#118D57]',
     inactive: 'bg-[#DCF6E5] text-[#118D57]',
   },
-  cancelled: {
+  inactive: {
     active: 'bg-[#FFE4DE] text-[#B71D18]',
     inactive: 'bg-[#FFE4DE] text-[#B71D18]',
   },
@@ -59,7 +54,7 @@ export default function Orders() {
   const [orders, setOrders] = useState<OrderRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [totalPages, setTotalPages] = useState(1)
-  const [orderCounts, setOrderCounts] = useState({ all: 0, pending: 0, completed: 0, cancelled: 0 })
+  const [orderCounts, setOrderCounts] = useState({ all: 0, active: 0, inactive: 0 })
 
   // Load mock orders data
   useEffect(() => {
@@ -87,9 +82,8 @@ export default function Orders() {
         // Calculate counts for tabs
         const counts = {
           all: mockOrders.length,
-          pending: mockOrders.filter(o => o.status === 'pending').length,
-          completed: mockOrders.filter(o => o.status === 'completed').length,
-          cancelled: mockOrders.filter(o => o.status === 'cancelled').length,
+          active: mockOrders.filter(o => o.status === 'active').length,
+          inactive: mockOrders.filter(o => o.status === 'inactive').length,
         }
         setOrderCounts(counts)
       } catch (error) {
