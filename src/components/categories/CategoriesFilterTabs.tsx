@@ -16,7 +16,8 @@ export default function CategoriesFilterTabs({ tabs, activeTab, onTabChange, cla
             key={tab.key}
             type="button"
             onClick={() => onTabChange(tab.key)}
-            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors duration-150 border-b-2 cursor-pointer ${
+            className={`px-2 sm:px-3 p-4 text-xs sm:text-sm
+               font-medium transition-colors duration-150 border-b-2 cursor-pointer ${
               isActive
                 ? 'text-black border-[#F7931E]'
                 : 'text-gray-600 hover:text-gray-900 border-transparent'

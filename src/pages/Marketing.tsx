@@ -11,7 +11,7 @@ import { type ProductActionType } from '../components/marketing/ProductsActionMe
 import { type PushNotificationActionType } from '../components/marketing/PushNotificationsActionMenu'
 import FilterDropdown from '../components/finance/FilterDropdown'
 import SearchBar from '../components/ui/SearchBar'
-import { CalendarIcon, PlusIcon, FilterIcon } from '../components/icons/Icons'
+import { CalendarIcon, PlusIcon, FilterIcon, XIcon } from '../components/icons/Icons'
 
 // Mock data for story highlights
 const MOCK_HIGHLIGHTS: StoryHighlight[] = [
@@ -177,8 +177,8 @@ const MOCK_BANNERS: Banner[] = [
   }),
 ]
 
-// Mock data for products
-const MOCK_PRODUCTS: Product[] = [
+// Initial mock data for products
+const INITIAL_MOCK_PRODUCTS: Product[] = [
   {
     id: '1',
     product: 'Flash Sale',
@@ -428,6 +428,9 @@ export default function Marketing() {
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [bannerStatusFilter, setBannerStatusFilter] = useState('All Status')
   const [currentPage, setCurrentPage] = useState(1)
+  const [products, setProducts] = useState<Product[]>(INITIAL_MOCK_PRODUCTS)
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
+  const [deleteProductName, setDeleteProductName] = useState<string>('')
 
   const filterTabsWithCounts = useMemo(
     () => {
@@ -523,12 +526,38 @@ export default function Marketing() {
   const handleProductAction = (product: Product, action: ProductActionType) => {
     // Handle action selection
     if (action === 'edit-product') {
-      // Handle edit product
-      console.log('Edit product:', product.id)
+      navigate(`/marketing/edit-product/${product.id}`)
     } else if (action === 'delete-product') {
-      // Handle delete product
-      console.log('Delete product:', product.id)
+      setDeleteProductId(product.id)
+      setDeleteProductName(product.product)
     }
+  }
+
+  const handleDeleteConfirm = () => {
+    if (deleteProductId) {
+      // Calculate remaining products before updating state
+      const remainingProducts = products.filter((p) => p.id !== deleteProductId)
+      const totalPages = Math.ceil(remainingProducts.length / 6)
+      
+      // Update products state
+      setProducts(remainingProducts)
+      
+      // Reset pagination if current page becomes empty
+      if (currentPage > totalPages && totalPages > 0) {
+        setCurrentPage(totalPages)
+      } else if (totalPages === 0) {
+        setCurrentPage(1)
+      }
+      
+      // Close modal
+      setDeleteProductId(null)
+      setDeleteProductName('')
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteProductId(null)
+    setDeleteProductName('')
   }
 
   const handleNewHighlightClick = () => {
@@ -616,10 +645,10 @@ export default function Marketing() {
   // Product filter tabs with counts
   const productFilterTabsWithCounts = useMemo(
     () => {
-      const allCount = MOCK_PRODUCTS.length
-      const scheduledCount = MOCK_PRODUCTS.filter((p) => p.status === 'scheduled').length
-      const activeCount = MOCK_PRODUCTS.filter((p) => p.status === 'active').length
-      const expiredCount = MOCK_PRODUCTS.filter((p) => p.status === 'expired').length
+      const allCount = products.length
+      const scheduledCount = products.filter((p: Product) => p.status === 'scheduled').length
+      const activeCount = products.filter((p: Product) => p.status === 'active').length
+      const expiredCount = products.filter((p: Product) => p.status === 'expired').length
 
       return [
         {
@@ -652,7 +681,7 @@ export default function Marketing() {
   )
 
   const filteredProducts = useMemo(() => {
-    let result = [...MOCK_PRODUCTS]
+    let result = [...products]
 
     if (productActiveFilter !== 'all') {
       result = result.filter((product) => product.status === productActiveFilter)
@@ -1079,13 +1108,11 @@ export default function Marketing() {
             <h2 className="text-lg sm:text-xl font-bold text-gray-900">Products</h2>
             <button
               type="button"
-              onClick={() => {
-                // Handle create new notification
-              }}
+              onClick={() => navigate('/marketing/add-product')}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap cursor-pointer"
             >
               <PlusIcon className="h-4 w-4" />
-              Create New Notification
+              Add New Product
             </button>
           </div>
 
@@ -1307,6 +1334,84 @@ export default function Marketing() {
           <p className="text-gray-500">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon</p>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteProductId && (
+        <DeleteConfirmationModal
+          productName={deleteProductName}
+          onClose={handleDeleteCancel}
+          onConfirm={handleDeleteConfirm}
+        />
+      )}
     </div>
   )
 }
+// Delete Confirmation Modal Component
+interface DeleteConfirmationModalProps {
+  productName: string
+  onClose: () => void
+  onConfirm: () => void
+}
+
+function DeleteConfirmationModal({ productName, onClose, onConfirm }: DeleteConfirmationModalProps) {
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/50"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+        <div
+          className="w-full max-w-md bg-white rounded-lg shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-gray-200 relative">
+            <h2 className="text-xl font-semibold text-gray-900">Delete Product</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              aria-label="Close modal"
+            >
+              <XIcon className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="px-6 py-6">
+            <p className="text-gray-700 mb-4">
+              Are you sure you want to delete <span className="font-semibold text-gray-900">"{productName}"</span>?
+            </p>
+            <p className="text-sm text-gray-500">
+              This action cannot be undone. The product will be permanently removed from the system.
+            </p>
+          </div>
+
+          {/* Footer Buttons */}
+          <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-[#E11D48] text-white text-sm font-semibold hover:bg-[#BE185D] transition-colors cursor-pointer"
+            >
+              Delete Product
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+

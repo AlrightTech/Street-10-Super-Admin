@@ -39,12 +39,20 @@ const PushNotificationSendDetail = lazy(() => import('./pages/PushNotificationSe
 const PushNotificationPendingDetail = lazy(() => import('./pages/PushNotificationPendingDetail'))
 const PushNotificationScheduledDetail = lazy(() => import('./pages/PushNotificationScheduledDetail'))
 const AddPushNotification = lazy(() => import('./pages/AddPushNotification'))
+const AddProduct = lazy(() => import('./pages/AddProduct'))
+const ProductActiveDetail = lazy(() => import('./pages/ProductActiveDetail'))
+const ProductScheduledDetail = lazy(() => import('./pages/ProductScheduledDetail'))
+const ProductExpiredDetail = lazy(() => import('./pages/ProductExpiredDetail'))
 const Analytics = lazy(() => import('./pages/Analytics'))
 const TopPerformerDetail = lazy(() => import('./pages/TopPerformerDetail'))
 const AnalyticsOrderDetail = lazy(() => import('./pages/AnalyticsOrderDetail'))
 const MainControl = lazy(() => import('./pages/MainControl'))
 const Categories = lazy(() => import('./pages/Categories'))
 const AddCategory = lazy(() => import('./pages/AddCategory'))
+const AddSubCategory = lazy(() => import('./pages/AddSubCategory'))
+const CategoryFilters = lazy(() => import('./pages/CategoryFilters'))
+const AddCategoryFilter = lazy(() => import('./pages/AddCategoryFilter'))
+const EditFilter = lazy(() => import('./pages/EditFilter'))
 const Products = lazy(() => import('./pages/Products'))
 const BiddingProducts = lazy(() => import('./pages/BiddingProducts'))
 const AddBiddingProduct = lazy(() => import('./pages/AddBiddingProduct'))
@@ -129,12 +137,25 @@ function App() {
             <Route path="marketing/push-notification/pending/:id" element={<PushNotificationPendingDetail />} />
             <Route path="marketing/push-notification/scheduled/:id" element={<PushNotificationScheduledDetail />} />
             <Route path="marketing/add-push-notification" element={<AddPushNotification />} />
+            <Route path="marketing/edit-push-notification/:id" element={<AddPushNotification />} />
+            <Route path="marketing/add-product" element={<AddProduct />} />
+            <Route path="marketing/edit-product/:id" element={<AddProduct />} />
+            <Route path="marketing/product/active/:id" element={<ProductActiveDetail />} />
+            <Route path="marketing/product/scheduled/:id" element={<ProductScheduledDetail />} />
+            <Route path="marketing/product/expired/:id" element={<ProductExpiredDetail />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="analytics/top-performer-detail" element={<TopPerformerDetail />} />
             <Route path="analytics/order-detail/:userId" element={<AnalyticsOrderDetail />} />
             <Route path="main-control" element={<MainControl />} />
             <Route path="categories" element={<Categories />} />
             <Route path="categories/add" element={<AddCategory />} />
+            <Route path="categories/edit/:id" element={<AddCategory />} />
+            <Route path="categories/add-sub-category" element={<AddSubCategory />} />
+            <Route path="categories/edit-subcategory/:id" element={<AddSubCategory />} />
+            <Route path="categories/filters" element={<CategoryFilters />} />
+            <Route path="categories/add-filter" element={<AddCategoryFilter />} />
+            <Route path="categories/edit-filter/:id" element={<AddCategoryFilter />} />
+            <Route path="categories/edit-filter" element={<EditFilter />} />
             <Route path="products" element={<Products />} />
             <Route path="products/bidding" element={<BiddingProducts />} />
             <Route path="products/ecommerce" element={<EcommerceProducts />} />

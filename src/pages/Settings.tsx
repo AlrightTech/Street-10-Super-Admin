@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { UploadIcon, EyeIcon, EyeOffIcon, ChevronDownIcon, MoreVerticalIcon, CheckIcon, MegaphoneIcon, SettingsIcon, DollarSignIcon, HeadsetIcon, ProductManagementIcon, OrderManagementIcon, UsersIcon } from '../components/icons/Icons'
+import { UploadIcon, EyeIcon, EyeOffIcon, ChevronDownIcon, CheckIcon, MegaphoneIcon, SettingsIcon, DollarSignIcon, HeadsetIcon, ProductManagementIcon, OrderManagementIcon, UsersIcon } from '../components/icons/Icons'
 import TextField from '../components/ui/TextField'
 import SearchBar from '../components/ui/SearchBar'
 import StatusBadge from '../components/users/StatusBadge'
@@ -26,44 +26,71 @@ interface SubAdmin {
 /**
  * Mock sub admins data
  */
-const mockSubAdmins: SubAdmin[] = [
-  { id: 1, name: 'Toussef Ahmed', role: 'Math', status: 'active' },
-  { id: 2, name: 'Qasim Muneer', role: 'Math', status: 'active' },
-  { id: 3, name: 'Yasir Hafeez', role: 'Math', status: 'pending' },
-  { id: 4, name: 'Junaid Akhtar Butt', role: 'Math', status: 'active' },
-  { id: 5, name: 'Tariq Iqbal', role: 'Math', status: 'blocked' },
-  { id: 6, name: 'Muhammed Saeed', role: 'Math', status: 'active' },
-  { id: 7, name: 'Abdurrehman', role: 'Math', status: 'pending' },
-  { id: 8, name: 'Yasir Hafeez', role: 'Math', status: 'active' },
-  { id: 9, name: 'Toussef Ahmed', role: 'Math', status: 'active' },
-  { id: 10, name: 'Qasim Muneer', role: 'Math', status: 'blocked' },
-  { id: 11, name: 'Yasir Hafeez', role: 'Math', status: 'pending' },
-  { id: 12, name: 'Junaid Akhtar Butt', role: 'Math', status: 'active' },
-  { id: 13, name: 'Tariq Iqbal', role: 'Math', status: 'active' },
-  { id: 14, name: 'Muhammed Saeed', role: 'Math', status: 'active' },
-  { id: 15, name: 'Abdurrehman', role: 'Math', status: 'blocked' },
-  { id: 16, name: 'Yasir Hafeez', role: 'Math', status: 'active' },
-  { id: 17, name: 'Toussef Ahmed', role: 'Math', status: 'pending' },
-  { id: 18, name: 'Qasim Muneer', role: 'Math', status: 'active' },
-]
+// Generate mock sub admins data (144 entries for 8 pages with 18 per page)
+const generateMockSubAdmins = (): SubAdmin[] => {
+  const names = [
+    'Touseef Ahmed', 'Qasim Muneer', 'Yasir Hafeez', 'Junaid Akhtar Butt',
+    'Tariq Iqbal', 'Muhammed Saeed', 'Abdurrahman', 'Ahmed Ali',
+    'Hassan Khan', 'Usman Malik', 'Bilal Sheikh', 'Zain Abbas',
+    'Hamza Raza', 'Faisal Iqbal', 'Nadeem Ahmed', 'Shahid Hussain',
+    'Imran Ali', 'Kamran Malik'
+  ]
+  const statuses: ('active' | 'pending' | 'blocked')[] = ['active', 'pending', 'blocked']
+  
+  const admins: SubAdmin[] = []
+  for (let i = 1; i <= 144; i++) {
+    const nameIndex = (i - 1) % names.length
+    const statusIndex = (i - 1) % statuses.length
+    admins.push({
+      id: i,
+      name: names[nameIndex],
+      role: 'Math',
+      status: statuses[statusIndex]
+    })
+  }
+  
+  // Set specific entries to match reference image exactly
+  admins[0] = { id: 1, name: 'Touseef Ahmed', role: 'Math', status: 'active' }
+  admins[1] = { id: 2, name: 'Qasim Muneer', role: 'Math', status: 'pending' }
+  admins[2] = { id: 3, name: 'Yasir Hafeez', role: 'Math', status: 'blocked' }
+  admins[3] = { id: 4, name: 'Junaid Akhtar Butt', role: 'Math', status: 'pending' }
+  admins[4] = { id: 5, name: 'Tariq Iqbal', role: 'Math', status: 'blocked' }
+  admins[5] = { id: 6, name: 'Muhammed Saeed', role: 'Math', status: 'blocked' }
+  admins[6] = { id: 7, name: 'Qasim Muneer', role: 'Math', status: 'blocked' }
+  admins[7] = { id: 8, name: 'Abdurrahman', role: 'Math', status: 'active' }
+  admins[8] = { id: 9, name: 'Yasir Hafeez', role: 'Math', status: 'pending' }
+  admins[9] = { id: 10, name: 'Yasir Hafeez', role: 'Math', status: 'blocked' }
+  admins[10] = { id: 11, name: 'Yasir Hafeez', role: 'Math', status: 'active' }
+  admins[11] = { id: 12, name: 'Yasir Hafeez', role: 'Math', status: 'blocked' }
+  admins[12] = { id: 13, name: 'Yasir Hafeez', role: 'Math', status: 'active' }
+  admins[13] = { id: 14, name: 'Yasir Hafeez', role: 'Math', status: 'pending' }
+  admins[14] = { id: 15, name: 'Yasir Hafeez', role: 'Math', status: 'pending' }
+  admins[15] = { id: 16, name: 'Yasir Hafeez', role: 'Math', status: 'active' }
+  admins[16] = { id: 17, name: 'Yasir Hafeez', role: 'Math', status: 'pending' }
+  admins[17] = { id: 18, name: 'Yasir Hafeez', role: 'Math', status: 'active' }
+  
+  return admins
+}
+
+const mockSubAdmins: SubAdmin[] = generateMockSubAdmins()
 
 /**
  * Mock notifications data
  */
 const mockNotifications: NotificationItem[] = [
   { id: '1', message: 'Your recent auction listing has been approved and is now live', timestamp: 'Just Now' },
-  { id: '2', message: 'System update scheduled for 12:00 AM - 2:00 AM. Platform may be temporarily unavailable', timestamp: '1:41am - 14-April-24' },
-  { id: '3', message: 'Your account has been suspended due to multiple reported violations. Contact support for more details', timestamp: '1:41am - 14-April-24' },
-  { id: '4', message: 'Your profile verification was successful. Welcome aboard', timestamp: '1:41am - 14-April-24' },
-  { id: '5', message: 'Auction for Toyota Corolla 2022 ends in 1 hour. Place your final bids', timestamp: 'Just Now' },
-  { id: '6', message: 'New comment on your auction listing. Is this car still under warranty?', timestamp: '1:41am - 14-April-24' },
-  { id: '7', message: 'Password changed successfully. If you did not perform this action, contact support immediately', timestamp: '1:41am - 14-April-24' },
-  { id: '8', message: 'Congratulations. Your bid won the auction for Honda Civic 2023', timestamp: '1:41am - 14-April-24' },
+  { id: '2', message: 'System update scheduled for 12:00 AM - 2:00 AM. Platform may be temporarily unavailable.', timestamp: '11:41 am - 14-April-24' },
+  { id: '3', message: 'Your account has been suspended due to multiple reported violations. Contact support for more details.', timestamp: '11:41 am - 14-April-24' },
+  { id: '4', message: 'Your profile verification was successful. Welcome aboard.', timestamp: '11:41 am - 14-April-24' },
+  { id: '5', message: 'Auction for Toyota Corolla 2022 ends in 1 hour. Place your final bids.', timestamp: 'Just Now' },
+  { id: '6', message: 'New comment on your auction listing: Is this car still under warranty?', timestamp: '11:41 am - 14-April-24' },
+  { id: '7', message: 'Password changed successfully. If you did not perform this action, contact support immediately.', timestamp: '11:41 am - 14-April-24' },
+  { id: '8', message: 'Congratulations. Your bid won the auction for Honda Civic 2023', timestamp: '11:41 am - 14-April-24' },
   { id: '9', message: 'Your post has been removed due to policy violations. Please review our community guidelines', timestamp: 'Just Now' },
-  { id: '10', message: 'New auction listing available: Ford Mustang GT 2021. Check it out now', timestamp: '1:41am - 14-April-24' },
-  { id: '11', message: 'Congratulations. Your bid won the auction for Honda Civic 2023', timestamp: '1:41am - 14-April-24' },
-  { id: '12', message: 'Auction for Toyota Corolla 2022 ends in 1 hour. Place your final bids', timestamp: '1:41am - 14-April-24' },
-  { id: '13', message: 'System update scheduled for 12:00 AM - 2:00 AM. Platform may be temporarily unavailable', timestamp: '1:41am - 14-April-24' },
+  { id: '10', message: 'New auction listing available: Ford Mustang GT 2021. Check it out now.', timestamp: '11:41 am - 14-April-24' },
+  { id: '11', message: 'Congratulations. Your bid won the auction for Honda Civic 2023', timestamp: '11:41 am - 14-April-24' },
+  { id: '12', message: 'Auction for Toyota Corolla 2022 ends in 1 hour. Place your final bids.', timestamp: '11:41 am - 14-April-24' },
+  { id: '13', message: 'System update scheduled for 12:00 AM - 2:00 AM. Platform may be temporarily unavailable.', timestamp: '11:41 am - 14-April-24' },
 ]
 
 /**
@@ -71,17 +98,21 @@ const mockNotifications: NotificationItem[] = [
  */
 export default function Settings() {
   const [activeSection, setActiveSection] = useState('admin-profile')
-  const [showAllNotifications, setShowAllNotifications] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
   })
   const [showPassword, setShowPassword] = useState(false)
-  const [accountPreferences, setAccountPreferences] = useState({
-    darkMode: false,
-    language: '',
-    timeZone: '',
+  const [accountPreferences, setAccountPreferences] = useState(() => {
+    // Load dark mode preference from localStorage
+    const savedDarkMode = localStorage.getItem('darkMode')
+    const isDarkMode = savedDarkMode === 'true'
+    return {
+      darkMode: isDarkMode,
+      language: localStorage.getItem('language') || '',
+      timeZone: localStorage.getItem('timeZone') || '',
+    }
   })
   const [securitySettings, setSecuritySettings] = useState({
     twoFactorAuth: false,
@@ -121,7 +152,7 @@ export default function Settings() {
   const timeZoneDropdownRef = useRef<HTMLDivElement>(null)
   const loginHistoryDropdownRef = useRef<HTMLDivElement>(null)
 
-  const SUB_ADMIN_PAGE_SIZE = 6
+  const SUB_ADMIN_PAGE_SIZE = 18
 
   const languageOptions = ['English', 'Arabic', 'French', 'Spanish']
   const timeZoneOptions = ['UTC', 'EST', 'PST', 'GMT', 'CST']
@@ -152,27 +183,35 @@ export default function Settings() {
         pages.push(i)
       }
     } else {
-      pages.push(1)
-      
-      if (subAdminPage > 3) {
-        pages.push('...')
-      }
-      
-      const start = Math.max(2, subAdminPage - 1)
-      const end = Math.min(totalPages - 1, subAdminPage + 1)
-      
-      for (let i = start; i <= end; i++) {
-        if (i !== 1 && i !== totalPages) {
-          pages.push(i)
+      // When on page 1, show: 1, 2, 3, ..., 7, 8 (matching reference image)
+      if (subAdminPage === 1) {
+        pages.push(1, 2, 3, '...', totalPages - 1, totalPages)
+      } else if (subAdminPage === totalPages) {
+        // When on last page, show: 1, 2, ..., totalPages-2, totalPages-1, totalPages
+        pages.push(1, 2, '...', totalPages - 2, totalPages - 1, totalPages)
+      } else {
+        pages.push(1)
+        
+        if (subAdminPage > 3) {
+          pages.push('...')
         }
-      }
-      
-      if (subAdminPage < totalPages - 2) {
-        pages.push('...')
-      }
-      
-      if (totalPages > 1) {
-        pages.push(totalPages)
+        
+        const start = Math.max(2, subAdminPage - 1)
+        const end = Math.min(totalPages - 1, subAdminPage + 1)
+        
+        for (let i = start; i <= end; i++) {
+          if (i !== 1 && i !== totalPages) {
+            pages.push(i)
+          }
+        }
+        
+        if (subAdminPage < totalPages - 2) {
+          pages.push('...')
+        }
+        
+        if (totalPages > 1) {
+          pages.push(totalPages)
+        }
       }
     }
     
@@ -192,6 +231,17 @@ export default function Settings() {
     if (page < 1 || page > totalSubAdminPages) return
     setSubAdminPage(page)
   }
+
+  // Apply dark mode to document
+  useEffect(() => {
+    if (accountPreferences.darkMode) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+    // Save to localStorage
+    localStorage.setItem('darkMode', accountPreferences.darkMode.toString())
+  }, [accountPreferences.darkMode])
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -226,10 +276,6 @@ export default function Settings() {
 
   const handleSectionChange = (sectionId: string) => {
     setActiveSection(sectionId)
-    // Reset notification view when switching sections
-    if (sectionId !== 'notification') {
-      setShowAllNotifications(false)
-    }
   }
 
   const handleSaveChanges = () => {
@@ -245,14 +291,35 @@ export default function Settings() {
   }
 
   const handleSavePreferences = () => {
+    // Save preferences to localStorage
+    localStorage.setItem('darkMode', accountPreferences.darkMode.toString())
+    localStorage.setItem('language', accountPreferences.language)
+    localStorage.setItem('timeZone', accountPreferences.timeZone)
+    
     // Handle save preferences logic here
     console.log('Saving preferences:', accountPreferences)
+    // You can add a success notification here
+    alert('Preferences saved successfully!')
   }
 
   const handleLogoutAllDevices = () => {
     // Handle logout from all devices logic here
     if (window.confirm('Are you sure you want to logout from all devices? This will end all active sessions.')) {
-      console.log('Logging out from all devices...')
+      // Mock data: Simulate logging out from all devices
+      const mockDevices = [
+        { id: '1', device: 'Chrome on Windows', location: 'New York, USA', lastActive: '2 hours ago' },
+        { id: '2', device: 'Safari on iPhone', location: 'Los Angeles, USA', lastActive: '5 hours ago' },
+        { id: '3', device: 'Firefox on Mac', location: 'London, UK', lastActive: '1 day ago' },
+      ]
+      
+      console.log('Logging out from all devices:', mockDevices)
+      
+      // Simulate API call delay
+      setTimeout(() => {
+        alert('Successfully logged out from all devices. You will need to log in again on all devices.')
+        // In a real app, you would redirect to login page or refresh the session
+        // window.location.href = '/login'
+      }, 500)
     }
   }
 
@@ -1147,7 +1214,7 @@ export default function Settings() {
             <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-0.5">Settings</h1>
             <p className="text-xs sm:text-sm text-gray-500">Dashboard - Sub Admin</p>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto sm:ml-auto">
             <div className="w-full sm:w-48 md:w-64">
               <SearchBar
                 placeholder="Search by Name"
@@ -1167,7 +1234,7 @@ export default function Settings() {
             </button>
           </div>
         </div>
-      )}
+          )}
 
       {/* Main Content: Sidebar and Table */}
       <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6 flex-1 items-start">
@@ -1187,8 +1254,9 @@ export default function Settings() {
               {settingsSections.map((section) => (
                 <button
                   key={section.id}
+                  type="button"
                   onClick={() => handleSectionChange(section.id)}
-                  className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 lg:py-3 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                  className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 lg:py-3 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                     activeSection === section.id
                       ? 'bg-[#F7931E] text-white'
                       : 'text-gray-700 hover:bg-gray-100'
@@ -1202,302 +1270,218 @@ export default function Settings() {
         </aside>
 
         {/* Right Content Area */}
-        <div className="flex-1 bg-white rounded-lg p-3 sm:p-4 md:p-6 lg:p-8 shadow-sm min-w-0 w-full">
+        <div className="flex-1 min-w-0 w-full">
           {activeSection === 'admin-profile' && (
             <>
-              <div className="mb-4 sm:mb-6 lg:mb-8">
-                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">General Settings</h2>
-                <p className="text-xs sm:text-sm lg:text-base text-gray-600">Update your profile</p>
-              </div>
+              <div className="bg-white rounded-lg p-3 mt-17 sm:p-4 md:p-6 lg:p-8 shadow-sm">
+                <div className="mb-4 sm:mb-6 lg:mb-8">
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">General Settings</h2>
+                  <p className="text-xs sm:text-sm lg:text-base text-gray-600">Update your profile</p>
+                </div>
 
-              <div className="space-y-4 sm:space-y-5 lg:space-y-6">
-                {/* Upload Image Section */}
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">Upload image</label>
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="relative group">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group-hover:border-gray-400 transition-colors">
-                        <UploadIcon className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 lg:h-10 lg:w-10 text-gray-400" />
+                <div className="space-y-4 sm:space-y-5 lg:space-y-6">
+                  {/* Upload Image Section */}
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">Upload image</label>
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="relative group">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group-hover:border-gray-400 transition-colors">
+                          <UploadIcon className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 lg:h-10 lg:w-10 text-gray-400" />
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          onChange={(e) => {
+                            // Handle image upload
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              console.log('Image selected:', file)
+                            }
+                          }}
+                        />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Name Field */}
+                  <TextField
+                    id="name"
+                    label="Name"
+                    type="text"
+                    placeholder="Enter your name"
+                    onChange={(value) => setFormData((prev) => ({ ...prev, name: value }))}
+                    className="w-full"
+                  />
+
+                  {/* Email Field */}
+                  <TextField
+                    id="email"
+                    label="Email"
+                    type="email"
+                    placeholder="Enter your email"
+                    onChange={(value) => setFormData((prev) => ({ ...prev, email: value }))}
+                    className="w-full"
+                  />
+
+                  {/* Change Password Field */}
+                  <div className="space-y-1">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                      Change Password
+                    </label>
+                    <div className="relative">
                       <input
-                        type="file"
-                        accept="image/*"
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        onChange={(e) => {
-                          // Handle image upload
-                          const file = e.target.files?.[0]
-                          if (file) {
-                            console.log('Image selected:', file)
-                          }
-                        }}
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                        className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-sm placeholder:text-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20"
+                        placeholder="Enter new password"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none cursor-pointer"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? (
+                          <EyeOffIcon className="h-5 w-5" />
+                        ) : (
+                          <EyeIcon className="h-5 w-5" />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Name Field */}
-                <TextField
-                  id="name"
-                  label="Name"
-                  type="text"
-                  placeholder="Enter your name"
-                  onChange={(value) => setFormData((prev) => ({ ...prev, name: value }))}
-                  className="w-full"
-                />
-
-                {/* Email Field */}
-                <TextField
-                  id="email"
-                  label="Email"
-                  type="email"
-                  placeholder="Enter your email"
-                  onChange={(value) => setFormData((prev) => ({ ...prev, email: value }))}
-                  className="w-full"
-                />
-
-                {/* Change Password Field */}
-                <div className="space-y-1">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    Change Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                      className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-sm placeholder:text-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20"
-                      placeholder="Enter new password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none cursor-pointer"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? (
-                        <EyeOffIcon className="h-5 w-5" />
-                      ) : (
-                        <EyeIcon className="h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 pt-4 sm:pt-5 lg:pt-6 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={handleDeleteAccount}
-                    className="text-red-600 hover:text-red-700 text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded px-2 py-2 sm:py-1 text-center sm:text-left"
-                  >
-                    Delete My Account
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveChanges}
-                    className="bg-gray-500 hover:bg-gray-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 cursor-pointer sm:ml-auto w-full sm:w-auto"
-                  >
-                    Save Changes
-                  </button>
-                </div>
+              {/* Action Buttons - Outside white card div */}
+              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mt-4">
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  className="text-red-600 hover:text-red-700 text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 rounded px-2 py-2 sm:py-1 text-center sm:text-left"
+                >
+                  Delete My Account
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveChanges}
+                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 cursor-pointer sm:ml-auto w-full sm:w-auto"
+                >
+                  Save Changes
+                </button>
               </div>
             </>
           )}
 
           {activeSection === 'notification' && (
-            <>
-              {/* Notification List View */}
-              {!showAllNotifications && (
-                <>
-                  <div className="space-y-0 max-h-[calc(100vh-250px)] sm:max-h-[calc(100vh-200px)] overflow-y-auto">
-                    {mockNotifications.slice(0, 5).map((notification, index) => (
-                      <div
-                        key={notification.id}
-                        className={`py-3 sm:py-4 ${
-                          index !== Math.min(4, mockNotifications.length - 1) ? 'border-b border-gray-200' : ''
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 lg:gap-4">
-                          <p className="flex-1 text-xs sm:text-sm lg:text-base text-gray-900 leading-relaxed break-words">
-                            {notification.message}
-                          </p>
-                          <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap flex-shrink-0 sm:text-right">
-                            {notification.timestamp}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="mt-4 sm:mt-6 flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setShowAllNotifications(true)}
-                      className="text-xs sm:text-sm text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap flex-shrink-0"
-                    >
-                      See all
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* Detailed Notification View (New Screen) */}
-              {showAllNotifications && (
-                <div className="space-y-4 sm:space-y-6">
-                  <div className="mb-4 sm:mb-6 flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setShowAllNotifications(false)}
-                      className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap flex-shrink-0 font-medium"
-                    >
-                      ← Back
-                    </button>
-                  </div>
-
-                  <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                    <div className="max-h-[calc(100vh-300px)] sm:max-h-[calc(100vh-250px)] overflow-y-auto">
-                      {mockNotifications.map((notification, index) => (
-                        <div
-                          key={notification.id}
-                          className={`py-3 sm:py-4 px-3 sm:px-4 lg:px-6 hover:bg-gray-50 transition-colors ${
-                            index !== mockNotifications.length - 1 ? 'border-b border-gray-200' : ''
-                          }`}
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 lg:gap-4">
-                            <div className="flex-1">
-                              <p className="text-xs sm:text-sm lg:text-base text-gray-900 leading-relaxed break-words mb-1">
-                                {notification.message}
-                              </p>
-                              <span className="text-xs text-gray-400">
-                                {notification.timestamp}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+            <div className="bg-white rounded-lg p-3 mt-17 sm:p-4 md:p-6 lg:p-8 shadow-sm">
+              <div className="space-y-0">
+                {mockNotifications.map((notification, index) => (
+                  <div
+                    key={notification.id}
+                    className={`py-2 ${
+                      index !== mockNotifications.length - 1 ? 'border-b border-gray-200' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <p className="flex-1 text-sm text-gray-900 leading-relaxed">
+                        {notification.message}
+                      </p>
+                      <span className="text-sm text-gray-500 whitespace-nowrap flex-shrink-0">
+                        {notification.timestamp}
+                      </span>
                     </div>
                   </div>
-
-                  {/* Additional Actions */}
-                  <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 pt-4 border-t border-gray-200">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Handle mark all as read
-                        console.log('Mark all as read')
-                      }}
-                      className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors text-center sm:text-left"
-                    >
-                      Mark all as read
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Handle clear all
-                        if (window.confirm('Are you sure you want to clear all notifications?')) {
-                          console.log('Clear all notifications')
-                        }
-                      }}
-                      className="text-xs sm:text-sm text-red-600 hover:text-red-700 font-medium transition-colors text-center sm:text-right"
-                    >
-                      Clear all
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
+                ))}
+              </div>
+            </div>
           )}
 
           {activeSection === 'account-preferences' && (
-            <div className="space-y-6">
-              {/* Settings Card */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
-                {/* Row 1 */}
-                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mb-4 sm:mb-6">
-                  {/* Dark Mode / Light Mode */}
-                  <div className="flex-1 flex items-center justify-between">
-                    <label className="text-sm sm:text-base font-medium text-gray-700">
-                      Dark Mode / Light Mode
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setAccountPreferences((prev) => ({ ...prev, darkMode: !prev.darkMode }))}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 ${
-                        accountPreferences.darkMode ? 'bg-gray-400' : 'bg-gray-300'
-                      }`}
-                      role="switch"
-                      aria-checked={accountPreferences.darkMode}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                          accountPreferences.darkMode ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
+            <>
+              <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 lg:p-8 shadow-sm mt-17">
+                <div className="space-y-4 sm:space-y-6">
+                  {/* Row 1: Dark Mode / Light Mode and Language */}
+                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                    {/* Dark Mode / Light Mode - Bordered Container */}
+                    <div className="flex-1 rounded-lg border border-gray-200 px-2.5 py-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm   text-gray-500">
+                          Dark Mode / Light Mode
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setAccountPreferences((prev) => ({ ...prev, darkMode: !prev.darkMode }))}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 ${
+                            accountPreferences.darkMode ? 'bg-gray-900' : 'bg-gray-300'
+                          }`}
+                          role="switch"
+                          aria-checked={accountPreferences.darkMode}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              accountPreferences.darkMode ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
 
-                  {/* Language */}
-                  <div className="flex-1 flex items-center justify-between">
-                    <label className="text-sm sm:text-base font-medium text-gray-700">
-                      Language
-                    </label>
-                    <div ref={languageDropdownRef} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
-                        className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors min-w-[120px] sm:min-w-[150px] justify-between"
-                      >
-                        <span className="text-sm text-gray-500">
-                          {accountPreferences.language || 'Select'}
-                        </span>
-                        <ChevronDownIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                      </button>
+                    {/* Language */}
+                    <div className="flex-1">
+                      <div ref={languageDropdownRef} className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
+                          className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full justify-between"
+                        >
+                          <span className="text-sm text-gray-500">
+                            {accountPreferences.language || 'Language'}
+                          </span>
+                          <ChevronDownIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        </button>
 
-                      {languageDropdownOpen && (
-                        <div className="absolute right-0 z-50 mt-2 w-full min-w-[120px] sm:min-w-[150px] origin-top-right rounded-lg border border-gray-200 bg-white shadow-lg">
-                          <div className="py-1" role="menu">
-                            {languageOptions.map((option) => (
-                              <button
-                                key={option}
-                                type="button"
-                                onClick={() => {
-                                  setAccountPreferences((prev) => ({ ...prev, language: option }))
-                                  setLanguageDropdownOpen(false)
-                                }}
-                                className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-                                role="menuitem"
-                              >
-                                {option}
-                              </button>
-                            ))}
+                        {languageDropdownOpen && (
+                          <div className="absolute left-0 right-0 z-50 mt-2 w-full origin-top rounded-lg border border-gray-200 bg-white shadow-lg">
+                            <div className="py-1" role="menu">
+                              {languageOptions.map((option) => (
+                                <button
+                                  key={option}
+                                  type="button"
+                                  onClick={() => {
+                                    setAccountPreferences((prev) => ({ ...prev, language: option }))
+                                    setLanguageDropdownOpen(false)
+                                  }}
+                                  className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                                  role="menuitem"
+                                >
+                                  {option}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Row 2 */}
-                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                   {/* Time Zone */}
-                  <div className="flex-1 flex items-center justify-between">
-                    <label className="text-sm sm:text-base font-medium text-gray-700">
-                      Time Zone
-                    </label>
+                  <div>
                     <div ref={timeZoneDropdownRef} className="relative">
                       <button
                         type="button"
                         onClick={() => setTimeZoneDropdownOpen(!timeZoneDropdownOpen)}
-                        className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors min-w-[120px] sm:min-w-[150px] justify-between"
+                        className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full justify-between"
                       >
                         <span className="text-sm text-gray-500">
-                          {accountPreferences.timeZone || 'Select'}
+                          {accountPreferences.timeZone || 'Time Zone'}
                         </span>
                         <ChevronDownIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
                       </button>
 
                       {timeZoneDropdownOpen && (
-                        <div className="absolute right-0 z-50 mt-2 w-full min-w-[120px] sm:min-w-[150px] origin-top-right rounded-lg border border-gray-200 bg-white shadow-lg">
+                        <div className="absolute left-0 right-0 z-50 mt-2 w-full origin-top rounded-lg border border-gray-200 bg-white shadow-lg">
                           <div className="py-1" role="menu">
                             {timeZoneOptions.map((option) => (
                               <button
@@ -1521,8 +1505,8 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* Save Preferences Button */}
-              <div className="flex justify-end">
+              {/* Save Preferences Button - Outside white card */}
+              <div className="flex justify-end mt-4">
                 <button
                   type="button"
                   onClick={handleSavePreferences}
@@ -1531,24 +1515,23 @@ export default function Settings() {
                   Save Preferences
                 </button>
               </div>
-            </div>
+            </>
           )}
 
           {activeSection === 'security-settings' && (
-            <div className="space-y-4 sm:space-y-6">
-              {/* Security Settings Card */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
-                {/* Two-Factor Authentication */}
-                <div>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-                    <label className="text-sm sm:text-base font-medium text-gray-700">
+            <>
+              <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 lg:p-8 shadow-sm mt-17">
+                <div className="space-y-4">
+                  {/* Two-Factor Authentication */}
+                  <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+                    <label className="text-sm font-medium text-gray-900">
                       Two-Factor Authentication
                     </label>
                     <button
                       type="button"
                       onClick={() => setSecuritySettings((prev) => ({ ...prev, twoFactorAuth: !prev.twoFactorAuth }))}
                       className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 ${
-                        securitySettings.twoFactorAuth ? 'bg-gray-400' : 'bg-gray-300'
+                        securitySettings.twoFactorAuth ? 'bg-gray-900' : 'bg-gray-300'
                       }`}
                       role="switch"
                       aria-checked={securitySettings.twoFactorAuth}
@@ -1566,7 +1549,7 @@ export default function Settings() {
                     <button
                       type="button"
                       onClick={() => setLoginHistoryDropdownOpen(!loginHistoryDropdownOpen)}
-                      className="w-full flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-gray-500 hover:bg-gray-50 transition-colors justify-between"
+                      className="w-full flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors justify-between"
                     >
                       <span className="text-sm text-gray-500">See recent login history</span>
                       <ChevronDownIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
@@ -1588,20 +1571,21 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* Logout from all devices Button */}
-              <div className="flex justify-end">
+              {/* Logout from all devices Button - Outside white card */}
+              <div className="flex justify-end mt-4">
                 <button
                   type="button"
                   onClick={handleLogoutAllDevices}
-                  className="bg-[#F7931E] hover:bg-[#E6851A] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer w-full sm:w-auto"
+                  className="bg-[#F7931E] hover:bg-[#E6851A] text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer"
                 >
                   Logout from all devices
                 </button>
               </div>
-            </div>
+            </>
           )}
 
           {activeSection === 'sub-admins' && (
+            <div className="bg-white rounded-lg  p-3 sm:p-4 md:p-6 lg:p-8 shadow-sm">
             <div className="space-y-4 sm:space-y-6">
               {/* Table Section */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
@@ -1630,8 +1614,7 @@ export default function Settings() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {paginatedSubAdmins.map((admin, index) => {
-                        const globalIndex = (subAdminPage - 1) * SUB_ADMIN_PAGE_SIZE + index
+                      {paginatedSubAdmins.map((admin) => {
                         const isHighlighted = admin.id === selectedSubAdminId
                         return (
                           <tr
@@ -1643,7 +1626,7 @@ export default function Settings() {
                             }`}
                           >
                             <td className="px-3 sm:px-4 lg:px-6 py-3 text-xs sm:text-sm text-gray-900">
-                              {globalIndex + 1}
+                              {admin.id}
                             </td>
                             <td className="px-3 sm:px-4 lg:px-6 py-3">
                               <div className="flex items-center gap-2 sm:gap-3">
@@ -1661,14 +1644,8 @@ export default function Settings() {
                             <td className="px-3 sm:px-4 lg:px-6 py-3">
                               <StatusBadge status={admin.status} />
                             </td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-3">
-                              <button
-                                type="button"
-                                className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                                aria-label="More actions"
-                              >
-                                <MoreVerticalIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                              </button>
+                            <td className="px-3 sm:px-4 lg:px-6 py-3 text-xs sm:text-sm text-gray-500">
+                              ---
                             </td>
                           </tr>
                         )
@@ -1679,8 +1656,8 @@ export default function Settings() {
 
                 {/* Pagination */}
                 {totalSubAdminPages > 1 && (
-                  <div className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
-                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
+                  <div className="flex flex-col sm:flex-row justify-center items-center gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center">
                       <button
                         type="button"
                         onClick={() => handleSubAdminPageChange(subAdminPage - 1)}
@@ -1727,6 +1704,7 @@ export default function Settings() {
                   </div>
                 )}
               </div>
+            </div>
             </div>
           )}
 

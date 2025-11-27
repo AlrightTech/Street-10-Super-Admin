@@ -46,7 +46,10 @@ export default function ProductsActionMenu({ onSelect, className = '', align = '
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((prev) => !prev)
+        }}
         className="rounded-full p-1 text-gray-400 cursor-pointer focus:outline-none"
       >
         <MoreVerticalIcon className="h-5 w-5" />
@@ -63,7 +66,10 @@ export default function ProductsActionMenu({ onSelect, className = '', align = '
             <button
               key={action.key}
               type="button"
-              onClick={() => handleSelect(action.key)}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleSelect(action.key)
+              }}
               role="menuitem"
               className="flex w-full items-center px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-50 hover:text-gray-900 cursor-pointer"
             >

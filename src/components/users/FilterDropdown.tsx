@@ -57,7 +57,8 @@ export default function FilterDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer w-full sm:w-auto"
+        className="flex items-center justify-between
+         gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer w-full sm:w-auto"
         aria-label={`Filter by ${label}`}
         aria-expanded={isOpen}
       >

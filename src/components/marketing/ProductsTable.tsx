@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import MarketingStatusBadge, { type MarketingStatus } from './MarketingStatusBadge'
 import ProductsActionMenu, { type ProductActionType } from './ProductsActionMenu'
 
@@ -21,6 +22,29 @@ interface ProductsTableProps {
 }
 
 export default function ProductsTable({ products, emptyState, onActionSelect }: ProductsTableProps) {
+  const navigate = useNavigate()
+
+  const handleRowClick = (product: Product, event: React.MouseEvent) => {
+    // Don't navigate if clicking on the action menu or its buttons
+    const target = event.target as HTMLElement
+    if (
+      target.closest('[role="menu"]') || 
+      target.closest('button[aria-haspopup="menu"]') ||
+      target.closest('[role="menuitem"]') ||
+      target.closest('.relative.inline-flex')
+    ) {
+      return
+    }
+
+    if (product.status === 'active') {
+      navigate(`/marketing/product/active/${product.id}`)
+    } else if (product.status === 'scheduled') {
+      navigate(`/marketing/product/scheduled/${product.id}`)
+    } else if (product.status === 'expired') {
+      navigate(`/marketing/product/expired/${product.id}`)
+    }
+  }
+
   if (products.length === 0) {
     return (
       <div className="flex min-h-[240px] flex-col  items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
@@ -56,8 +80,9 @@ export default function ProductsTable({ products, emptyState, onActionSelect }: 
               <tbody>
                 {products.map((product, index) => (
                   <tr 
-                    key={product.id} 
-                    className={`border-b border-gray-200 last:border-b-0 ${
+                    key={product.id}
+                    onClick={(e) => handleRowClick(product, e)}
+                    className={`border-b border-gray-200 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
                       index === 4 ? 'bg-gray-50' : ''
                     }`}
                   >
@@ -66,8 +91,8 @@ export default function ProductsTable({ products, emptyState, onActionSelect }: 
                     </TableCell>
                     <TableCell className="text-xs sm:text-sm">{product.vendor}</TableCell>
                     <TableCell className="text-xs sm:text-sm">{product.category}</TableCell>
-                    <TableCell className="text-xs whitespace-nowrap">{product.startDate}</TableCell>
-                    <TableCell className="text-xs whitespace-nowrap">{product.endDate}</TableCell>
+                    <TableCell className="text-sm whitespace-nowrap">{product.startDate}</TableCell>
+                    <TableCell className="text-sm whitespace-nowrap">{product.endDate}</TableCell>
                     <TableCell>
                       <span className={`text-xs font-medium ${
                         product.priority === 'High' ? 'text-red-600' : 

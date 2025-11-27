@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { CalendarIcon, ClockIcon, LinkIcon, ChevronDownIcon } from '../components/icons/Icons'
+import { type PushNotification } from '../components/marketing/PushNotificationsTable'
 
 interface PushNotificationFormData {
   title: string
@@ -15,8 +16,102 @@ interface PushNotificationFormData {
   message: string
 }
 
+// Mock data - in a real app, this would come from an API
+const MOCK_PUSH_NOTIFICATIONS: (PushNotification & {
+  email?: string
+  phone?: string
+  fullMessage?: string
+  startDate?: string
+  endDate?: string
+  sendTime?: string
+  recipients?: string
+  url?: string
+  avatar?: string
+})[] = [
+  {
+    id: '1',
+    name: 'Touseef Ahmed',
+    title: 'Flash Sale Alert',
+    audience: 'All Users',
+    category: 'Promo',
+    deliveryTime: 'Immediate',
+    priority: 'High',
+    status: 'sent',
+    email: 'alice.johnson@example.com',
+    phone: '+1 234 567 8900',
+    fullMessage: 'Flash Sale Alert! Get 50% off an all electronics for the next 24 hours. Don\'t miss out on this incredible deal - shop now before it\'s too late! Use code: FLASH50',
+    startDate: 'Dec 22, 2024',
+    endDate: 'Dec 22, 2024',
+    sendTime: '10:00 AM',
+    recipients: '12,450 recipients',
+    url: 'https://www.example-site123.com/deals/flash-sole',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+  },
+  {
+    id: '2',
+    name: 'Qasim Muneer',
+    title: 'Payment Reminder',
+    audience: 'User',
+    category: 'Reminder',
+    deliveryTime: 'Dec 22, 2024 at...',
+    priority: 'Medium',
+    status: 'pending',
+    email: 'qasim@example.com',
+    phone: '+1 234 567 8901',
+    fullMessage: 'Payment reminder message',
+    startDate: 'Dec 22, 2024',
+    endDate: 'Dec 22, 2024',
+    sendTime: '10:00 AM',
+    recipients: '5,200 recipients',
+    url: 'https://www.example-site123.com/payment',
+  },
+  {
+    id: '4',
+    name: 'Touseef Ahmed',
+    title: 'Flash Sale Alert',
+    audience: 'All Users',
+    category: 'Promo',
+    deliveryTime: 'Dec 22, 2024 at...',
+    priority: 'High',
+    status: 'scheduled',
+    email: 'alice.johnson@example.com',
+    phone: '+1 234 567 8900',
+    fullMessage: 'Flash Sale Alert! Get 50% off on all electronics for the next 24 hours. Don\'t miss out on this incredible deal – shop now before it\'s too late! Use code: FLASH50',
+    startDate: 'Dec 22, 2024',
+    endDate: 'Dec 22, 2024',
+    sendTime: '10:00 AM',
+    recipients: '12,450 recipients',
+    url: 'https://www.example-site123.com/deals/flash-sale',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+  },
+]
+
+// Helper function to convert date from "Dec 22, 2024" to "2024-12-22"
+const convertDateToInputFormat = (dateStr: string): string => {
+  const months: { [key: string]: string } = {
+    'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+    'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+    'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+  }
+  const parts = dateStr.split(' ')
+  if (parts.length === 3) {
+    const day = parts[1].replace(',', '').padStart(2, '0')
+    const month = months[parts[0]] || '01'
+    const year = parts[2]
+    return `${year}-${month}-${day}`
+  }
+  return dateStr
+}
+
+// Helper function to convert time from "10:00 AM" to "10:00AM"
+const convertTimeToInputFormat = (timeStr: string): string => {
+  return timeStr.replace(/\s/g, '')
+}
+
 export default function AddPushNotification() {
+  const { id } = useParams<{ id?: string }>()
   const navigate = useNavigate()
+  const isEditMode = !!id
   const startDateInputRef = useRef<HTMLInputElement>(null)
   const endDateInputRef = useRef<HTMLInputElement>(null)
   const sendingTimeInputRef = useRef<HTMLInputElement>(null)
@@ -33,6 +128,46 @@ export default function AddPushNotification() {
     url: 'https://www.example-site123.com/deals/flash-sale',
     message: 'Flash Sale Alert! Get 50% off on all electronics for the next 24 hours. Don\'t miss out on this incredible deal - shop now before it\'s too late! Use code: FLASH50',
   })
+
+  // Load notification data in edit mode
+  useEffect(() => {
+    if (isEditMode && id) {
+      const notification = MOCK_PUSH_NOTIFICATIONS.find((n) => n.id === id)
+      if (notification) {
+        // Map audience to form fields
+        let audienceType = 'User/vendors...'
+        let audienceScope = 'All/Separate Users/Vendors'
+        let audienceTarget = 'All Users'
+
+        if (notification.audience === 'All Users') {
+          audienceType = 'Users'
+          audienceScope = 'All'
+          audienceTarget = 'All Users'
+        } else if (notification.audience === 'User') {
+          audienceType = 'Users'
+          audienceScope = 'All'
+          audienceTarget = 'All Users'
+        } else if (notification.audience === 'Vendor') {
+          audienceType = 'Vendors'
+          audienceScope = 'All'
+          audienceTarget = 'All Vendors'
+        }
+
+        setFormData({
+          title: notification.title || '',
+          startDate: notification.startDate ? convertDateToInputFormat(notification.startDate) : '',
+          endDate: notification.endDate ? convertDateToInputFormat(notification.endDate) : '',
+          sendingTime: notification.sendTime ? convertTimeToInputFormat(notification.sendTime) : '10:00AM',
+          audienceType,
+          audienceScope,
+          audienceTarget,
+          priority: notification.priority || 'High',
+          url: notification.url || '',
+          message: notification.fullMessage || '',
+        })
+      }
+    }
+  }, [id, isEditMode])
 
   // Custom dropdown states
   const [isAudienceTypeDropdownOpen, setIsAudienceTypeDropdownOpen] = useState(false)
@@ -78,26 +213,101 @@ export default function AddPushNotification() {
     // eslint-disable-next-line no-console
     console.log('Form submitted:', formData)
     // Add your save logic here
-    // After saving, navigate back to marketing page
-    navigate('/marketing')
+    // After saving, navigate back to marketing page or detail page
+    if (isEditMode && id) {
+      // Determine which detail page to navigate to based on status
+      const notification = MOCK_PUSH_NOTIFICATIONS.find((n) => n.id === id)
+      if (notification) {
+        if (notification.status === 'sent') {
+          navigate(`/marketing/push-notification/send/${id}`)
+        } else if (notification.status === 'pending') {
+          navigate(`/marketing/push-notification/pending/${id}`)
+        } else if (notification.status === 'scheduled') {
+          navigate(`/marketing/push-notification/scheduled/${id}`)
+        } else {
+          navigate('/marketing')
+        }
+      } else {
+        navigate('/marketing')
+      }
+    } else {
+      navigate('/marketing')
+    }
   }
 
   const handleCancel = () => {
-    navigate('/marketing')
+    if (isEditMode && id) {
+      // Navigate back to the appropriate detail page
+      const notification = MOCK_PUSH_NOTIFICATIONS.find((n) => n.id === id)
+      if (notification) {
+        if (notification.status === 'sent') {
+          navigate(`/marketing/push-notification/send/${id}`)
+        } else if (notification.status === 'pending') {
+          navigate(`/marketing/push-notification/pending/${id}`)
+        } else if (notification.status === 'scheduled') {
+          navigate(`/marketing/push-notification/scheduled/${id}`)
+        } else {
+          navigate('/marketing')
+        }
+      } else {
+        navigate('/marketing')
+      }
+    } else {
+      navigate('/marketing')
+    }
   }
 
   const maxCharacters = 200
 
   return (
-    <div className="space-y-6 px-4 md:px-0">
+    <div className="space-y-6">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Marketing</h1>
         <p className="text-sm text-gray-600 mt-1">Dashboard - Finance</p>
       </div>
 
+      {/* Main Navigation Bar */}
+      <nav className="flex flex-wrap items-center gap-1 sm:gap-2 md:gap-4 border-b border-gray-200 overflow-x-auto pt-3 pb-1">
+        <button
+          type="button"
+          onClick={() => navigate('/marketing')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+        >
+          Story Highlight
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/marketing')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+        >
+          Banners
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/marketing')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+        >
+          Pop-Up
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/marketing')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-[#F7931E] border-b-2 border-[#F7931E]"
+        >
+          Push Notifications
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/marketing')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+        >
+          Product
+        </button>
+      </nav>
+
       {/* Section Title */}
-      <h2 className="text-lg sm:text-xl font-bold text-gray-900">Add New Notification</h2>
+      <h2 className="text-lg sm:text-xl font-bold text-gray-900">{isEditMode ? 'Edit Notification' : 'Add New Notification'}</h2>
 
       {/* Form Container */}
       <div className="rounded-xl bg-white shadow-sm p-4 sm:p-6">
@@ -514,7 +724,7 @@ export default function AddPushNotification() {
               type="submit"
               className="w-full sm:w-auto rounded-lg bg-[#F7931E] px-6 py-2.5 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer"
             >
-              Send
+              {isEditMode ? 'Update' : 'Send'}
             </button>
           </div>
         </form>

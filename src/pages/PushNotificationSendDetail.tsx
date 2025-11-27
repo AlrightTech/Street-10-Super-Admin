@@ -125,8 +125,7 @@ export default function PushNotificationSendDetail() {
   }
 
   const handleEdit = () => {
-    // Handle edit - navigate to edit page
-    console.log('Edit notification:', id)
+    navigate(`/marketing/edit-push-notification/${id}`)
   }
 
   const handleCreateNew = () => {
@@ -257,11 +256,11 @@ export default function PushNotificationSendDetail() {
               </div>
 
               {/* Right Column - Category & Priority */}
-              <div className="space-y-4">
+              <div className="space-y-4 flex gap-8">
                 <div>
                   <span className="text-sm text-gray-900">Category</span>
                   <div className="mt-2">
-                    <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-purple-600 text-white">
+                    <span className="inline-flex items-center rounded-md px-3 py-1 text-xs font-medium bg-purple-600 text-white">
                       {notificationData.category}
                     </span>
                   </div>
@@ -269,7 +268,7 @@ export default function PushNotificationSendDetail() {
                 <div>
                   <span className="text-sm text-gray-900">Priority</span>
                   <div className="mt-2">
-                    <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-red-100 text-red-600">
+                    <span className="inline-flex items-center rounded-md px-3 py-1 text-xs font-medium bg-red-100 text-red-600">
                       {notificationData.priority}
                     </span>
                   </div>
@@ -283,26 +282,26 @@ export default function PushNotificationSendDetail() {
               <span className="text-sm text-gray-900">URL</span>
               <span className="text-sm text-gray-900 break-all">{notificationData.url}</span>
             </div>
-          </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleCreateNew}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-white bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap w-full sm:w-auto cursor-pointer"
-          >
-            Create New Notification
-          </button>
-          <button
-            type="button"
-            onClick={handleEdit}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap w-full sm:w-auto cursor-pointer"
-          >
-            <EditIcon className="h-4 w-4" />
-            Edit
-          </button>
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={handleCreateNew}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-white bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap w-full sm:w-auto cursor-pointer"
+              >
+                Create New Notification
+              </button>
+              <button
+                type="button"
+                onClick={handleEdit}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap w-full sm:w-auto cursor-pointer"
+              >
+                <EditIcon className="h-4 w-4" />
+                Edit
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

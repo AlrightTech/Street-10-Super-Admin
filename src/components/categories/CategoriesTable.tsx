@@ -84,7 +84,7 @@ export default function CategoriesTable({
 
   return (
     <Fragment>
-      <div className="w-full overflow-hidden">
+      <div className="w-full overflow-hidden  rounded-xl shadow-sm">
         <div className="overflow-x-auto -mx-4 sm:mx-0">
           <div className="inline-block min-w-full align-middle">
             <div className="overflow-hidden">
@@ -136,7 +136,7 @@ export default function CategoriesTable({
                       <button
                         type="button"
                         onClick={() => onDelete?.(category)}
-                        className="text-gray-500 hover:text-red-600 transition-colors p-1 rounded cursor-pointer"
+                        className="text-red-600 hover:text-red-700 transition-colors p-1 rounded cursor-pointer"
                         aria-label="Delete category"
                       >
                         <TrashIcon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -161,12 +161,13 @@ interface TableHeaderProps {
 }
 
 function TableHeader({ children, align = 'left' }: TableHeaderProps) {
-  const textAlign = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+  const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-right'
 
   return (
     <th
       scope="col"
-      className={`px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700 ${textAlign} whitespace-nowrap`}
+      className={`px-2 sm:px-4 py-2 bg-gray-100 text-sm
+         font-semibold  tracking-wider text-gray-700 ${textAlign} whitespace-nowrap`}
     >
       {children}
     </th>
@@ -180,10 +181,10 @@ interface TableCellProps {
 }
 
 function TableCell({ children, className = '', align = 'left' }: TableCellProps) {
-  const textAlign = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'
+  const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-left'
 
   return (
-    <td className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700 ${textAlign} ${className}`}>
+    <td className={`px-2 sm:px-4 py-2  text-xs sm:text-sm text-gray-700 ${textAlign} ${className}`}>
       {children}
     </td>
   )

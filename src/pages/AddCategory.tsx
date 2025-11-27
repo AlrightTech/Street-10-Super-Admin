@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import CategoriesFilterTabs from '../components/categories/CategoriesFilterTabs'
 import { PlusIcon, UploadIcon } from '../components/icons/Icons'
+import { type CategoryRecord } from './Categories'
 
 const TAB_OPTIONS: { key: string; label: string }[] = [
   { key: 'categories', label: 'Categories' },
@@ -16,7 +17,8 @@ const FilterIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
   </svg>
 )
 
-const FILTER_OPTIONS = [
+// Initial filter options - fallback if localStorage is empty
+const INITIAL_FILTER_OPTIONS = [
   { id: 'brand', label: 'Brand' },
   { id: 'mileage', label: 'Mileage' },
   { id: 'model-year', label: 'Model Year' },
@@ -27,14 +29,112 @@ const FILTER_OPTIONS = [
   { id: 'color', label: 'Color' },
 ]
 
+export interface FilterOption {
+  id: string
+  label: string
+}
+
+// Mock data - in a real app, this would come from an API
+const MOCK_CATEGORIES: CategoryRecord[] = [
+  { id: '001', name: 'Electronics', icon: 'laptop', parentCategory: null, status: 'active' },
+  { id: '002', name: 'Smartphones', icon: 'smartphone', parentCategory: 'Electronics', status: 'active' },
+  { id: '003', name: 'Fashion', icon: 'shirt', parentCategory: null, status: 'inactive' },
+  { id: '004', name: "Men's Clothing", icon: 'person', parentCategory: 'Fashion', status: 'active' },
+  { id: '005', name: 'Home & Garden', icon: 'home', parentCategory: null, status: 'active' },
+  { id: '006', name: 'Computers', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
+  { id: '007', name: 'Accessories', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
+  { id: '008', name: 'Women Clothing', icon: 'person', parentCategory: 'Fashion', status: 'active' },
+  { id: '009', name: 'Kitchen', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
+  { id: '010', name: 'Furniture', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
+  { id: '011', name: 'Tablets', icon: 'smartphone', parentCategory: 'Electronics', status: 'active' },
+  { id: '012', name: 'Watches', icon: 'shirt', parentCategory: 'Fashion', status: 'inactive' },
+  { id: '013', name: 'Shoes', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
+  { id: '014', name: 'Bags', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
+  { id: '015', name: 'Jewelry', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
+  { id: '016', name: 'Appliances', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
+  { id: '017', name: 'Garden Tools', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
+  { id: '018', name: 'Cameras', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
+  { id: '019', name: 'Audio', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
+  { id: '020', name: 'Gaming', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
+  { id: '021', name: 'TV & Video', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
+  { id: '022', name: 'Kids Clothing', icon: 'person', parentCategory: 'Fashion', status: 'active' },
+  { id: '023', name: 'Bedding', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
+  { id: '024', name: 'Lighting', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
+]
+
 export default function AddCategory() {
+  const { id } = useParams<{ id?: string }>()
   const navigate = useNavigate()
+  const isEditMode = !!id
   const [activeTab, setActiveTab] = useState<string>('categories')
   const [categoryName, setCategoryName] = useState('')
   const [description, setDescription] = useState('')
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
+  const [filterOptions, setFilterOptions] = useState<FilterOption[]>(INITIAL_FILTER_OPTIONS)
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Load filters from localStorage (synced with EditFilter page)
+  useEffect(() => {
+    const loadFilters = () => {
+      const savedFilters = localStorage.getItem('filterOptions')
+      if (savedFilters) {
+        try {
+          const parsed = JSON.parse(savedFilters)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setFilterOptions(parsed)
+          }
+        } catch (error) {
+          console.error('Failed to parse saved filters:', error)
+          setFilterOptions(INITIAL_FILTER_OPTIONS)
+        }
+      } else {
+        setFilterOptions(INITIAL_FILTER_OPTIONS)
+      }
+    }
+
+    loadFilters()
+
+    // Listen for storage changes (when EditFilter updates filters in another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'filterOptions') {
+        loadFilters()
+      }
+    }
+
+    // Listen for custom event (when EditFilter updates filters in same tab)
+    const handleFilterUpdate = () => {
+      loadFilters()
+    }
+
+    // Also check on focus (when user returns from EditFilter page)
+    const handleFocus = () => {
+      loadFilters()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('filterOptionsUpdated', handleFilterUpdate)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('filterOptionsUpdated', handleFilterUpdate)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [])
+
+  // Load category data in edit mode
+  useEffect(() => {
+    if (isEditMode && id) {
+      const category = MOCK_CATEGORIES.find((c) => c.id === id)
+      if (category) {
+        setCategoryName(category.name)
+        // In a real app, you would load description and selected filters from the category data
+        setDescription('') // Placeholder - would come from category data
+        setSelectedFilters(new Set()) // Placeholder - would come from category data
+      }
+    }
+  }, [id, isEditMode])
 
   const handleTabChange = (tabKey: string) => {
     setActiveTab(tabKey)
@@ -80,9 +180,9 @@ export default function AddCategory() {
   }
 
   const handleAddCategory = () => {
-    // Handle add category logic here
+    // Handle add/edit category logic here
     // eslint-disable-next-line no-console
-    console.log('Add category:', { categoryName, description, selectedFilters })
+    console.log(isEditMode ? 'Update category:' : 'Add category:', { categoryName, description, selectedFilters, id })
     navigate('/categories')
   }
 
@@ -93,14 +193,14 @@ export default function AddCategory() {
         <p className="text-xs sm:text-sm text-gray-600 mb-1">
           <span>Dashboard</span>
           <span className="mx-1">•</span>
-          <span>Add Categories</span>
+          <span>{isEditMode ? 'Edit Category' : 'Add Categories'}</span>
         </p>
         <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">Categories</h1>
       </div>
 
       {/* Tabs Section - Separate White Card */}
       <section className="rounded-xl bg-white shadow-sm">
-        <div className="px-4 sm:px-6 py-4">
+        <div className="px-4 sm:px-6">
           <CategoriesFilterTabs tabs={TAB_OPTIONS} activeTab={activeTab} onTabChange={handleTabChange} />
         </div>
       </section>
@@ -109,14 +209,14 @@ export default function AddCategory() {
       <div className="flex flex-col sm:flex-row justify-end items-center gap-3">
         <button
           type="button"
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-[#E8851C] border border-[#E8851C] px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white transition hover:bg-[#D77A1A] focus:outline-none focus:ring-2 focus:ring-[#E8851C] focus:ring-offset-2 whitespace-nowrap cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#E8851C] border border-[#E8851C] px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white transition hover:bg-[#D77A1A] focus:outline-none focus:ring-2 focus:ring-[#E8851C] focus:ring-offset-2 whitespace-nowrap cursor-pointer"
         >
           Manage Filter
         </button>
         <button
           type="button"
           onClick={() => navigate('/categories/add-sub-category')}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-[#F7931E] px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white transition hover:bg-[#E8851C] focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 whitespace-nowrap cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white transition hover:bg-[#E8851C] focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 whitespace-nowrap cursor-pointer"
         >
           <PlusIcon className="h-3 w-3 sm:h-4 sm:w-4" />
           Add New Sub Categories
@@ -124,7 +224,7 @@ export default function AddCategory() {
       </div>
 
       {/* Add New Category Heading - Below Buttons */}
-      <h2 className="text-base sm:text-lg font-semibold text-gray-900">Add New Category</h2>
+      <h2 className="text-base sm:text-lg font-semibold text-gray-900">{isEditMode ? 'Edit Category' : 'Add New Category'}</h2>
 
       {/* Main Content Card */}
       <section className="rounded-xl bg-white shadow-sm">
@@ -205,7 +305,8 @@ export default function AddCategory() {
               <h2 className="text-base sm:text-lg font-semibold text-gray-900">Select Filters for This Category</h2>
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#F7931E] px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white transition hover:bg-[#E8851C] focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 whitespace-nowrap cursor-pointer w-full sm:w-auto"
+                onClick={() => navigate('/categories/edit-filter')}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white transition hover:bg-[#E8851C] focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 whitespace-nowrap cursor-pointer w-full sm:w-auto"
               >
                 <PlusIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                 Edit Filter
@@ -214,7 +315,7 @@ export default function AddCategory() {
 
             {/* Filter Options Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-              {FILTER_OPTIONS.map((filter) => {
+              {filterOptions.map((filter) => {
                 const isSelected = selectedFilters.has(filter.id)
                 return (
                   <div
@@ -256,16 +357,16 @@ export default function AddCategory() {
           <button
             type="button"
             onClick={handleCancel}
-            className="w-full sm:w-auto rounded-full border border-gray-300 bg-white px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 cursor-pointer"
+            className="w-full sm:w-auto rounded-lg border border-gray-300 bg-white px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleAddCategory}
-            className="w-full sm:w-auto rounded-full bg-[#F7931E] px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white transition hover:bg-[#E8851C] focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer"
+            className="w-full sm:w-auto rounded-lg bg-[#F7931E] px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white transition hover:bg-[#E8851C] focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer"
           >
-            Add Category
+            {isEditMode ? 'Update Category' : 'Add Category'}
           </button>
         </div>
       </section>
