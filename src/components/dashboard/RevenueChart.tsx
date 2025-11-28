@@ -8,12 +8,13 @@ import type { RevenueSegment } from '../../types/dashboard'
 export interface RevenueChartProps {
   data: RevenueSegment[]
   centerText?: string
+  totalAmount?: string
 }
 
 /**
  * Revenue overview donut chart component
  */
-export default function RevenueChart({ data, centerText = '+42%' }: RevenueChartProps) {
+export default function RevenueChart({ data, centerText = '+42%', totalAmount }: RevenueChartProps) {
   const [radius, setRadius] = useState({ inner: 70, outer: 100 })
 
   useEffect(() => {
@@ -35,8 +36,11 @@ export default function RevenueChart({ data, centerText = '+42%' }: RevenueChart
 
   return (
     <div className="flex h-full min-h-[280px] w-full min-w-0 sm:min-h-[350px] md:min-h-[400px] flex-col rounded-lg border border-gray-200 bg-white p-4 sm:p-5 md:p-6 shadow-sm">
-      <div className="mb-3 sm:mb-4 flex w-full flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-3 sm:mb-4 flex w-full flex-col gap-1">
         <h3 className="text-base font-semibold text-gray-900 sm:text-lg">Revenue Breakdown</h3>
+        {totalAmount && (
+          <p className="text-sm text-gray-700">{totalAmount}</p>
+        )}
       </div>
       <div className="relative flex-1 min-h-[180px] w-full min-w-0 sm:min-h-[250px] md:min-h-[300px]">
         <ResponsiveContainer width="100%" height="100%">

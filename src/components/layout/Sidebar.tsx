@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSidebar } from '../../contexts/SidebarContext'
+import { useNotifications } from '../../contexts/NotificationContext'
 import {
   LayoutDashboardIcon,
   UsersIcon,
@@ -16,18 +17,21 @@ import {
   GridIcon,
   CubeIcon,
 } from '../icons/Icons'
+import NotificationBadge from '../ui/NotificationBadge'
 import type { NavigationItem } from '../../types/navigation'
 import { useTranslation } from '../../hooks/useTranslation'
+import type { NotificationModule } from '../../types/notifications'
 
 /**
- * Sidebar navigation items with badges
+ * Sidebar navigation items
+ * Badge counts are now dynamic and come from NotificationContext
  */
-const navigationItems: Array<NavigationItem & { badge?: number; hasDropdown?: boolean }> = [
+const navigationItems: Array<NavigationItem & { hasDropdown?: boolean; notificationModule?: NotificationModule }> = [
   { id: '1', label: 'Dashboard', icon: 'LayoutDashboard', path: '/dashboard', active: true },
   { id: '2', label: 'Users', icon: 'Users', path: '/users' },
   { id: '3', label: 'Vendors', icon: 'ShoppingBag', path: '/vendors' },
-  { id: '4', label: 'Orders', icon: 'Package', path: '/orders', badge: 34 },
-  { id: '5', label: 'Finance', icon: 'DollarSign', path: '/finance', badge: 34 },
+  { id: '4', label: 'Orders', icon: 'Package', path: '/orders', notificationModule: 'orders' },
+  { id: '5', label: 'Finance', icon: 'DollarSign', path: '/finance', notificationModule: 'finance' },
   { id: '6', label: 'Marketing', icon: 'Megaphone', path: '/marketing' },
   { id: '7', label: 'Analytics', icon: 'BarChart3', path: '/analytics' },
   { id: '8', label: 'Main Control', icon: 'Settings', path: '/main-control' },
@@ -57,12 +61,14 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 /**
  * Sidebar component with navigation
+ * Integrates with NotificationContext for dynamic badge counts
  */
 export default function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { translateSidebarLabel } = useTranslation()
   const { isMobileOpen, setIsMobileOpen } = useSidebar()
+  const { counts, markAsRead } = useNotifications()
   const [isProductsOpen, setIsProductsOpen] = useState(false)
 
   // Check if any product sub-route is active
@@ -76,6 +82,35 @@ export default function Sidebar() {
       setIsProductsOpen(true)
     }
   }, [isAnyProductSubRouteActive])
+
+  /**
+   * Handle navigation click
+   * Marks notifications as read when clicking Orders or Finance
+   */
+  const handleNavClick = useCallback(
+    (item: typeof navigationItems[0]) => {
+      // Mark notifications as read when clicking Orders or Finance
+      if (item.notificationModule) {
+        markAsRead(item.notificationModule)
+      }
+      // Close mobile sidebar
+      setIsMobileOpen(false)
+    },
+    [markAsRead, setIsMobileOpen]
+  )
+
+  /**
+   * Get badge count for a navigation item
+   */
+  const getBadgeCount = useCallback(
+    (item: typeof navigationItems[0]): number => {
+      if (item.notificationModule) {
+        return counts[item.notificationModule]
+      }
+      return 0
+    },
+    [counts]
+  )
 
   const handleLogout = () => {
     try {
@@ -135,6 +170,7 @@ export default function Sidebar() {
             {navigationItems.map((item) => {
               const isActive = location.pathname === item.path
               const isProductsItem = item.id === '10'
+              const badgeCount = getBadgeCount(item)
               
               if (isProductsItem) {
                 return (
@@ -153,14 +189,7 @@ export default function Sidebar() {
                     >
                       <span className="text-white flex-shrink-0 relative">
                         {getIcon(item.icon)}
-                        {item.badge && (
-                          <span className="absolute -top-4 sm:-top-2 -right-1.5 z-10 flex h-6 w-7 sm:h-4 sm:w-4
-                           items-center justify-center rounded-full 
-                           bg-red-500 sm:text-[8px] font-semibold
-                            leading-none text-white">
-                            {item.badge > 99 ? '99+' : item.badge}
-                          </span>
-                        )}
+                        <NotificationBadge count={badgeCount} />
                       </span>
                       <span className="flex flex-1 items-center gap-2">
                         <span className="truncate">{translateSidebarLabel(item.label)}</span>
@@ -211,7 +240,7 @@ export default function Sidebar() {
                 <Link
                   key={item.id}
                   to={item.path}
-                  onClick={() => setIsMobileOpen(false)}
+                  onClick={() => handleNavClick(item)}
                   className={`flex items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium transition-colors ${
                     isActive
                       ? 'bg-[#F7931E] text-white'
@@ -220,14 +249,7 @@ export default function Sidebar() {
                 >
                   <span className="text-white flex-shrink-0 relative">
                     {getIcon(item.icon)}
-                    {item.badge && (
-                      <span className="absolute -top-4 sm:-top-2 -right-1.5 z-10 flex h-6 w-7 sm:h-4 sm:w-4
-                       items-center justify-center rounded-full 
-                       bg-red-500 sm:text-[8px] font-semibold
-                        leading-none text-white">
-                        {item.badge > 99 ? '99+' : item.badge}
-                      </span>
-                    )}
+                    <NotificationBadge count={badgeCount} />
                   </span>
                   <span className="flex flex-1 items-center gap-2">
                     <span className="truncate">{translateSidebarLabel(item.label)}</span>

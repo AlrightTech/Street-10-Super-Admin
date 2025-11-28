@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [userGrowthData, setUserGrowthData] = useState<UserGrowthData[]>([]);
   const [revenueSegments, setRevenueSegments] = useState<RevenueSegment[]>([]);
   const [userName, setUserName] = useState("Admin");
+  const [revenueTotal, setRevenueTotal] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -58,12 +59,19 @@ export default function Dashboard() {
 
         // Transform dashboard stats to stat cards
         // Handle revenue - it should be a string from the API (already converted from BigInt)
-        const revenueTotal =
+        const revenueTotalValue =
           typeof dashboardStats.revenue.totalMinor === "string"
             ? parseFloat(dashboardStats.revenue.totalMinor) / 100
             : typeof dashboardStats.revenue.totalMinor === "bigint"
             ? Number(dashboardStats.revenue.totalMinor) / 100
             : 0;
+        
+        // Format revenue total for display in chart
+        const formattedRevenueTotal = `${dashboardStats.revenue?.currency || "QAR"} ${revenueTotalValue.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`;
+        setRevenueTotal(formattedRevenueTotal);
 
         const cards: StatCardType[] = [
           {
@@ -93,9 +101,7 @@ export default function Dashboard() {
           {
             id: "3",
             title: "Total Revenue (This Month)",
-            value: `${
-              dashboardStats.revenue?.currency || "QAR"
-            } ${revenueTotal.toLocaleString("en-US", {
+            value: `${dashboardStats.revenue?.currency || "QAR"} ${revenueTotalValue.toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}`,
@@ -303,6 +309,8 @@ export default function Dashboard() {
         setStatCards(fallbackCards);
         // Use mock activities as fallback if API fails
         setActivities(mockActivities);
+        // Set fallback revenue total
+        setRevenueTotal("QAR 0.00");
       } finally {
         setLoading(false);
       }
@@ -348,7 +356,11 @@ export default function Dashboard() {
         {/* Right side (40%) - Revenue Overview */}
         <div className="flex-1 min-w-0 lg:flex-[0.4]">
           <div className="h-full min-w-0">
-            <RevenueChart data={revenueSegments} centerText="+42%" />
+            <RevenueChart 
+              data={revenueSegments} 
+              centerText="+42%" 
+              totalAmount={revenueTotal}
+            />
           </div>
         </div>
       </div>

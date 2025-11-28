@@ -215,35 +215,102 @@ export default function EcommerceProductDetail() {
           <div className="lg:col-span-2 space-y-6">
             {/* Product Images */}
             <div className=''>
-              <div className="mb-4">
+              <div className="sm:flex sm:gap-4  mb-4">
                 <img
                   src={product.images[selectedImageIndex]}
                   alt={product.name}
                   className="w-70 h-70 object-cover rounded-lg"
                 />
+                {/* laptop */}
+                <div className='sm:block hidden mt-3'>
+
+<div >
+  <h3 className="text-xl font-bold text-gray-900">{product.name}</h3>
+  <p className="mt-1 text-sm text-gray-600">Category: {product.category}</p>
+</div>
+
+<div>
+  <p className="text-sm text-gray-700 leading-relaxed">{product.description}</p>
+</div>
+
+{product.videoUrl && (
+  <div>
+    <h2 className='font-bold text-xl'>Addition Document</h2>
+    <a
+      href={product.videoUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer underline"
+      >
+      Watch Video
+    </a>
+  </div>
+)}
+</div>
               </div>
-              <div className="flex gap-2 overflow-x-auto">
+              <div className="sm:flex sm:gap-6 overflow-x-auto">
+                <div>
+
+              <div className='sm:flex sm:gap-2.5' >
+
                 {product.images.map((image, index) => (
                   <button
-                    key={index}
-                    type="button"
-                    onClick={() => setSelectedImageIndex(index)}
-                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors cursor-pointer ${
-                      selectedImageIndex === index ? 'border-[#F7931E]' : 'border-gray-200'
-                    }`}
+                  key={index}
+                  type="button"
+                  onClick={() => setSelectedImageIndex(index)}
+                  className={`flex-shrink-0  sm:w-12 sm:h-12 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors cursor-pointer ${
+                    selectedImageIndex === index ? 'border-[#F7931E]' : 'border-gray-200'
+                  }`}
                   >
                     <img
                       src={image}
                       alt={`${product.name} view ${index + 1}`}
                       className="w-full h-full object-cover"
-                    />
+                      />
                   </button>
                 ))}
+
+
               </div>
+              <div className='mt-8 sm:block hidden sm:flex sm:justify-between sm:gap-3 '>
+                <span className="text-sm font-medium text-gray-600">Product Slug: </span>
+                <span className="text-sm font-semibold text-center w-40  text-gray-900">{product.productSlug}</span>
+              </div>
+                </div>
+
+              
+              <div className="space-y-2 hidden sm:block ">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-600 w-32">Condition:</span>
+                  <span className="text-sm text-gray-900">{product.condition}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-600 w-32">Brand:</span>
+                  <span className="text-sm text-gray-900">{product.brand}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-600 w-32">Regular Price:</span>
+                  <span className="text-sm text-gray-500 line-through">${product.regularPrice.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-600 w-32">Sale Price:</span>
+                  <span className="text-sm font-semibold text-green-600">${product.salePrice.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-600 w-32">Stock Quantity:</span>
+                  <span className="text-sm text-gray-900">{product.stockQuantity}</span>
+                </div>
+              </div>
+
+
+
+
+                </div>
             </div>
 
-            {/* Product Information */}
-            <div className="">
+            {/* Mobile view */}
+            <div className='block sm:hidden'>
+
               <div>
                 <h3 className="text-xl font-bold text-gray-900">{product.name}</h3>
                 <p className="mt-1 text-sm text-gray-600">Category: {product.category}</p>
@@ -255,19 +322,27 @@ export default function EcommerceProductDetail() {
 
               {product.videoUrl && (
                 <div>
+                  <h2 className='font-bold text-xl'>Additional Document</h2>
                   <a
                     href={product.videoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-blue-600 hover:text-blue-700 cursor-pointer underline"
-                  >
+                    >
                     Watch Video
                   </a>
                 </div>
               )}
+              </div>
+
+
+
+            {/* Product Information */}
+            <div className="">
+              
 
               {/* Product Specifications */}
-              <div className="space-y-2">
+              <div className="space-y-2 block sm:hidden">
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-600 w-32">Condition:</span>
                   <span className="text-sm text-gray-900">{product.condition}</span>
@@ -291,7 +366,7 @@ export default function EcommerceProductDetail() {
               </div>
 
               {/* Product Slug */}
-              <div>
+              <div className='sm:hidden block mt-2'>
                 <span className="text-sm font-medium text-gray-600">Product Slug: </span>
                 <span className="text-sm text-gray-900">{product.productSlug}</span>
               </div>
@@ -365,32 +440,35 @@ export default function EcommerceProductDetail() {
           </div>
         </div>
 
-        {/* Additional Information */}
-        <div className="mt-6 space-y-4">
-          <h3 className="text-base font-semibold text-gray-900">Additional Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <span className="text-sm font-medium text-gray-600">Weight: </span>
-              <span className="text-sm text-gray-900">{product.weight}</span>
-            </div>
-            <div>
-              <span className="text-sm font-medium text-gray-600">Dimensions: </span>
-              <span className="text-sm text-gray-900">{product.dimensions}</span>
+        {/* Additional Information & SEO & Marketing - Side by Side Cards */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Additional Information Card */}
+          <div className="rounded-lg bg-white border border-gray-200 p-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">Additional Information</h3>
+            <div className="space-y-2">
+              <div>
+                <span className="text-sm font-normal text-gray-600">Weight: </span>
+                <span className="text-sm font-normal text-gray-900">{product.weight}</span>
+              </div>
+              <div>
+                <span className="text-sm font-normal text-gray-600">Dimensions: </span>
+                <span className="text-sm font-normal text-gray-900">{product.dimensions}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* SEO & Marketing */}
-        <div className="mt-6 space-y-4">
-          <h3 className="text-base font-semibold text-gray-900">SEO & Marketing</h3>
-          <div className="space-y-3">
-            <div>
-              <span className="text-sm font-medium text-gray-600">Meta Title: </span>
-              <span className="text-sm text-gray-900">{product.metaTitle}</span>
-            </div>
-            <div>
-              <span className="text-sm font-medium text-gray-600">Meta Description: </span>
-              <span className="text-sm text-gray-900">{product.metaDescription}</span>
+          {/* SEO & Marketing Card */}
+          <div className="rounded-lg bg-white border border-gray-200 p-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">SEO & Marketing</h3>
+            <div className="space-y-2">
+              <div>
+                <div className="text-sm font-normal text-gray-600 mb-1">Meta Title:</div>
+                <div className="text-sm font-normal text-gray-900">{product.metaTitle}</div>
+              </div>
+              <div>
+                <div className="text-sm font-normal text-gray-600 mb-1">Meta Description:</div>
+                <div className="text-sm font-normal text-gray-900">{product.metaDescription}</div>
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { UploadIcon, EyeIcon, EyeOffIcon, ChevronDownIcon, CheckIcon, MegaphoneIcon, SettingsIcon, DollarSignIcon, HeadsetIcon, ProductManagementIcon, OrderManagementIcon, UsersIcon } from '../components/icons/Icons'
+import { UploadIcon, EyeIcon, EyeOffIcon, ChevronDownIcon, CheckIcon, MegaphoneIcon, SettingsIcon, DollarSignIcon, HeadsetIcon, ProductManagementIcon, OrderManagementIcon, UsersIcon, MoreVerticalIcon } from '../components/icons/Icons'
 import TextField from '../components/ui/TextField'
 import SearchBar from '../components/ui/SearchBar'
 import StatusBadge from '../components/users/StatusBadge'
@@ -123,10 +123,10 @@ export default function Settings() {
   const [showAddSubAdminModal, setShowAddSubAdminModal] = useState(false)
   const [addSubAdminStep, setAddSubAdminStep] = useState(1)
   const [addSubAdminForm, setAddSubAdminForm] = useState({
-    fullName: 'Tousif Ahmed',
-    email: 'dina.johnson@example.com',
-    password: '',
-    confirmPassword: '',
+    fullName: 'Touseef Ahmed',
+    email: 'alice.johnson@example.com',
+    password: 'password123',
+    confirmPassword: 'password123',
     status: 'active' as 'active' | 'inactive',
     selectedRoles: [] as string[],
     permissions: {
@@ -329,64 +329,73 @@ export default function Settings() {
       {showAddSubAdminModal ? (
         <div className="w-full">
           {/* Header */}
-          <div className="mb-4 sm:mb-6">
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900">Users</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Dashboard &gt; Users</p>
+          <div className="mb-6">
+            <h1 className="text-xl font-bold text-gray-900">Users</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Dashboard - Users</p>
           </div>
-          <div className="mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Add New Sub Admin</h2>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">Create a new sub-admin and customize permissions.</p>
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Add New Sub Admin</h2>
+            <p className="text-sm text-gray-600 mt-1">Create a new admin user with custom permissions</p>
           </div>
 
           {/* Content */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             {/* Multi-Step Progress Indicator */}
-            <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <div className="flex items-center justify-between mb-8">
               {/* Step 1 */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-sm sm:text-base font-semibold ${
+              <div className="flex  items-center gap-2 ">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-base font-semibold ${
                   addSubAdminStep === 1 ? 'bg-[#F7931E] text-white' : addSubAdminStep > 1 ? 'bg-[#F7931E] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
                   {addSubAdminStep > 1 ? (
-                    <CheckIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                    <CheckIcon className="h-6 w-6 text-white" />
                   ) : (
                     '1'
                   )}
                 </div>
-                <p className="text-xs sm:text-sm font-medium text-gray-900 mt-2">Basic Info</p>
+                <div className='-mt-2'>
+
+                <p className="text-sm font-medium text-gray-900 mt-2">Basic Info</p>
                 <p className="text-xs text-gray-500 mt-1 text-center">Personal details and credentials</p>
+                </div>
               </div>
 
-              {/* Connector Line */}
-              <div className={`flex-1 h-0.5 mx-2 sm:mx-4 ${addSubAdminStep >= 2 ? 'bg-[#F7931E]' : 'bg-gray-200'}`} />
+          
+              
 
               {/* Step 2 */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-sm sm:text-base font-semibold ${
+              <div className="flex gap-2 items-center">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-base font-semibold ${
                   addSubAdminStep === 2 ? 'bg-[#F7931E] text-white' : addSubAdminStep > 2 ? 'bg-[#F7931E] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
                   {addSubAdminStep > 2 ? (
-                    <CheckIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                    <CheckIcon className="h-6 w-6 text-white" />
                   ) : (
                     '2'
                   )}
                 </div>
-                <p className="text-xs sm:text-sm font-medium text-gray-900 mt-2">Role Assignment</p>
+                <div className='-mt-2'>
+
+                <p className="text-sm font-medium text-gray-900 mt-2">Role Assignment</p>
                 <p className="text-xs text-gray-500 mt-1 text-center">Select admin role and responsibilities</p>
+                </div>
               </div>
 
               {/* Connector Line */}
-              <div className={`flex-1 h-0.5 mx-2 sm:mx-4 ${addSubAdminStep >= 3 ? 'bg-[#F7931E]' : 'bg-gray-200'}`} />
+              
 
               {/* Step 3 */}
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-sm sm:text-base font-semibold ${
+              <div className="flex gap-2 items-center ">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-base font-semibold ${
                   addSubAdminStep === 3 ? 'bg-[#F7931E] text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
                   3
                 </div>
-                <p className="text-xs sm:text-sm font-medium text-gray-900 mt-2">Permission Control</p>
+                <div className='-mt-2'>
+
+                <p className="text-sm font-medium text-gray-900 mt-2">Permission Control</p>
                 <p className="text-xs text-gray-500 mt-1 text-center">Customize access permissions</p>
+                </div>
               </div>
             </div>
 
@@ -394,16 +403,16 @@ export default function Settings() {
             {addSubAdminStep === 1 && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Basic Information</h3>
-                  <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6">
-                    Enter the details to create a user account and set up login credentials.
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Basic Information</h3>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Enter the admin user's personal details and login credentials
                   </p>
                 </div>
 
-                <div className="space-y-4 sm:space-y-5">
+                <div className="space-y-5">
                   {/* Full Name */}
                   <div>
-                    <label htmlFor="fullName" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
                       Full Name
                     </label>
                     <input
@@ -411,14 +420,14 @@ export default function Settings() {
                       type="text"
                       value={addSubAdminForm.fullName}
                       onChange={(e) => setAddSubAdminForm((prev) => ({ ...prev, fullName: e.target.value }))}
-                      className="block w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm placeholder:text-gray-400 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20"
+                      className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm placeholder:text-gray-400 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20"
                       placeholder="Enter full name"
                     />
                   </div>
 
                   {/* Email Address */}
                   <div>
-                    <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                       Email Address
                     </label>
                     <input
@@ -426,14 +435,14 @@ export default function Settings() {
                       type="email"
                       value={addSubAdminForm.email}
                       onChange={(e) => setAddSubAdminForm((prev) => ({ ...prev, email: e.target.value }))}
-                      className="block w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm placeholder:text-gray-400 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20"
+                      className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm placeholder:text-gray-400 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20"
                       placeholder="Enter email address"
                     />
                   </div>
 
                   {/* Password */}
                   <div>
-                    <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                       Password
                     </label>
                     <div className="relative">
@@ -442,7 +451,7 @@ export default function Settings() {
                         type={showAddSubAdminPassword ? 'text' : 'password'}
                         value={addSubAdminForm.password}
                         onChange={(e) => setAddSubAdminForm((prev) => ({ ...prev, password: e.target.value }))}
-                        className="block w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 pr-10 text-sm placeholder:text-gray-400 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20"
+                        className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 pr-10 text-sm placeholder:text-gray-400 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20"
                         placeholder="Enter password"
                       />
                       <button
@@ -462,7 +471,7 @@ export default function Settings() {
 
                   {/* Confirm Password */}
                   <div>
-                    <label htmlFor="confirmPassword" className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                       Confirm Password
                     </label>
                     <div className="relative">
@@ -471,7 +480,7 @@ export default function Settings() {
                         type={showAddSubAdminConfirmPassword ? 'text' : 'password'}
                         value={addSubAdminForm.confirmPassword}
                         onChange={(e) => setAddSubAdminForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                        className="block w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 pr-10 text-sm placeholder:text-gray-400 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20"
+                        className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 pr-10 text-sm placeholder:text-gray-400 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20"
                         placeholder="Confirm password"
                       />
                       <button
@@ -491,8 +500,8 @@ export default function Settings() {
 
                   {/* Status */}
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-3">Status</label>
-                    <div className="flex items-center gap-4 sm:gap-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Status</label>
+                    <div className="flex items-center gap-6">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
@@ -502,7 +511,7 @@ export default function Settings() {
                           onChange={(e) => setAddSubAdminForm((prev) => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
                           className="w-4 h-4 text-blue-600 focus:ring-blue-500 focus:ring-2 border-gray-300"
                         />
-                        <span className="text-xs sm:text-sm text-gray-700">Active</span>
+                        <span className="text-sm text-gray-700">Active</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -513,7 +522,7 @@ export default function Settings() {
                           onChange={(e) => setAddSubAdminForm((prev) => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
                           className="w-4 h-4 text-gray-300 focus:ring-gray-300 focus:ring-2 border-gray-300"
                         />
-                        <span className="text-xs sm:text-sm text-gray-700">Inactive</span>
+                        <span className="text-sm text-gray-700">Inactive</span>
                       </label>
                     </div>
                   </div>
@@ -723,8 +732,9 @@ export default function Settings() {
                             productManagement: !prev.productManagement,
                           }))
                         }}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
                       >
+                        <span>Select All</span>
                         <input
                           type="checkbox"
                           checked={addSubAdminForm.permissions.productManagement.length === 4}
@@ -742,7 +752,6 @@ export default function Settings() {
                           }}
                           className="w-4 h-4 border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
                         />
-                        <span>Select All</span>
                         <ChevronDownIcon
                           className={`h-4 w-4 text-gray-400 transition-transform ${
                             expandedPermissions.productManagement ? 'rotate-180' : ''
@@ -751,7 +760,7 @@ export default function Settings() {
                       </button>
                     </div>
                     {expandedPermissions.productManagement && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="mt-4 pt-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {[
                             { key: 'view', label: 'View Products' },
@@ -759,7 +768,7 @@ export default function Settings() {
                             { key: 'delete', label: 'Delete Products' },
                             { key: 'approve', label: 'Approve Products' },
                           ].map((permission) => (
-                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer">
+                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded-lg p-3 bg-white">
                               <input
                                 type="checkbox"
                                 checked={addSubAdminForm.permissions.productManagement.includes(permission.key)}
@@ -785,7 +794,7 @@ export default function Settings() {
                                 }}
                                 className="w-4 h-4 border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
                               />
-                              <span className="text-xs sm:text-sm text-gray-700">{permission.label}</span>
+                              <span className="text-sm text-gray-700">{permission.label}</span>
                             </label>
                           ))}
                         </div>
@@ -815,8 +824,9 @@ export default function Settings() {
                             userManagement: !prev.userManagement,
                           }))
                         }}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
                       >
+                        <span>Select All</span>
                         <input
                           type="checkbox"
                           checked={addSubAdminForm.permissions.userManagement.length === 4}
@@ -834,7 +844,6 @@ export default function Settings() {
                           }}
                           className="w-4 h-4 border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
                         />
-                        <span>Select All</span>
                         <ChevronDownIcon
                           className={`h-4 w-4 text-gray-400 transition-transform ${
                             expandedPermissions.userManagement ? 'rotate-180' : ''
@@ -843,7 +852,7 @@ export default function Settings() {
                       </button>
                     </div>
                     {expandedPermissions.userManagement && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="mt-4 pt-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {[
                             { key: 'view', label: 'View Users' },
@@ -851,7 +860,7 @@ export default function Settings() {
                             { key: 'delete', label: 'Delete Users' },
                             { key: 'approve', label: 'Approve Users' },
                           ].map((permission) => (
-                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer">
+                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded-lg p-3 bg-white">
                               <input
                                 type="checkbox"
                                 checked={addSubAdminForm.permissions.userManagement.includes(permission.key)}
@@ -907,8 +916,9 @@ export default function Settings() {
                             orderManagement: !prev.orderManagement,
                           }))
                         }}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
                       >
+                        <span>Select All</span>
                         <input
                           type="checkbox"
                           checked={addSubAdminForm.permissions.orderManagement.length === 4}
@@ -926,7 +936,6 @@ export default function Settings() {
                           }}
                           className="w-4 h-4 border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
                         />
-                        <span>Select All</span>
                         <ChevronDownIcon
                           className={`h-4 w-4 text-gray-400 transition-transform ${
                             expandedPermissions.orderManagement ? 'rotate-180' : ''
@@ -935,7 +944,7 @@ export default function Settings() {
                       </button>
                     </div>
                     {expandedPermissions.orderManagement && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="mt-4 pt-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {[
                             { key: 'view', label: 'View Orders' },
@@ -943,7 +952,7 @@ export default function Settings() {
                             { key: 'delete', label: 'Delete Orders' },
                             { key: 'approve', label: 'Approve Orders' },
                           ].map((permission) => (
-                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer">
+                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded-lg p-3 bg-white">
                               <input
                                 type="checkbox"
                                 checked={addSubAdminForm.permissions.orderManagement.includes(permission.key)}
@@ -999,8 +1008,9 @@ export default function Settings() {
                             supportTickets: !prev.supportTickets,
                           }))
                         }}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
                       >
+                        <span>Select All</span>
                         <input
                           type="checkbox"
                           checked={addSubAdminForm.permissions.supportTickets.length === 4}
@@ -1018,7 +1028,6 @@ export default function Settings() {
                           }}
                           className="w-4 h-4 border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
                         />
-                        <span>Select All</span>
                         <ChevronDownIcon
                           className={`h-4 w-4 text-gray-400 transition-transform ${
                             expandedPermissions.supportTickets ? 'rotate-180' : ''
@@ -1027,7 +1036,7 @@ export default function Settings() {
                       </button>
                     </div>
                     {expandedPermissions.supportTickets && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="mt-4 pt-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {[
                             { key: 'view', label: 'View Tickets' },
@@ -1035,7 +1044,7 @@ export default function Settings() {
                             { key: 'delete', label: 'Delete Tickets' },
                             { key: 'approve', label: 'Approve Tickets' },
                           ].map((permission) => (
-                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer">
+                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded-lg p-3 bg-white">
                               <input
                                 type="checkbox"
                                 checked={addSubAdminForm.permissions.supportTickets.includes(permission.key)}
@@ -1150,12 +1159,12 @@ export default function Settings() {
             )}
 
             {/* Action Buttons */}
-            <div className="flex justify-end mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+            <div className="flex justify-end mt-8 pt-6">
               {addSubAdminStep > 1 && (
                 <button
                   type="button"
                   onClick={() => setAddSubAdminStep(addSubAdminStep - 1)}
-                  className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-xs sm:text-sm font-medium hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 mr-3 sm:mr-4"
+                  className="px-6 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 mr-4"
                 >
                   Previous
                 </button>
@@ -1163,8 +1172,37 @@ export default function Settings() {
               {addSubAdminStep < 3 ? (
                 <button
                   type="button"
-                  onClick={() => setAddSubAdminStep(addSubAdminStep + 1)}
-                  className="bg-[#F7931E] hover:bg-[#E6851A] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer"
+                  onClick={() => {
+                    // Basic validation before moving to next step
+                    if (addSubAdminStep === 1) {
+                      // Validate step 1: Basic Information
+                      if (!addSubAdminForm.fullName.trim()) {
+                        alert('Please enter a full name')
+                        return
+                      }
+                      if (!addSubAdminForm.email.trim() || !addSubAdminForm.email.includes('@')) {
+                        alert('Please enter a valid email address')
+                        return
+                      }
+                      if (!sendInviteLink && (!addSubAdminForm.password || addSubAdminForm.password.length < 6)) {
+                        alert('Password must be at least 6 characters long')
+                        return
+                      }
+                      if (!sendInviteLink && addSubAdminForm.password !== addSubAdminForm.confirmPassword) {
+                        alert('Passwords do not match')
+                        return
+                      }
+                    }
+                    if (addSubAdminStep === 2) {
+                      // Validate step 2: Role Assignment
+                      if (addSubAdminForm.selectedRoles.length === 0) {
+                        alert('Please select at least one role')
+                        return
+                      }
+                    }
+                    setAddSubAdminStep(addSubAdminStep + 1)
+                  }}
+                  className="bg-[#F7931E] hover:bg-[#E6851A] text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer"
                 >
                   Next Step
                 </button>
@@ -1172,7 +1210,33 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={() => {
+                    // Final validation before submission
+                    if (!addSubAdminForm.fullName.trim()) {
+                      alert('Please enter a full name')
+                      return
+                    }
+                    if (!addSubAdminForm.email.trim() || !addSubAdminForm.email.includes('@')) {
+                      alert('Please enter a valid email address')
+                      return
+                    }
+                    if (!sendInviteLink && (!addSubAdminForm.password || addSubAdminForm.password.length < 6)) {
+                      alert('Password must be at least 6 characters long')
+                      return
+                    }
+                    if (!sendInviteLink && addSubAdminForm.password !== addSubAdminForm.confirmPassword) {
+                      alert('Passwords do not match')
+                      return
+                    }
+                    if (addSubAdminForm.selectedRoles.length === 0) {
+                      alert('Please select at least one role')
+                      return
+                    }
+                    
+                    // Submit form
                     console.log('Submitting form:', addSubAdminForm)
+                    alert('Sub Admin created successfully!')
+                    
+                    // Reset form and close modal
                     setShowAddSubAdminModal(false)
                     setAddSubAdminStep(1)
                     setSendInviteLink(false)
@@ -1183,21 +1247,21 @@ export default function Settings() {
                       supportTickets: false,
                     })
                     setAddSubAdminForm({
-                      fullName: '',
-                      email: '',
-                      password: '',
-                      confirmPassword: '',
+                      fullName: 'Touseef Ahmed',
+                      email: 'alice.johnson@example.com',
+                      password: 'password123',
+                      confirmPassword: 'password123',
                       status: 'active',
                       selectedRoles: [],
                       permissions: {
-                        productManagement: [],
-                        userManagement: [],
-                        orderManagement: [],
+                        productManagement: ['view'],
+                        userManagement: ['view'],
+                        orderManagement: ['view'],
                         supportTickets: [],
                       },
                     })
                   }}
-                  className="bg-[#F7931E] hover:bg-[#E6851A] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer"
+                  className="bg-[#F7931E] hover:bg-[#E6851A] text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer"
                 >
                   Submit
                 </button>
@@ -1227,7 +1291,33 @@ export default function Settings() {
             </div>
             <button
               type="button"
-              onClick={() => setShowAddSubAdminModal(true)}
+              onClick={() => {
+                setShowAddSubAdminModal(true)
+                setAddSubAdminStep(1)
+                setAddSubAdminForm({
+                  fullName: 'Touseef Ahmed',
+                  email: 'alice.johnson@example.com',
+                  password: 'password123',
+                  confirmPassword: 'password123',
+                  status: 'active',
+                  selectedRoles: [],
+                  permissions: {
+                    productManagement: ['view'],
+                    userManagement: ['view'],
+                    orderManagement: ['view'],
+                    supportTickets: [],
+                  },
+                })
+                setShowAddSubAdminPassword(false)
+                setShowAddSubAdminConfirmPassword(false)
+                setExpandedPermissions({
+                  productManagement: false,
+                  userManagement: false,
+                  orderManagement: false,
+                  supportTickets: false,
+                })
+                setSendInviteLink(false)
+              }}
               className="bg-[#F7931E] hover:bg-[#E6851A] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer whitespace-nowrap w-full sm:w-auto"
             >
               +Add New
@@ -1585,15 +1675,15 @@ export default function Settings() {
           )}
 
           {activeSection === 'sub-admins' && (
-            <div className="bg-white rounded-lg  p-3 sm:p-4 md:p-6 lg:p-8 shadow-sm">
-            <div className="space-y-4 sm:space-y-6">
+            
+            <div className="">
               {/* Table Section */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              <div className="border border-gray-200 shadow-sm rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[600px]">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs sm:text-sm font-medium text-gray-700">
+                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700">
                           ID:
                         </th>
                         <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs sm:text-sm font-medium text-gray-700">
@@ -1602,13 +1692,13 @@ export default function Settings() {
                             <ChevronDownIcon className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
                           </div>
                         </th>
-                        <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs sm:text-sm font-medium text-gray-700">
+                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700">
                           Role
                         </th>
-                        <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs sm:text-sm font-medium text-gray-700">
+                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700">
                           Status
                         </th>
-                        <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs sm:text-sm font-medium text-gray-700">
+                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700">
                           Action
                         </th>
                       </tr>
@@ -1625,10 +1715,10 @@ export default function Settings() {
                                 : 'hover:bg-gray-50'
                             }`}
                           >
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 text-xs sm:text-sm text-gray-900">
+                            <td className="px-3 sm:px-4 lg:px-6 py-2 text-xs sm:text-sm text-gray-900">
                               {admin.id}
                             </td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-3">
+                            <td className="px-3 sm:px-4 lg:px-6 py-2">
                               <div className="flex items-center gap-2 sm:gap-3">
                                 <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600 flex-shrink-0">
                                   {getAvatarInitials(admin.name)}
@@ -1638,14 +1728,20 @@ export default function Settings() {
                                 </span>
                               </div>
                             </td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 text-xs sm:text-sm text-gray-900">
+                            <td className="px-3 sm:px-4 lg:px-6 py-2 text-xs sm:text-sm text-gray-900">
                               {admin.role}
                             </td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-3">
+                            <td className="px-3 sm:px-4 lg:px-6 py-2">
                               <StatusBadge status={admin.status} />
                             </td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-3 text-xs sm:text-sm text-gray-500">
-                              ---
+                            <td className="px-3 sm:px-4 lg:px-6 py-2">
+                              <button
+                                type="button"
+                                className="p-1.5 rounded-lg cursor-pointer"
+                                aria-label="Actions"
+                              >
+                                <MoreVerticalIcon className="h-5 w-5 text-gray-600" />
+                              </button>
                             </td>
                           </tr>
                         )
@@ -1656,7 +1752,7 @@ export default function Settings() {
 
                 {/* Pagination */}
                 {totalSubAdminPages > 1 && (
-                  <div className="flex flex-col sm:flex-row justify-center items-center gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
+                  <div className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
                     <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center">
                       <button
                         type="button"
@@ -1705,7 +1801,7 @@ export default function Settings() {
                 )}
               </div>
             </div>
-            </div>
+        
           )}
 
           {activeSection !== 'admin-profile' && activeSection !== 'notification' && activeSection !== 'account-preferences' && activeSection !== 'security-settings' && activeSection !== 'sub-admins' && (

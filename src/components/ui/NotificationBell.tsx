@@ -1,8 +1,10 @@
+import { memo } from 'react'
+import { useNotifications } from '../../contexts/NotificationContext'
+
 /**
  * NotificationBell component props
  */
 export interface NotificationBellProps {
-  count?: number
   onClick?: () => void
   className?: string
 }
@@ -17,28 +19,40 @@ const BellIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
 )
 
 /**
- * Notification bell component with badge
+ * NotificationBell Component
+ * Displays a bell icon with a dynamic badge showing total unread notification count
+ * Badge automatically appears/disappears based on unread notifications
+ * Uses NotificationContext for state management
  */
-export default function NotificationBell({
-  count = 0,
+const NotificationBell = memo(function NotificationBell({
   onClick,
   className = '',
 }: NotificationBellProps) {
+  const { notifications } = useNotifications()
+
+  /**
+   * Calculate total unread notifications count
+   * Badge only shows when unreadCount > 0
+   */
+  const unreadCount = notifications.filter((n) => !n.isRead).length
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`relative  p-2 text-gray-600 cursor-pointer
-          ${className}`}
-      aria-label={`Notifications${count > 0 ? ` (${count} unread)` : ''}`}
+      className={`relative p-2 text-gray-600 cursor-pointer ${className}`}
+      aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
     >
       <BellIcon className="h-5 w-5" />
-      {count > 0 && (
-        <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
-          {count > 9 ? '9+' : count}
+      {/* Badge - only shows when unreadCount > 0 */}
+      {unreadCount > 0 && (
+        <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white transition-all duration-300 ease-in-out">
+          {unreadCount > 9 ? '9+' : unreadCount}
         </span>
       )}
     </button>
   )
-}
+})
+
+export default NotificationBell
 

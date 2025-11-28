@@ -195,7 +195,7 @@ export default function StatCard({ stat }: StatCardProps) {
           <h3 className="text-xs sm:text-sm font-normal text-[#555555]">{stat.title}</h3>
           
           {/* Value and Chart Row */}
-          <div className="mt-2 sm:mt-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-2 sm:mt-3 flex items-center justify-between gap-2">
             {/* Value */}
             <p className="flex-1 min-w-[160px] sm:min-w-[120px] text-xl sm:text-2xl font-bold text-[#333333] break-words">
               {stat.value}

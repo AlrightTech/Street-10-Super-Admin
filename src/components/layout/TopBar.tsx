@@ -1,23 +1,40 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserIcon } from '../icons/Icons'
-import SearchBar from '../ui/SearchBar'
+import GlobalSearchBar from '../ui/GlobalSearchBar'
 import NotificationBell from '../ui/NotificationBell'
+import NotificationDropdown from '../ui/NotificationDropdown'
 import LanguageSwitcher from '../LanguageSwitcher'
-import NotificationsPopup from '../dashboard/NotificationsPopup'
 import { useTranslation } from '../../hooks/useTranslation'
 import { useSidebar } from '../../contexts/SidebarContext'
+import { useNotifications } from '../../contexts/NotificationContext'
 
 /**
  * TopBar component with search, language switcher, notifications, and profile
+ * Integrates with NotificationContext for dynamic notification badge
  */
 export default function TopBar() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { isMobileOpen, setIsMobileOpen } = useSidebar()
+  const { markAllAsRead } = useNotifications()
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
+
+  /**
+   * Handle notification bell click
+   * Toggles dropdown and marks all notifications as read when opening
+   */
+  const handleNotificationClick = useCallback(() => {
+    const newState = !isNotificationsOpen
+    setIsNotificationsOpen(newState)
+
+    // Mark all notifications as read when opening dropdown
+    if (newState) {
+      markAllAsRead()
+    }
+  }, [isNotificationsOpen, markAllAsRead])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -59,9 +76,9 @@ export default function TopBar() {
       )}
 
       <header className="flex flex-col md:flex-row w-full items-center justify-between gap-3 px-3 sm:px-4 md:px-6 py-3 md:py-4">
-        {/* Desktop: Search Bar (first) */}
-        <div className="hidden md:block w-full md:flex-1 md:min-w-0 md:max-w-md order-1">
-          <SearchBar placeholder={t('search')} />
+        {/* Desktop: Global Search Bar (first) */}
+        <div className="hidden md:block w-full md:w-auto md:max-w-md order-1">
+          <GlobalSearchBar placeholder={t('search') || 'Search across Users, Vendors, Orders, Products...'} />
         </div>
 
         {/* Right Side Actions (Language, Bell, Profile) */}
@@ -70,9 +87,10 @@ export default function TopBar() {
           <LanguageSwitcher />
 
           {/* Notifications Bell */}
-          <div className="bg-white rounded-full w-9 h-9 sm:w-10 sm:h-10 flex
-           items-center justify-center flex-shrink-0">
-            <NotificationBell count={3} onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} />
+          <div className="relative bg-white rounded-full w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0">
+            <NotificationBell onClick={handleNotificationClick} />
+            {/* Notification Dropdown */}
+            <NotificationDropdown isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
           </div>
 
           {/* Profile Dropdown */}
@@ -120,16 +138,11 @@ export default function TopBar() {
           </div>
         </div>
 
-        {/* Mobile: Search Bar (below actions) */}
+        {/* Mobile: Global Search Bar (below actions) */}
         <div className="w-full md:hidden order-3">
-          <SearchBar placeholder={t('search')} />
+          <GlobalSearchBar placeholder={t('search') || 'Search across Users, Vendors, Orders, Products...'} />
         </div>
       </header>
-
-      {/* Notifications Popup */}
-      {isNotificationsOpen && (
-        <NotificationsPopup onClose={() => setIsNotificationsOpen(false)} />
-      )}
     </>
   )
 }
