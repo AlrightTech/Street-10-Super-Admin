@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
 import type { Notification, NotificationModule, NotificationCounts } from '../types/notifications'
-import { mockNotifications, getInitialNotificationCounts } from '../data/mockNotifications'
+import { mockNotifications } from '../data/mockNotifications'
 
 /**
  * Notification context interface

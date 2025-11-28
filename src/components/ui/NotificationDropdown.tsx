@@ -36,22 +36,6 @@ const formatTimeAgo = (date: Date): string => {
 }
 
 /**
- * Get notification type color for visual indicator
- */
-const getTypeColor = (type?: string): string => {
-  switch (type) {
-    case 'success':
-      return 'bg-green-500'
-    case 'warning':
-      return 'bg-yellow-500'
-    case 'error':
-      return 'bg-red-500'
-    default:
-      return 'bg-blue-500'
-  }
-}
-
-/**
  * NotificationDropdown Component
  * Displays all notifications in a dropdown panel
  * Marks all notifications as read when opened (via useEffect in parent)

@@ -45,7 +45,7 @@ export default function Header({ onNotificationClick, notificationCount = 3 }: H
 
         {/* Notifications Bell */}
         <div className="bg-white rounded-full w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0">
-          <NotificationBell count={notificationCount} onClick={onNotificationClick} />
+          <NotificationBell onClick={onNotificationClick} />
         </div>
 
         {/* Profile Dropdown */}

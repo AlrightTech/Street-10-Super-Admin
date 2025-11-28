@@ -7,21 +7,6 @@ interface ScheduledDetailProps {
   onClose: () => void
 }
 
-interface BidHistoryItem {
-  id: string
-  bidderName: string
-  bidderEmail: string
-  status: string
-  date: string
-  time: string
-  amount: string
-}
-
-// Sample bidding history data for scheduled products (usually empty or minimal)
-const BIDDING_HISTORY: BidHistoryItem[] = [
-  // Scheduled products typically have no bids yet
-]
-
 /**
  * Scheduled Product Detail page
  */
