@@ -16,6 +16,7 @@ const Orders = lazy(() => import('./pages/Orders'))
 const OrderDetail = lazy(() => import('./pages/OrderDetail'))
 const OrderDetailView = lazy(() => import('./pages/OrderDetailView'))
 const ProcessRefundOrder = lazy(() => import('./pages/ProcessRefundOrder'))
+const StartRefundProcess = lazy(() => import('./pages/StartRefundProcess'))
 const Invoice = lazy(() => import('./pages/Invoice'))
 const EcommerceOrderView = lazy(() => import('./pages/EcommerceOrderView'))
 const BidDetailPage = lazy(() => import('./pages/BidDetailPage'))
@@ -118,6 +119,7 @@ function App() {
             <Route path="orders/:orderId/view" element={<OrderDetailView />} />
             <Route path="orders/:orderId/detail" element={<OrderDetail />} />
             <Route path="orders/:orderId/process-refund" element={<ProcessRefundOrder />} />
+            <Route path="orders/:orderId/start-refund-process" element={<StartRefundProcess />} />
             <Route path="orders/:orderId/invoice" element={<Invoice />} />
             <Route path="orders/:orderId" element={<OrderDetail />} />
             <Route path="biddings/:bidId" element={<BidDetailPage />} />

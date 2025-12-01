@@ -9,13 +9,12 @@ import LanguageSwitcher from '../LanguageSwitcher'
  */
 export interface HeaderProps {
   onNotificationClick?: () => void
-  notificationCount?: number
 }
 
 /**
  * Header component with search, language switcher, notifications, and profile
  */
-export default function Header({ onNotificationClick, notificationCount = 3 }: HeaderProps) {
+export default function Header({ onNotificationClick }: HeaderProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
 

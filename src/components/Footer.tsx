@@ -60,7 +60,7 @@ export default function Footer() {
           <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
             <span className="text-white font-medium text-xs sm:text-sm md:text-base whitespace-nowrap">Contact</span>
             <a href="mailto:contact-us@street10.com" className="flex items-center gap-1.5 text-white hover:underline text-xs sm:text-sm md:text-base whitespace-nowrap">
-              <svg className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3 w-3 sm:h-4 sm:mt-1 sm:w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
               <span className="break-all sm:break-normal">contact-us@street10.com</span>

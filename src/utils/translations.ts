@@ -13,6 +13,8 @@ export const translations = {
     // Login Page
     home: 'Home',
     heroTitle: 'Manage Users, Orders & Services',
+    heroTitle2: 'Streamline Your Business Operations',
+    heroTitle3: 'Powerful Admin Dashboard',
     
     // Login Form
     email: 'Email',
@@ -94,6 +96,8 @@ export const translations = {
     // Login Page
     home: 'الرئيسية',
     heroTitle: 'إدارة المستخدمين والطلبات والخدمات',
+    heroTitle2: 'تبسيط عمليات عملك',
+    heroTitle3: 'لوحة تحكم إدارية قوية',
     
     // Login Form
     email: 'البريد الإلكتروني',

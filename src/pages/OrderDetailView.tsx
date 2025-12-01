@@ -122,7 +122,7 @@ export default function OrderDetailView() {
 
   const handleProcessRefund = () => {
     if (orderId) {
-      navigate(`/orders/${orderId}/process-refund`)
+      navigate(`/orders/${orderId}/start-refund-process`)
     }
   }
 

@@ -112,14 +112,22 @@ export default function TopBar() {
                 <div className="py-1" role="menu">
                   <button
                     type="button"
-                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => {
+                      setIsProfileOpen(false)
+                      navigate('/settings')
+                    }}
+                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
                     role="menuitem"
                   >
                     {t('profile')}
                   </button>
                   <button
                     type="button"
-                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => {
+                      setIsProfileOpen(false)
+                      navigate('/settings')
+                    }}
+                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
                     role="menuitem"
                   >
                     {t('settings')}
@@ -127,7 +135,7 @@ export default function TopBar() {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
                     role="menuitem"
                   >
                     {t('logout')}
