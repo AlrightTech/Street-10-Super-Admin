@@ -69,14 +69,22 @@ export default function Vendors() {
           id: numericId,
           ownerName: vendor.user?.email?.split('@')[0] || vendor.name || 'Vendor',
           businessName: vendor.name || 'Business',
-          status: (vendor.status === 'approved' ? 'approved' : 
-                  vendor.status === 'rejected' ? 'rejected' : 
+          status: (vendor.status === 'approved' ? 'approved' :
+                  vendor.status === 'rejected' ? 'rejected' :
                   'pending') as VendorStatus,
           avatar: '',
           // Store full vendor data for reference
           _vendorData: vendor,
         }
       })
+
+      // Create a mapping of transformed IDs to original vendor data for vendor request details
+      const vendorMapping: Record<number, any> = {}
+      transformedVendors.forEach(vendor => {
+        vendorMapping[vendor.id] = vendor._vendorData
+      })
+      // Store the mapping globally so getVendorRequestDetail can access it
+      ;(window as any).vendorMapping = vendorMapping
       
       setVendors(transformedVendors)
       setTotalPages(result.pagination.totalPages)
@@ -323,7 +331,7 @@ export default function Vendors() {
                 if (status === 'approved') {
                   navigate(`/vendors/${vendorId}/detail`)
                 } else if (status === 'pending') {
-                  navigate(`/vendor-request-detail/${vendorId}`)
+                  navigate(`/vendors/vendor-request-detail/${vendorId}`);
                 }
               }}
             />
