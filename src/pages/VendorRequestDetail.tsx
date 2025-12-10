@@ -105,14 +105,14 @@ export default function VendorRequestDetail() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="mb-4 text-xl font-semibold text-[#1F2937]">Vendor Requested Detail Page</h1>
+        <h1 className="mb-4 text-lg sm:text-xl font-semibold text-[#1F2937]">Vendor Requested Detail Page</h1>
 
-        <div className="rounded-lg border border-[#E5E7EB] bg-gradient-to-r 
-        from-white via-white to-[#F4F6FB] p-3">
+        <div className="rounded-lg border border-[#E5E7EB] bg-gradient-to-r
+        from-white via-white to-[#F4F6FB] p-4 sm:p-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-            <div className="flex flex-col gap-4 px-5 sm:flex-row sm:items-center sm:gap-5">
+            <div className="flex flex-col gap-4 px-2 sm:px-5 sm:flex-row sm:items-center sm:gap-5">
               {detail.avatar ? (
                 <img
                   src={detail.avatar}
@@ -167,7 +167,7 @@ export default function VendorRequestDetail() {
 
       <div>
         <h2 className="text-base font-semibold text-[#1F2937]">Documents / Attachments</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {detail.documents.map((document) => (
             <div
               key={document.id}
@@ -192,31 +192,30 @@ export default function VendorRequestDetail() {
         </div>
       </div>
 
-      <div className="">
+      <div className="space-y-4">
         <div>
           <h2 className="text-base font-semibold text-[#1F2937]">Business Details</h2>
-          <div className="mt-4 rounded-lg bg-white px-3 mb-4 p-2 pb-30
-           shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
+          <div className="mt-4 rounded-lg bg-white px-4 py-6 sm:px-6 sm:py-8 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
             <p className="text-sm font-medium text-[#333333]">
               {detail.businessDescription}
             </p>
           </div>
         </div>
 
-        <div className="flex justify-end pb-5 gap-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pb-5">
           <button
             type="button"
             onClick={() => handleStatusChange('rejected')}
-            className="rounded-lg border border-[#D1D5DB] px-12 py-3 text-sm 
-           text-[#999999] transition-colors bg-white/80"
+            className="rounded-lg border border-[#D1D5DB] px-6 sm:px-12 py-3 text-sm
+           text-[#999999] transition-colors bg-white/80 order-2 sm:order-1"
           >
             Reject
           </button>
           <button
             type="button"
             onClick={() => handleStatusChange('approved')}
-            className="rounded-lg cursor-pointer bg-[#F39C12] px-8 py-3 text-sm
-              text-white transition-colors hover:bg-[#E67E22]"
+            className="rounded-lg cursor-pointer bg-[#F39C12] px-6 sm:px-8 py-3 text-sm
+              text-white transition-colors hover:bg-[#E67E22] order-1 sm:order-2"
           >
             Approved
           </button>
@@ -272,8 +271,8 @@ export default function VendorRequestDetail() {
       {isCredentialModalOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-black/70" aria-hidden="true" />
-          <div className="fixed inset-0 z-50 flex items-center  justify-center px-4 py-6 sm:px-6">
-            <div className="relative w-full max-w-lg rounded-lg bg-white px-6 py-7 shadow-[0_30px_60px_rgba(17,24,39,0.14)] sm:px-8 lg:px-9">
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 sm:px-6">
+            <div className="relative w-full max-w-lg rounded-lg bg-white px-4 sm:px-6 lg:px-9 py-6 sm:py-7 shadow-[0_30px_60px_rgba(17,24,39,0.14)]">
               <button
                 type="button"
                 onClick={() => setCredentialModalOpen(false)}
@@ -287,15 +286,15 @@ export default function VendorRequestDetail() {
 
               <h3 className="text-center text-lg font-semibold  text-[#1F2937] sm:text-xl">Create Credentials</h3>
 
-              <div className="mt-2 space-y-2">
+              <div className="mt-4 space-y-4">
                 <div className="">
-                  <label className="text-sm   text-[#6B7280]">Email</label>
+                  <label className="text-sm text-[#6B7280]">Email</label>
                   <input
                     type="email"
                     value={formValues.email}
                     onChange={(event) => handleInputChange('email', event.target.value)}
                     className="w-full rounded-lg border border-[#E5E7EB] bg-[#F7F7F7] px-4
-                     py-2 text-sm text-[#1F2937] mt-1 focus:border-[#F39C12] focus:bg-white 
+                     py-3 text-sm text-[#1F2937] mt-1 focus:border-[#F39C12] focus:bg-white
                      focus:outline-none focus:ring-2 focus:ring-[#F39C12]/30"
                     placeholder="e.g john@example.com"
                   />
@@ -307,25 +306,25 @@ export default function VendorRequestDetail() {
                     type="text"
                     value={formValues.commissionRate}
                     onChange={(event) => handleInputChange('commissionRate', event.target.value)}
-                    className="w-full rounded-lg border mt-1 border-[#E5E7EB] bg-[#F7F7F7] px-4 py-2
+                    className="w-full rounded-lg border mt-1 border-[#E5E7EB] bg-[#F7F7F7] px-4 py-3
                      text-sm text-[#1F2937] focus:border-[#F39C12] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F39C12]/30"
                     placeholder="15%"
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <div className="">
-                    <label className="text-sm  text-[#6B7280]">Password</label>
+                    <label className="text-sm text-[#6B7280]">Password</label>
                     <div className="relative">
                       <input
                         type={passwordVisible ? 'text' : 'password'}
                         value={formValues.password}
                         onChange={(event) => handleInputChange('password', event.target.value)}
-                        className="w-full rounded-lg border border-[#E5E7EB] bg-[#F7F7F7] px-4 
-                        py-2 pr-28 text-sm text-[#1F2937] mt-1 focus:border-[#F39C12] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F39C12]/30"
+                        className="w-full rounded-lg border border-[#E5E7EB] bg-[#F7F7F7] px-4
+                        py-3 pr-28 text-sm text-[#1F2937] mt-1 focus:border-[#F39C12] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F39C12]/30"
                         placeholder="e.g 12ppklka"
                       />
-                      <span className="absolute right-12 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9CA3AF]">
+                      <span className="absolute right-12 top-1/2 -translate-y-1/2 text-xs font-medium text-[#9CA3AF] hidden sm:block">
                         Auto Generate
                       </span>
                       <button
@@ -359,8 +358,8 @@ export default function VendorRequestDetail() {
                         onChange={(event) => handleInputChange('confirmPassword', event.target.value)}
                         className={`w-full mt-1 rounded-lg border ${
                           formErrors.passwordMismatch ? 'border-[#F87171]' : 'border-[#E5E7EB]'
-                        } bg-[#F7F7F7] px-4 
-                        py-2 pr-12 text-sm text-[#1F2937] 
+                        } bg-[#F7F7F7] px-4
+                        py-3 pr-12 text-sm text-[#1F2937]
                         focus:border-[#F39C12] focus:bg-white focus:outline-none
                          focus:ring-2 focus:ring-[#F39C12]/30`}
                         placeholder="e.g 12ppklka"
@@ -392,15 +391,15 @@ export default function VendorRequestDetail() {
                 </div>
               </div>
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-6 flex justify-end">
                 <button
                   type="button"
                   onClick={handleSubmitCredentials}
                   className="inline-flex cursor-pointer items-center justify-center
-                   rounded-lg bg-[#F39C12] px-3 py-2 text-xs
-                     text-white 
-                      transition-transform hover:-translate-y-0.5 
-                      hover:shadow-[0_15px_30px_rgba(243,156,18,0.35)] 
+                   rounded-lg bg-[#F39C12] px-4 py-3 text-sm
+                     text-white
+                      transition-transform hover:-translate-y-0.5
+                      hover:shadow-[0_15px_30px_rgba(243,156,18,0.35)]
                       focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F39C12]/60"
                 >
                   Create And Send
