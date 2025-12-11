@@ -10,6 +10,8 @@ export interface Vendor {
   accountManagerId: string | null;
   createdAt: string;
   updatedAt: string;
+  companyDocs?: any;
+  ownerIdUrl?: string | null;
   user: {
     id: string;
     email: string;
@@ -64,6 +66,18 @@ export const vendorsApi = {
     ownerIdUrl?: string;
   }): Promise<Vendor> => {
     const response = await api.post<ApiResponse<{ vendor: Vendor }>>('/vendors', data);
+    return response.data.data.vendor;
+  },
+
+  // Approve vendor
+  approve: async (id: string, data?: { accountManagerId?: string; email?: string; password?: string; commissionRate?: string }): Promise<Vendor> => {
+    const response = await api.post<ApiResponse<{ vendor: Vendor }>>(`/vendors/${id}/approve`, data || {});
+    return response.data.data.vendor;
+  },
+
+  // Reject vendor
+  reject: async (id: string, reason?: string): Promise<Vendor> => {
+    const response = await api.post<ApiResponse<{ vendor: Vendor }>>(`/vendors/${id}/reject`, { reason });
     return response.data.data.vendor;
   },
 };

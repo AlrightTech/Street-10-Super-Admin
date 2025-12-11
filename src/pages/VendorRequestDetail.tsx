@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import type { VendorRequestDetail } from '../types/vendorRequest'
 import type { VendorStatus } from '../types/vendors'
 import { getVendorRequestDetail, updateVendorRequestStatus } from '../data/mockVendorRequests'
+import { vendorsApi } from '../services/vendors.api'
 
 const DocumentIcon = ({ className = 'h-6 w-6 text-[#F39C12]' }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -35,32 +36,173 @@ export default function VendorRequestDetail() {
   const [formErrors, setFormErrors] = useState({
     passwordMismatch: false,
   })
+  const [loading, setLoading] = useState(false)
+  const [vendorId, setVendorId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!id) return
-    const numericId = Number(id)
-    const data = getVendorRequestDetail(numericId)
-    if (!data) {
-      navigate('/vendors', { replace: true })
-      return
+    const fetchVendorDetail = async () => {
+      if (!id) return
+      
+      try {
+        // Check if id is numeric (not a UUID)
+        const isNumericId = !id.includes("-") && /^\d+$/.test(id)
+        let vendorIdToFetch: string = id
+
+        if (isNumericId) {
+          // Fetch vendors list to find UUID
+          const vendorsResult = await vendorsApi.getAll({ page: 1, limit: 1000 })
+          if (vendorsResult.data && vendorsResult.data.length > 0) {
+            const vendorIdMap = new Map<number, string>()
+            vendorsResult.data.forEach((v: any) => {
+              try {
+                if (v.id && typeof v.id === "string") {
+                  const numericId =
+                    parseInt(v.id.replace(/-/g, "").substring(0, 10), 16) %
+                    1000000
+                  vendorIdMap.set(numericId, v.id)
+                }
+              } catch (e) {
+                console.error("Error converting vendor ID:", v.id, e)
+              }
+            })
+            const numericId = parseInt(id)
+            const uuid = vendorIdMap.get(numericId)
+            if (uuid) {
+              vendorIdToFetch = uuid
+            } else {
+              throw new Error(`Vendor with ID ${id} not found`)
+            }
+          } else {
+            throw new Error("No vendors found in the system")
+          }
+        }
+
+        // Fetch vendor from API
+        const apiVendor = await vendorsApi.getById(vendorIdToFetch)
+
+        // Parse companyDocs JSON to extract business details and documents
+        const companyDocs = apiVendor.companyDocs as any || {}
+        const businessDetails = companyDocs.businessDetails || {}
+        const profileImageUrl = companyDocs.profileImageUrl || null
+
+        // Extract document information
+        const documents: any[] = []
+        if (companyDocs.companyRegistrationDoc) {
+          documents.push({
+            id: 'company-registration',
+            name: 'Company Registration Document',
+            statusLabel: 'Uploaded',
+            verifiedDate: new Date(apiVendor.createdAt).toLocaleDateString(),
+            icon: 'document',
+            url: companyDocs.companyRegistrationDoc.url,
+            fileName: companyDocs.companyRegistrationDoc.name,
+          })
+        }
+        if (companyDocs.commercialLicense) {
+          documents.push({
+            id: 'commercial-license',
+            name: 'Commercial License',
+            statusLabel: 'Uploaded',
+            verifiedDate: new Date(apiVendor.createdAt).toLocaleDateString(),
+            icon: 'document',
+            url: companyDocs.commercialLicense.url,
+            fileName: companyDocs.commercialLicense.name,
+          })
+        }
+
+        // Build address string
+        const addressParts = [
+          businessDetails.businessAddress,
+          businessDetails.city,
+          businessDetails.state,
+          businessDetails.zipCode,
+          businessDetails.country,
+        ].filter(Boolean)
+        const address = addressParts.length > 0 ? addressParts.join(', ') : 'N/A'
+
+        // Transform API response to VendorRequestDetail format
+        const transformedDetail: VendorRequestDetail = {
+          id: parseInt(id),
+          ownerName: apiVendor.name || apiVendor.user?.email?.split('@')[0] || 'Vendor',
+          avatar: profileImageUrl || '',
+          contact: {
+            email: apiVendor.email || apiVendor.user?.email || '',
+            phone: apiVendor.phone || businessDetails.contactPersonPhone || apiVendor.user?.phone || '',
+          },
+          business: {
+            businessName: apiVendor.name || 'Business',
+            vendorType: 'General',
+            address: address,
+            contactPerson: businessDetails.contactPerson || apiVendor.name || 'Contact',
+          },
+          documents: documents.length > 0 ? documents : [
+            {
+              id: 'no-docs',
+              name: 'No documents uploaded',
+              statusLabel: 'Pending',
+              verifiedDate: 'N/A',
+              icon: 'document',
+            },
+          ],
+          businessDescription: businessDetails.businessAddress 
+            ? `Business located at ${address}` 
+            : 'No business description provided',
+          status: (apiVendor.status === 'approved' ? 'approved' :
+                   apiVendor.status === 'rejected' ? 'rejected' :
+                   'pending') as any,
+        }
+
+        setDetail(transformedDetail)
+        setVendorId(vendorIdToFetch) // Store UUID for API calls
+      } catch (error) {
+        console.error('Error fetching vendor detail:', error)
+        // Fallback to mock data if API fails
+        const numericId = Number(id)
+        const data = getVendorRequestDetail(numericId)
+        if (!data) {
+          navigate('/vendors', { replace: true })
+          return
+        }
+        setDetail({ ...data })
+      }
     }
-    setDetail({ ...data })
+
+    fetchVendorDetail()
   }, [id, navigate])
 
   if (!detail) {
     return null
   }
 
-  const handleStatusChange = (status: VendorStatus) => {
-    const updated = updateVendorRequestStatus(detail.id, status)
-    if (updated) {
-      setDetail({ ...updated })
-    }
+  const handleStatusChange = async (status: VendorStatus) => {
+    if (!vendorId || !detail) return
 
-    if (status === 'approved') {
-      setApproveModalOpen(true)
-    } else {
-      setApproveModalOpen(false)
+    try {
+      setLoading(true)
+      
+      if (status === 'approved') {
+        // Approve vendor via API
+        await vendorsApi.approve(vendorId)
+        // Update local state
+        const updated = { ...detail, status: 'approved' as any }
+        setDetail(updated)
+        setApproveModalOpen(true)
+      } else if (status === 'rejected') {
+        // Reject vendor via API
+        await vendorsApi.reject(vendorId, 'Rejected by admin')
+        // Update local state
+        const updated = { ...detail, status: 'rejected' as any }
+        setDetail(updated)
+        // Show success message
+        alert('Vendor has been rejected successfully')
+        // Optionally navigate back
+        // navigate('/vendors')
+      }
+    } catch (error: any) {
+      console.error('Error updating vendor status:', error)
+      alert(error?.response?.data?.message || 'Failed to update vendor status')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -79,13 +221,37 @@ export default function VendorRequestDetail() {
     }
   }
 
-  const handleSubmitCredentials = () => {
+  const handleSubmitCredentials = async () => {
     if (formValues.password !== formValues.confirmPassword) {
       setFormErrors({ passwordMismatch: true })
       return
     }
-    setCredentialModalOpen(false)
-    setCredentialSuccessOpen(true)
+
+    if (!vendorId || !detail) return
+
+    try {
+      setLoading(true)
+      
+      // Send credentials to backend (email and password will be sent via API)
+      await vendorsApi.approve(vendorId, {
+        email: formValues.email,
+        password: formValues.password,
+        commissionRate: formValues.commissionRate,
+      })
+
+      setCredentialModalOpen(false)
+      setCredentialSuccessOpen(true)
+      
+      // Refresh vendor data
+      const apiVendor = await vendorsApi.getById(vendorId)
+      const updated = { ...detail, status: 'approved' as any }
+      setDetail(updated)
+    } catch (error: any) {
+      console.error('Error creating credentials:', error)
+      alert(error?.response?.data?.message || 'Failed to create credentials')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const openCredentialModal = () => {
