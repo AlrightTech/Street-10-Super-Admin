@@ -51,6 +51,59 @@ export function getVendorRequestDetail(id: number) {
     return existing
   }
 
+  // First check if we have a vendor mapping from the API data
+  const vendorMapping = (window as any).vendorMapping || {}
+  const apiVendor = vendorMapping[id]
+
+  if (apiVendor) {
+    // Generate vendor request detail from API vendor data
+    const generated: VendorRequestDetail = {
+      id: id,
+      ownerName: apiVendor.user?.email?.split('@')[0] || apiVendor.name || 'Vendor',
+      avatar: '',
+      contact: {
+        email: apiVendor.user?.email || 'vendor@example.com',
+        phone: apiVendor.user?.phone || '+1 234 567 8900',
+      },
+      business: {
+        businessName: apiVendor.name || 'Business',
+        vendorType: 'Hotel',
+        address: 'Street #12, Kohat, Qatar',
+        contactPerson: apiVendor.user?.email?.split('@')[0] || 'Contact',
+      },
+      documents: [
+        {
+          id: 'business-license',
+          name: 'Business License',
+          statusLabel: 'Verified',
+          verifiedDate: 'Jan 15, 2025',
+          icon: 'document',
+        },
+        {
+          id: 'commercial-certificate',
+          name: 'Commercial Certificate',
+          statusLabel: 'Verified',
+          verifiedDate: 'Jan 15, 2025',
+          icon: 'document',
+        },
+        {
+          id: 'tax-certificate',
+          name: 'Tax Certificate',
+          statusLabel: 'Verified',
+          verifiedDate: 'Jan 15, 2025',
+          icon: 'document',
+        },
+      ],
+      businessDescription: 'We provide hotel rooms & catering services',
+      status: (apiVendor.status === 'approved' ? 'approved' :
+               apiVendor.status === 'rejected' ? 'rejected' :
+               'pending') as any,
+    }
+    vendorRequests.push(generated)
+    return generated
+  }
+
+  // Fallback to mock vendors for development
   const vendor = mockVendors.find((item) => item.id === id)
   if (!vendor) {
     return null
@@ -96,7 +149,6 @@ export function getVendorRequestDetail(id: number) {
     businessDescription: 'We provide hotel rooms & catering services',
     status: vendor.status,
   }
-
   vendorRequests.push(generated)
   return generated
 }

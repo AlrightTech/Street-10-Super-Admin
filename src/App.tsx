@@ -114,7 +114,8 @@ function App() {
             <Route path="vendors/:id/products" element={<AllVendorProducts />} />
             <Route path="vendors/:id/edit-user-detail" element={<EditUserDetail />} />
             <Route path="vendor/product/:productId" element={<ProductDetail />} />
-            <Route path="vendor-request-detail/:id" element={<VendorRequestDetail />} />
+            <Route path="/vendors/vendor-request-detail/:id" element={<VendorRequestDetail />} />
+
             <Route path="orders" element={<Orders />} />
             <Route path="orders/:orderId/view" element={<OrderDetailView />} />
             <Route path="orders/:orderId/detail" element={<OrderDetail />} />
