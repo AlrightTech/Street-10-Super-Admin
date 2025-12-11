@@ -11,6 +11,7 @@ export interface UsersTableProps {
   onEdit: (userId: number, user: User) => void
   onView: (userId: number) => void
   onToggleBlock: (userId: number) => void
+  onDelete?: (userId: number) => void
 }
 
 /**
@@ -21,6 +22,7 @@ export default function UsersTable({
   onEdit,
   onView,
   onToggleBlock,
+  onDelete,
 }: UsersTableProps) {
 
   // Generate avatar initials or use placeholder
@@ -95,6 +97,7 @@ export default function UsersTable({
                       onEdit={() => onEdit(user.id, user)}
                       onView={onView}
                       onToggleBlock={onToggleBlock}
+                      onDelete={onDelete}
                     />
                   </td>
                 </tr>

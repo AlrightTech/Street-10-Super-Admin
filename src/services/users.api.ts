@@ -141,4 +141,9 @@ export const usersApi = {
     );
     return response.data.data;
   },
+
+  // Delete user
+  delete: async (id: string): Promise<void> => {
+    await api.delete<ApiResponse<{ message: string }>>(`/admin/users/${id}`);
+  },
 };

@@ -197,19 +197,61 @@ export default function Users() {
   const confirmDelete = async () => {
     if (userToDelete !== null) {
       try {
-        // TODO: Implement delete user API endpoint when available
-        // For now, just remove from local state
+        // userToDelete is already the UUID string
+        await usersApi.delete(userToDelete)
+        
+        // Remove from local state
         setUsers((prevUsers) =>
           prevUsers.filter((user) => {
-            const apiUserId = userIdMap.get(user.id)
-            return apiUserId !== userToDelete
+            const mappedUserId = userIdMap.get(user.id)
+            return mappedUserId !== userToDelete
           })
         )
         setDeleteModalOpen(false)
         setUserToDelete(null)
+        
+        // Refresh the list
+        const result = await usersApi.getAll({
+          ...filters,
+          page: pagination.page,
+          limit: pagination.limit,
+        })
+        const usersArray = result?.data || []
+        const transformedUsers: User[] = usersArray.map((user: ApiUser) => {
+          const numericId =
+            parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+          return {
+            id: numericId,
+            name: user.email.split('@')[0],
+            email: user.email,
+            role: user.role,
+            totalPurchase: user.stats?.totalSpent
+              ? parseFloat(user.stats.totalSpent.toString()) / 100
+              : 0,
+            status:
+              user.status === 'active'
+                ? 'active'
+                : user.status === 'blocked'
+                ? 'blocked'
+                : 'pending',
+            joinDate: new Date(user.createdAt).toLocaleDateString(),
+            biddingWins: 0,
+          }
+        })
+        const newMap = new Map<number, string>()
+        usersArray.forEach((user: ApiUser) => {
+          const numericId =
+            parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+          newMap.set(numericId, user.id)
+        })
+        setUsers(transformedUsers)
+        setUserIdMap(newMap)
+        if (result?.pagination) {
+          setPagination(result.pagination)
+        }
       } catch (error) {
         console.error('Error deleting user:', error)
-        alert('Failed to delete user')
+        alert('Failed to delete user. Please try again.')
       }
     }
   }
@@ -220,6 +262,20 @@ export default function Users() {
   const cancelDelete = () => {
     setDeleteModalOpen(false)
     setUserToDelete(null)
+  }
+
+  /**
+   * Handle delete user
+   */
+  const handleDelete = (userId: number) => {
+    const apiUserId = userIdMap.get(userId)
+    if (apiUserId) {
+      setUserToDelete(apiUserId)
+      setDeleteModalOpen(true)
+    } else {
+      console.error('User ID not found in map')
+      alert('User ID not found')
+    }
   }
 
   /**
@@ -409,6 +465,7 @@ export default function Users() {
             onEdit={handleEdit}
             onView={handleView}
             onToggleBlock={handleToggleBlock}
+            onDelete={handleDelete}
           />
         )}
       </div>

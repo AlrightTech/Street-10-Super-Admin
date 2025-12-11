@@ -168,11 +168,38 @@ export default function Vendors() {
   /**
    * Confirm delete vendor
    */
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (vendorToDelete !== null) {
-      setVendors((prevVendors) => prevVendors.filter((v) => v.id !== vendorToDelete))
-      setDeleteModalOpen(false)
-      setVendorToDelete(null)
+      try {
+        // Find the vendor to get the actual UUID
+        const vendor = vendors.find((v) => v.id === vendorToDelete)
+        if (!vendor || !(vendor as any)._vendorData) {
+          console.error('Vendor not found or missing data')
+          alert('Vendor not found')
+          return
+        }
+        
+        // Use the vendor's actual UUID from the stored vendor data
+        const vendorId = (vendor as any)._vendorData.id
+        if (!vendorId) {
+          console.error('Vendor UUID not found')
+          alert('Vendor ID not found')
+          return
+        }
+        
+        await vendorsApi.delete(vendorId)
+        
+        // Remove from local state
+        setVendors((prevVendors) => prevVendors.filter((v) => v.id !== vendorToDelete))
+        setDeleteModalOpen(false)
+        setVendorToDelete(null)
+        
+        // Refresh the list
+        fetchVendors()
+      } catch (error) {
+        console.error('Error deleting vendor:', error)
+        alert('Failed to delete vendor. Please try again.')
+      }
     }
   }
 

@@ -11,6 +11,7 @@ export interface ActionMenuProps {
   onEdit: () => void
   onView: (userId: number) => void
   onToggleBlock: (userId: number) => void
+  onDelete?: (userId: number) => void
 }
 
 /**
@@ -22,6 +23,7 @@ export default function ActionMenu({
   onEdit,
   onView,
   onToggleBlock,
+  onDelete,
 }: ActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -56,6 +58,13 @@ export default function ActionMenu({
   const handleToggleBlock = () => {
     onToggleBlock(userId)
     setIsOpen(false)
+  }
+
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(userId)
+      setIsOpen(false)
+    }
   }
 
   return (
@@ -97,6 +106,16 @@ export default function ActionMenu({
             >
               {currentStatus === 'active' ? 'Block' : currentStatus === 'blocked' ? 'Unblock' : 'Block'}
             </button>
+            {onDelete && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="block w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                role="menuitem"
+              >
+                Delete
+              </button>
+            )}
           </div>
         </div>
       )}

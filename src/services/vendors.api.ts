@@ -80,5 +80,10 @@ export const vendorsApi = {
     const response = await api.post<ApiResponse<{ vendor: Vendor }>>(`/vendors/${id}/reject`, { reason });
     return response.data.data.vendor;
   },
+
+  // Delete vendor
+  delete: async (id: string): Promise<void> => {
+    await api.delete<ApiResponse<{ message: string }>>(`/vendors/${id}`);
+  },
 };
 
