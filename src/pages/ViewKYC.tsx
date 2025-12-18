@@ -115,7 +115,7 @@ export default function ViewKYC() {
           // Transform user to frontend format
           const transformedUser: UserDetails = {
             id: parseInt(apiUserData.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
-            name: apiUserData.user.name || apiUserData.user.email.split('@')[0],
+            name: (apiUserData.user as any).name || apiUserData.user.email.split('@')[0],
             email: apiUserData.user.email,
             phone: apiUserData.user.phone || '',
             avatar: (apiUserData.user as any).profileImageUrl || '',
