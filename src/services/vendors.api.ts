@@ -69,6 +69,28 @@ export const vendorsApi = {
     return response.data.data.vendor;
   },
 
+  // Update vendor
+  update: async (
+    id: string,
+    data: {
+      name?: string;
+      email?: string;
+      phone?: string | null;
+      status?: string;
+      companyDocs?: any;
+      ownerIdUrl?: string | null;
+      accountManagerId?: string | null;
+      commissionType?: string;
+      commissionValue?: number;
+    }
+  ): Promise<Vendor> => {
+    const response = await api.patch<ApiResponse<{ vendor: Vendor }>>(
+      `/vendors/${id}`,
+      data
+    );
+    return response.data.data.vendor;
+  },
+
   // Approve vendor
   approve: async (id: string, data?: { accountManagerId?: string; email?: string; password?: string; commissionRate?: string }): Promise<Vendor> => {
     const response = await api.post<ApiResponse<{ vendor: Vendor }>>(`/vendors/${id}/approve`, data || {});

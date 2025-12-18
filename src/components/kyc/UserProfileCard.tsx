@@ -17,10 +17,19 @@ export default function UserProfileCard({ user, kycStatus }: UserProfileCardProp
     return <span className="inline-flex rounded-full px-3 py-1 text-xs font-medium bg-yellow-100 text-yellow-800">Pending Account</span>
   }
 
-  // Format join date (assuming it's in the user data)
-  const joinDate = 'Nov 15, 2024'
-  const location = 'New York, USA'
-  const userId = `#USR-2024-${String(user.id).padStart(3, '0')}`
+  // Format join date & location from real user data
+  const joinDate = user.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : '-'
+
+  const location = user.location || '-'
+
+  // Display-friendly user id
+  const userId = `#USR-${String(user.id).padStart(6, '0')}`
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
@@ -41,7 +50,7 @@ export default function UserProfileCard({ user, kycStatus }: UserProfileCardProp
           ) : (
             <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center">
               <span className="text-gray-500 text-lg font-semibold">
-                {user.name.charAt(0).toUpperCase()}
+                {(user.name?.[0] || user.email?.[0] || 'U').toUpperCase()}
               </span>
             </div>
           )}

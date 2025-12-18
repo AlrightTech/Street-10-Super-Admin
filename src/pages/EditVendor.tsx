@@ -1,7 +1,7 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { mockVendors } from '../data/mockVendors'
 import type { Vendor } from '../types/vendors'
+import { vendorsApi } from '../services/vendors.api'
 
 /**
  * Edit Vendor page component
@@ -17,33 +17,77 @@ export default function EditVendor() {
   const [formData, setFormData] = useState({
     ownerName: '',
     businessName: '',
+    email: '',
+    phone: '',
   })
   const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending')
+  
+  // Store original values for comparison
+  const [originalData, setOriginalData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    status: 'pending' as 'pending' | 'approved' | 'rejected',
+  })
+  
+  // UI messages
+  const [statusMessage, setStatusMessage] = useState<string>('')
+  const [statusError, setStatusError] = useState<string>('')
 
   useEffect(() => {
     const loadVendor = async () => {
       setLoading(true)
-      // Try to get vendor from location state first
-      if (location.state?.vendor) {
-        const vendorData = location.state.vendor as Vendor
-        setVendor(vendorData)
-        setFormData({
-          ownerName: vendorData.ownerName,
-          businessName: vendorData.businessName,
-        })
-        setStatus(vendorData.status)
-      } else if (id) {
-        // Fetch vendor by ID from mock data
-        const vendorId = parseInt(id, 10)
-        const vendorData = mockVendors.find((v) => v.id === vendorId)
+      try {
+        let vendorData: Vendor | null = null
+
+        // Prefer vendor passed via navigation state (includes _vendorData with full API vendor)
+        if (location.state?.vendor) {
+          vendorData = location.state.vendor as Vendor
+        } else if (id) {
+          // Fallback: try to resolve numeric ID to UUID using global mapping from Vendors page
+          const numericId = parseInt(id, 10)
+          const mapping = (window as any).vendorMapping || {}
+          const apiVendor = mapping[numericId]
+
+          if (apiVendor) {
+            vendorData = {
+              id: numericId,
+              ownerName: apiVendor.user?.email?.split('@')[0] || apiVendor.name || 'Vendor',
+              businessName: apiVendor.name || 'Business',
+              status: (apiVendor.status === 'approved' ? 'approved' :
+                       apiVendor.status === 'rejected' ? 'rejected' : 'pending'),
+              avatar: '',
+              _vendorData: apiVendor,
+            }
+          }
+        }
+
         if (vendorData) {
           setVendor(vendorData)
+          const apiData = (vendorData as any)._vendorData
+          const initialName = apiData?.name || vendorData.businessName
+          const initialEmail = apiData?.email || apiData?.user?.email || ''
+          const initialPhone = apiData?.phone || apiData?.user?.phone || ''
+          const initialStatus = vendorData.status
+          
           setFormData({
             ownerName: vendorData.ownerName,
-            businessName: vendorData.businessName,
+            businessName: initialName,
+            email: initialEmail,
+            phone: initialPhone,
           })
-          setStatus(vendorData.status)
+          setStatus(initialStatus)
+          
+          // Store original values for change detection
+          setOriginalData({
+            name: initialName,
+            email: initialEmail,
+            phone: initialPhone,
+            status: initialStatus,
+          })
         }
+      } catch (error) {
+        console.error('Error loading vendor:', error)
       }
       setLoading(false)
     }
@@ -51,30 +95,89 @@ export default function EditVendor() {
     loadVendor()
   }, [id, location.state])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!vendor) return
-    
-    // Update vendor in mock data (in a real app, this would be an API call)
-    const vendorIndex = mockVendors.findIndex((v) => v.id === vendor.id)
-    if (vendorIndex !== -1) {
-      mockVendors[vendorIndex] = {
-        ...mockVendors[vendorIndex],
-        ownerName: formData.ownerName,
-        businessName: formData.businessName,
-        status: status,
-      }
+
+    const apiData = (vendor as any)._vendorData
+    const vendorId = apiData?.id as string | undefined
+
+    if (!vendorId) {
+      console.error('Vendor UUID not found in _vendorData')
+      setStatusError('Unable to determine vendor ID. Please reopen this vendor from the Vendors list.')
+      setTimeout(() => setStatusError(''), 5000)
+      return
     }
-    
-    navigate('/vendors', { 
-      state: { 
-        vendor: {
-          ...vendor,
-          ownerName: formData.ownerName,
-          businessName: formData.businessName,
-          status: status,
-        }
-      } 
-    })
+
+    // Clear previous messages
+    setStatusMessage('')
+    setStatusError('')
+
+    const updateData: any = {}
+
+    // Compare business name (trim whitespace)
+    const trimmedBusinessName = formData.businessName.trim()
+    if (trimmedBusinessName && trimmedBusinessName !== originalData.name) {
+      updateData.name = trimmedBusinessName
+    }
+
+    // Compare email (trim whitespace)
+    const trimmedEmail = formData.email.trim()
+    if (trimmedEmail && trimmedEmail !== originalData.email) {
+      updateData.email = trimmedEmail
+    }
+
+    // Compare phone (handle null/empty)
+    const trimmedPhone = formData.phone.trim()
+    const normalizedPhone = trimmedPhone || null
+    const normalizedOriginalPhone = originalData.phone || null
+    if (normalizedPhone !== normalizedOriginalPhone) {
+      updateData.phone = normalizedPhone
+    }
+
+    // Compare status
+    if (status !== originalData.status) {
+      updateData.status = status
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      setStatusError('No changes to save')
+      setTimeout(() => setStatusError(''), 5000)
+      return
+    }
+
+    try {
+      const updated = await vendorsApi.update(vendorId, updateData)
+
+      // Update local state with latest data
+      setVendor({
+        ...vendor,
+        businessName: updated.name || vendor.businessName,
+        status: (updated.status as any) || status,
+        _vendorData: updated,
+      })
+
+      // Update original data to reflect saved changes
+      setOriginalData({
+        name: updated.name || originalData.name,
+        email: updated.email || originalData.email,
+        phone: updated.phone || originalData.phone,
+        status: (updated.status as any) || status,
+      })
+
+      setStatusMessage('Vendor updated successfully')
+      setTimeout(() => {
+        setStatusMessage('')
+        navigate('/vendors')
+      }, 2000)
+    } catch (error: any) {
+      console.error('Error updating vendor:', error)
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to update vendor. Please try again.'
+      setStatusError(message)
+      setTimeout(() => setStatusError(''), 5000)
+    }
   }
 
   const handleCancel = () => {
@@ -110,6 +213,18 @@ export default function EditVendor() {
 
   return (
     <div className="space-y-6">
+      {/* Status messages */}
+      {statusMessage && (
+        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+          {statusMessage}
+        </div>
+      )}
+      {statusError && (
+        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+          {statusError}
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
@@ -132,18 +247,18 @@ export default function EditVendor() {
       {/* Edit Form */}
       <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <div className="space-y-6">
-          {/* Owner Name */}
+          {/* Owner Name - Read-only (derived from email) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Owner Name
+              Owner Name <span className="text-gray-400 text-xs">(read-only)</span>
             </label>
             <div className="relative">
               <input
                 type="text"
                 value={formData.ownerName}
-                onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 pl-10 text-sm text-gray-900 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
-                placeholder="Enter owner name"
+                readOnly
+                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-500 cursor-not-allowed"
+                placeholder="Owner name (derived from email)"
               />
               <svg
                 className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
@@ -185,6 +300,64 @@ export default function EditVendor() {
                   strokeLinejoin="round"
                   strokeWidth={2}
                   d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 pl-10 text-sm text-gray-900 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
+                placeholder="Enter email address"
+              />
+              <svg
+                className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Phone Number
+            </label>
+            <div className="relative">
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 pl-10 text-sm text-gray-900 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
+                placeholder="Enter phone number"
+              />
+              <svg
+                className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                 />
               </svg>
             </div>

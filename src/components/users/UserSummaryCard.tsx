@@ -57,12 +57,16 @@ export default function UserSummaryCard({ user }: UserSummaryCardProps) {
           <div className="flex flex-col gap-6 w-full lg:w-auto">
             <div>
               <h3 className="text-base font-bold text-gray-900 mb-2">Interests</h3>
-              <p className="text-sm font-normal text-gray-600 break-words">{user.interests.join(', ')}</p>
+              <p className="text-sm font-normal text-gray-600 break-words">
+                {user.interests && user.interests.length > 0 
+                  ? user.interests.join(', ') 
+                  : 'No interests specified'}
+              </p>
             </div>
             
             <div>
               <h3 className="text-base font-bold text-gray-900 mb-2">Wallet</h3>
-              <p className="text-sm font-normal text-gray-600 mb-3">${user.walletBalance.toLocaleString()}</p>
+              <p className="text-sm font-normal text-gray-600 mb-3">${(user.walletBalance || 0).toLocaleString()}</p>
               <button
                 type="button"
                 onClick={handleRefundRequest}
@@ -70,20 +74,22 @@ export default function UserSummaryCard({ user }: UserSummaryCardProps) {
               >
                 Refund Request
               </button>
-              <p className="text-sm font-normal text-gray-600">${user.walletLimit.toLocaleString()}</p>
+              <p className="text-sm font-normal text-gray-600">${(user.walletLimit || 0).toLocaleString()}</p>
             </div>
           </div>
 
           {/* Right Section - Image + Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center gap-4 flex-shrink-0 w-full sm:w-auto">
             {/* Interests Image */}
-            <div className="flex-shrink-0">
-              <img
-                src={user.interestsImage}
-                alt="Interests"
-                className="w-32 h-32 sm:w-36 sm:h-36 rounded-lg object-cover"
-              />
-            </div>
+            {user.interestsImage && (
+              <div className="flex-shrink-0">
+                <img
+                  src={user.interestsImage}
+                  alt="Interests"
+                  className="w-32 h-32 sm:w-36 sm:h-36 rounded-lg object-cover"
+                />
+              </div>
+            )}
             
             {/* Action Buttons */}
             <div className="flex flex-col gap-3 w-full sm:w-auto">

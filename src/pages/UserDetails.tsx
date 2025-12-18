@@ -40,10 +40,17 @@ export default function UserDetails() {
         try {
         // Check if user data is passed from navigation state (e.g., after edit)
         if (location.state?.user) {
-            setUser(location.state.user as UserDetailsType);
-            setUserUuid(id); // Store the ID from URL as UUID
-            setLoading(false);
-            return;
+            const stateUser = location.state.user as UserDetailsType;
+            // Validate that we have essential user data
+            if (stateUser && stateUser.id && stateUser.email) {
+              // Optimistically show state user, but still fetch fresh data from API
+              setUser(stateUser);
+              // For now, store the ID from URL (numeric) – we'll resolve UUID below
+              setUserUuid(null);
+            } else {
+              // Invalid state data, fall through to fetch from API
+              console.warn('Invalid user data in navigation state, fetching from API');
+            }
           }
 
           // Check if id is a numeric ID (not a UUID)
@@ -147,10 +154,11 @@ export default function UserDetails() {
             id:
               parseInt(apiUser.user.id.replace(/-/g, "").substring(0, 10), 16) %
               1000000,
-            name: apiUser.user.email.split("@")[0],
+            name:
+              (apiUser.user as any).name || apiUser.user.email.split("@")[0],
             email: apiUser.user.email,
             phone: apiUser.user.phone || "",
-            avatar: "",
+            avatar: (apiUser.user as any).profileImageUrl || "",
             role: apiUser.user.role,
             accountStatus:
               apiUser.user.status === "active"
@@ -179,6 +187,8 @@ export default function UserDetails() {
             walletLimit: 10000,
             interests: [],
             interestsImage: "",
+            createdAt: apiUser.user.createdAt,
+            location: "", // can be enhanced with city/country when available
             biddings: (apiUser.recentBids || []).map((bid: any) => ({
               id: bid.id,
               productName: bid.auction?.product?.title || "Product",

@@ -6,6 +6,9 @@ export interface VendorDocument {
   statusLabel: string
   verifiedDate: string
   icon: string
+  // Optional fields for real file handling
+  url?: string
+  fileName?: string
 }
 
 export interface VendorContactInfo {

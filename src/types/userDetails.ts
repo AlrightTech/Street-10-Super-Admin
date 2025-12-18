@@ -53,6 +53,9 @@ export interface UserDetails {
   role: string
   accountStatus: 'verified' | 'unverified' | 'pending'
   status?: 'pending' | 'blocked' | 'active'
+  // Optional metadata for profile displays
+  createdAt?: string
+  location?: string
   ordersMade: number
   biddingWins: number
   totalSpent: number

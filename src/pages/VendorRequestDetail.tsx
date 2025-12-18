@@ -340,16 +340,29 @@ export default function VendorRequestDetail() {
               className="rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 shadow-sm"
             >
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full
-                  bg-[#FBFAFA]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FBFAFA]">
                   <DocumentIcon className="h-5 w-5 text-[#F59E0B]" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-[#515151]">{document.name}</p>
+                  {document.fileName && (
+                    <p className="mt-1 text-xs text-[#6B7280] break-all">
+                      {document.fileName}
+                    </p>
+                  )}
                   <p className="mt-1 text-sm text-[#4B5563]">{document.statusLabel}</p>
-                  <div className="mt-4 flex items-center justify-end gap-2 text-xs font-medium text-[#6B7280]">
-                    <DownloadIcon className="h-4 w-4 text-[#9CA3AF]" />
+                  <div className="mt-4 flex items-center justify-between gap-2 text-xs font-medium text-[#6B7280]">
                     <span>{document.verifiedDate}</span>
+                    {document.url && (
+                      <button
+                        type="button"
+                        onClick={() => window.open(document.url as string, '_blank')}
+                        className="inline-flex items-center gap-1 text-[#2563EB] hover:text-[#1D4ED8]"
+                      >
+                        <DownloadIcon className="h-4 w-4 text-[#2563EB]" />
+                        <span>View</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

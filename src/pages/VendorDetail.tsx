@@ -112,6 +112,13 @@ export default function VendorDetail() {
         // Fetch vendor from API
         const apiVendor = await vendorsApi.getById(vendorIdToFetch)
 
+        // Extract profile image from vendor or companyDocs
+        const companyDocs = (apiVendor as any).companyDocs || {}
+        const profileImageUrl =
+          (apiVendor as any).profileImageUrl ||
+          companyDocs.profileImageUrl ||
+          ''
+
         // Transform API response to VendorDetailData format
         const transformedVendor: VendorDetailData = {
           id: parseInt(apiVendor.id.replace(/-/g, "").substring(0, 10), 16) % 1000000,
@@ -121,8 +128,8 @@ export default function VendorDetail() {
           phone: apiVendor.phone || apiVendor.user?.phone || '',
           role: 'vendor',
           status: apiVendor.status === 'approved' ? 'approved' : 'pending',
-          avatar: '', // API doesn't provide avatar
-          address: 'N/A', // API doesn't provide address
+          avatar: profileImageUrl,
+          address: 'N/A', // API currently doesn't provide address
           vendorType: 'General',
           commissionRate: '10%', // Default, API doesn't provide this
           financialInfo: {

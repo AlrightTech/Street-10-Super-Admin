@@ -20,6 +20,8 @@ export default function ViewKYC() {
   const [kycData, setKycData] = useState<KYCData | null>(null)
   const [loading, setLoading] = useState(true)
   const [userUuid, setUserUuid] = useState<string | null>(null) // State to store the UUID
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
@@ -113,13 +115,15 @@ export default function ViewKYC() {
           // Transform user to frontend format
           const transformedUser: UserDetails = {
             id: parseInt(apiUserData.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
-            name: apiUserData.user.email.split('@')[0],
+            name: apiUserData.user.name || apiUserData.user.email.split('@')[0],
             email: apiUserData.user.email,
             phone: apiUserData.user.phone || '',
-            avatar: '',
+            avatar: (apiUserData.user as any).profileImageUrl || '',
             role: apiUserData.user.role,
             accountStatus: apiUserData.user.status === 'active' ? 'verified' : 'unverified',
             status: apiUserData.user.status === 'active' ? 'active' : 'blocked',
+            createdAt: apiUserData.user.createdAt,
+            location: '', // can be enhanced later using KYC/billing info
             ordersMade: apiUserData.stats?.ordersCount || 0,
             biddingWins: apiUserData.stats?.bidsWon || 0,
             totalSpent: parseFloat(apiUserData.stats?.totalSpent?.toString() || '0') / 100,
@@ -294,41 +298,45 @@ export default function ViewKYC() {
           })),
         }
         setKycData(updatedKyc)
-        alert('KYC approved successfully!')
+        setStatusMessage('KYC approved successfully.')
+        setStatusError(null)
       } catch (reloadError) {
         console.error('Error reloading KYC data:', reloadError)
         // Still update local state even if reload fails
-    setKycData({
-      ...kycData,
-      status: 'approved',
-      activityHistory: [
-        ...kycData.activityHistory.filter(item => !item.isCurrent),
-        {
-          id: String(Date.now()),
-          event: 'Status: Approved',
-          description: 'KYC has been approved by admin',
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          icon: 'check',
-          isCurrent: true,
-        },
-      ],
-    })
-        alert('KYC approved successfully!')
+        setKycData({
+          ...kycData,
+          status: 'approved',
+          activityHistory: [
+            ...kycData.activityHistory.filter(item => !item.isCurrent),
+            {
+              id: String(Date.now()),
+              event: 'Status: Approved',
+              description: 'KYC has been approved by admin',
+              date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+              icon: 'check',
+              isCurrent: true,
+            },
+          ],
+        })
+        setStatusMessage('KYC approved successfully.')
+        setStatusError(null)
       }
     } catch (error: any) {
       console.error('Error approving KYC:', error)
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to approve KYC. Please try again.'
-      alert(`Error: ${errorMessage}`)
+      setStatusError(errorMessage)
+      setStatusMessage(null)
     }
   }
 
   const handleReject = async () => {
     if (!kycData || !userUuid) return
     
-    const reason = prompt('Please enter rejection reason:')
-    if (!reason || reason.trim() === '') {
-      alert('Rejection reason is required')
+    const reason = prompt('Please enter rejection reason:') || ''
+    if (!reason.trim()) {
+      setStatusError('Rejection reason is required.')
+      setStatusMessage(null)
       return
     }
     
@@ -355,33 +363,36 @@ export default function ViewKYC() {
           })),
         }
         setKycData(updatedKyc)
-        alert('KYC rejected successfully!')
+        setStatusMessage('KYC rejected successfully.')
+        setStatusError(null)
       } catch (reloadError) {
         console.error('Error reloading KYC data:', reloadError)
         // Still update local state even if reload fails
-    setKycData({
-      ...kycData,
-      status: 'rejected',
+        setKycData({
+          ...kycData,
+          status: 'rejected',
           adminNotes: reason,
-      activityHistory: [
-        ...kycData.activityHistory.filter(item => !item.isCurrent),
-        {
-          id: String(Date.now()),
-          event: 'Status: Rejected',
+          activityHistory: [
+            ...kycData.activityHistory.filter(item => !item.isCurrent),
+            {
+              id: String(Date.now()),
+              event: 'Status: Rejected',
               description: `KYC has been rejected by admin: ${reason}`,
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          icon: 'x',
-          isCurrent: true,
-        },
-      ],
-    })
-        alert('KYC rejected successfully!')
+              date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+              icon: 'x',
+              isCurrent: true,
+            },
+          ],
+        })
+        setStatusMessage('KYC rejected successfully.')
+        setStatusError(null)
       }
     } catch (error: any) {
       console.error('Error rejecting KYC:', error)
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to reject KYC. Please try again.'
-      alert(`Error: ${errorMessage}`)
+      setStatusError(errorMessage)
+      setStatusMessage(null)
     }
   }
 
@@ -425,6 +436,18 @@ export default function ViewKYC() {
 
   return (
     <div className="w-full overflow-x-hidden space-y-6">
+      {/* Status messages */}
+      {statusMessage && (
+        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800">
+          {statusMessage}
+        </div>
+      )}
+      {statusError && (
+        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800">
+          {statusError}
+        </div>
+      )}
+
       {/* User Profile Card */}
       <UserProfileCard user={user} kycStatus={kycData.status} />
 

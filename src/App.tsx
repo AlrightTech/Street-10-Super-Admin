@@ -95,7 +95,6 @@ function App() {
     <LanguageProvider>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/" element={<LoginPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/" element={
@@ -103,6 +102,7 @@ function App() {
               <Layout />
             </ProtectedRoute>
           }>
+            <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="all-users" element={<AllUsers />} />
             <Route path="users" element={<Users />} />

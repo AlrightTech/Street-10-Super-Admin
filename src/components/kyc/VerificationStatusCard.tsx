@@ -64,6 +64,9 @@ export default function VerificationStatusCard({
     )
   }
 
+  const isApproved = status === 'approved'
+  const isRejected = status === 'rejected'
+
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -82,7 +85,9 @@ export default function VerificationStatusCard({
             <button
               type="button"
               onClick={onApprove}
-              className="w-full sm:w-[200px] flex items-center justify-center sm:justify-start gap-5 rounded-lg bg-green-600 px-10 py-3 text-sm font-medium text-white hover:bg-green-700 transition-colors cursor-pointer"
+              disabled={isApproved}
+              className={`w-full sm:w-[200px] flex items-center justify-center sm:justify-start gap-5 rounded-lg px-10 py-3 text-sm font-medium text-white transition-colors
+                ${isApproved ? 'bg-green-300 cursor-not-allowed opacity-60' : 'bg-green-600 hover:bg-green-700 cursor-pointer'}`}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -92,7 +97,9 @@ export default function VerificationStatusCard({
             <button
               type="button"
               onClick={onReject}
-              className="w-full sm:w-[200px] flex items-center justify-center sm:justify-start gap-5 rounded-lg bg-red-600 px-10 py-3 text-sm font-medium text-white hover:bg-red-700 transition-colors cursor-pointer"
+              disabled={isRejected}
+              className={`w-full sm:w-[200px] flex items-center justify-center sm:justify-start gap-5 rounded-lg px-10 py-3 text-sm font-medium text-white transition-colors
+                ${isRejected ? 'bg-red-300 cursor-not-allowed opacity-60' : 'bg-red-600 hover:bg-red-700 cursor-pointer'}`}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

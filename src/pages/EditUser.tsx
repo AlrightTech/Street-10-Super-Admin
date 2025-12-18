@@ -24,6 +24,18 @@ export default function EditUser() {
     address: '',
   })
   const [isActive, setIsActive] = useState(true)
+  
+  // Store original values for comparison
+  const [originalData, setOriginalData] = useState({
+    email: '',
+    phone: '',
+    status: 'active',
+  })
+  
+  // UI messages
+  const [statusMessage, setStatusMessage] = useState<string>('')
+  const [statusError, setStatusError] = useState<string>('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const loadUser = async () => {
@@ -76,8 +88,6 @@ export default function EditUser() {
           } else {
             setUserUuid(id || null)
           }
-          setLoading(false)
-          return
         } else if (id) {
           // Check if id is a numeric ID (not a UUID)
           userIdToFetch = id
@@ -173,15 +183,26 @@ export default function EditUser() {
 
         if (userData) {
           setUserDetails(userData)
+          const initialEmail = userData.email
+          const initialPhone = userData.phone || ''
+          const initialStatus = userData.status === 'active' ? 'active' : 'blocked'
+          
           setFormData({
             name: userData.name,
-            email: userData.email,
+            email: initialEmail,
             interests: userData.interests?.join(', ') || '',
             password: '******',
-            phone: userData.phone,
+            phone: initialPhone,
             address: 'Street #12, Kohat, Qatar',
           })
           setIsActive(userData.status === 'active')
+          
+          // Store original values for change detection
+          setOriginalData({
+            email: initialEmail,
+            phone: initialPhone,
+            status: initialStatus,
+          })
         }
       } catch (error) {
         console.error('Error loading user:', error)
@@ -198,62 +219,126 @@ export default function EditUser() {
   }
 
   const handleSave = async () => {
-    if (!userDetails || !userUuid) return
+    if (!userDetails) {
+      setStatusError('User details not loaded. Please refresh the page.')
+      setTimeout(() => setStatusError(''), 5000)
+      return
+    }
+    
+    if (!userUuid) {
+      setStatusError('User ID not found. Please reopen this user from the Users list.')
+      setTimeout(() => setStatusError(''), 5000)
+      return
+    }
+    
+    // Clear previous messages
+    setStatusMessage('')
+    setStatusError('')
+    setSaving(true)
     
     // Basic validation
     if (!formData.email || !formData.email.includes('@')) {
-      alert('Please enter a valid email address')
+      setStatusError('Please enter a valid email address')
+      setSaving(false)
+      setTimeout(() => setStatusError(''), 5000)
       return
     }
     
     if (formData.phone && formData.phone.length > 0 && formData.phone.length < 10) {
-      alert('Please enter a valid phone number')
+      setStatusError('Please enter a valid phone number')
+      setSaving(false)
+      setTimeout(() => setStatusError(''), 5000)
       return
     }
     
     try {
-      // Prepare update data - only include fields that can be updated
+      // Prepare update data - compare against original values
       const updateData: any = {}
       
-      if (formData.email !== userDetails.email) {
-        updateData.email = formData.email
+      // Compare email (trim whitespace)
+      const trimmedEmail = formData.email.trim()
+      if (trimmedEmail !== originalData.email) {
+        updateData.email = trimmedEmail
       }
       
-      if (formData.phone !== userDetails.phone) {
-        updateData.phone = formData.phone || null
+      // Compare phone (handle null/empty)
+      const trimmedPhone = formData.phone.trim()
+      const normalizedPhone = trimmedPhone || null
+      const normalizedOriginalPhone = originalData.phone || null
+      if (normalizedPhone !== normalizedOriginalPhone) {
+        updateData.phone = normalizedPhone
       }
       
+      // Compare status
       const newStatus = isActive ? 'active' : 'blocked'
-      if (newStatus !== userDetails.status) {
+      if (newStatus !== originalData.status) {
         updateData.status = newStatus
       }
       
       // Only make API call if there are changes
       if (Object.keys(updateData).length > 0) {
-        await usersApi.update(userUuid, updateData)
-        
-        // Show success message
-        alert('User updated successfully!')
-        
-        // Navigate back to user details with updated data
-        navigate(`/users/${userUuid}`, { 
-          state: { 
-            user: {
-              ...userDetails,
-              email: formData.email,
-              phone: formData.phone,
-              status: newStatus,
-            }
-          } 
-        })
+        try {
+          const updatedUser = await usersApi.update(userUuid, updateData)
+          
+          // Update original data to reflect saved changes
+          setOriginalData({
+            email: trimmedEmail,
+            phone: normalizedPhone || '',
+            status: newStatus,
+          })
+          
+          // Update userDetails with the response from API to ensure consistency
+          // Make sure all required fields are preserved, especially arrays and numeric fields
+          const updatedUserDetails: UserDetails = {
+            ...userDetails,
+            email: updatedUser.email || trimmedEmail,
+            phone: updatedUser.phone || normalizedPhone || '',
+            status: updatedUser.status === 'active' ? 'active' : 'blocked',
+            // Ensure arrays are always defined
+            interests: Array.isArray(userDetails.interests) ? userDetails.interests : [],
+            biddings: Array.isArray(userDetails.biddings) ? userDetails.biddings : [],
+            orders: Array.isArray(userDetails.orders) ? userDetails.orders : [],
+            // Ensure numeric fields have defaults
+            ordersMade: userDetails.ordersMade || 0,
+            biddingWins: userDetails.biddingWins || 0,
+            totalSpent: userDetails.totalSpent || 0,
+            totalRefunds: userDetails.totalRefunds || 0,
+            pendingRefunds: userDetails.pendingRefunds || 0,
+            netSpending: userDetails.netSpending || 0,
+            walletBalance: userDetails.walletBalance || 0,
+            walletLimit: userDetails.walletLimit || 10000,
+          }
+          
+          setStatusMessage('User updated successfully!')
+          setSaving(false)
+          setTimeout(() => {
+            setStatusMessage('')
+            // Navigate back to user details with updated data
+            // Use numeric ID from userDetails, not UUID
+            const numericId = userDetails.id
+            navigate(`/users/${numericId}`, { 
+              state: { 
+                user: updatedUserDetails
+              },
+              replace: true // Replace current history entry to avoid back button issues
+            })
+          }, 2000)
+        } catch (apiError: any) {
+          // Re-throw to be caught by outer catch block
+          throw apiError
+        }
       } else {
         // No changes made
-        alert('No changes to save')
+        setSaving(false)
+        setStatusError('No changes to save')
+        setTimeout(() => setStatusError(''), 5000)
       }
     } catch (error: any) {
       console.error('Error updating user:', error)
+      setSaving(false)
       const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update user. Please try again.'
-      alert(`Error: ${errorMessage}`)
+      setStatusError(`Error: ${errorMessage}`)
+      setTimeout(() => setStatusError(''), 5000)
     }
   }
 
@@ -304,23 +389,38 @@ export default function EditUser() {
   )
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="px-6 pt-4 pb-2">
-        <h1 className="text-lg font-semibold text-gray-900 text-center">Edit User</h1>
-      </div>
+    <div className="space-y-6">
+      {/* Status messages as floating toasts */}
+      {statusMessage && (
+        <div className="fixed top-20 right-6 z-50 rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800 shadow-lg">
+          {statusMessage}
+        </div>
+      )}
+      {statusError && (
+        <div className="fixed top-20 right-6 z-50 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800 shadow-lg">
+          {statusError}
+        </div>
+      )}
+
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="px-6 pt-4 pb-2">
+          <h1 className="text-lg font-semibold text-gray-900 text-center">Edit User</h1>
+        </div>
 
       <div className="px-6 pt-4 pb-6">
         <div className="space-y-5">
+          {/* Name - read-only for now (derived from email / not editable from admin) */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">Name</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Name <span className="text-xs text-gray-400">(read-only)</span>
+            </label>
             <div className="relative">
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                className={inputClassName}
+                readOnly
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 pr-12 text-sm text-gray-500 cursor-not-allowed"
               />
-              {renderEditIcon()}
             </div>
           </div>
 
@@ -426,12 +526,14 @@ export default function EditUser() {
             <button
               type="button"
               onClick={handleSave}
-              className="w-full sm:w-auto rounded-lg bg-[#F39C12] px-4 py-2 text-sm font-medium text-white hover:bg-[#E67E22] transition-colors cursor-pointer"
+              disabled={saving}
+              className="w-full sm:w-auto rounded-lg bg-[#F39C12] px-4 py-2 text-sm font-medium text-white hover:bg-[#E67E22] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Changes
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
