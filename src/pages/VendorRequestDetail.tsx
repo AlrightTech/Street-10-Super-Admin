@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { VendorRequestDetail } from '../types/vendorRequest'
 import type { VendorStatus } from '../types/vendors'
-import { getVendorRequestDetail, updateVendorRequestStatus } from '../data/mockVendorRequests'
+import { getVendorRequestDetail } from '../data/mockVendorRequests'
 import { vendorsApi } from '../services/vendors.api'
 
 const DocumentIcon = ({ className = 'h-6 w-6 text-[#F39C12]' }: { className?: string }) => (
@@ -36,7 +36,7 @@ export default function VendorRequestDetail() {
   const [formErrors, setFormErrors] = useState({
     passwordMismatch: false,
   })
-  const [loading, setLoading] = useState(false)
+  const [_loading, setLoading] = useState(false)
   const [vendorId, setVendorId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -243,7 +243,7 @@ export default function VendorRequestDetail() {
       setCredentialSuccessOpen(true)
       
       // Refresh vendor data
-      const apiVendor = await vendorsApi.getById(vendorId)
+      await vendorsApi.getById(vendorId)
       const updated = { ...detail, status: 'approved' as any }
       setDetail(updated)
     } catch (error: any) {
