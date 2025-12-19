@@ -68,7 +68,8 @@ export const mapAuctionToBiddingProduct = (auction: Auction): BiddingProduct => 
   const category = auction.product.categories?.[0]?.category?.name || 'Uncategorized'
   
   return {
-    id: auction.id,
+    id: auction.id, // Auction ID
+    productId: auction.productId, // Product ID for deletion
     name: auction.product.title,
     category: category,
     startingPrice: startingPrice,

@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SearchBar from '../components/ui/SearchBar'
 import { FilterIcon } from '../components/icons/Icons'
 import EcommerceProductsTable, { type EcommerceProduct } from '../components/ecommerce/EcommerceProductsTable'
 import AdminOrdersTable, { type AdminOrder, type AdminOrderStatus } from '../components/ecommerce/AdminOrdersTable'
 import OrdersFilterTabs from '../components/orders/OrdersFilterTabs'
+import { productsApi, type Product } from '../services/products.api'
 
 // Sample data for E-commerce Products
 const ECOMMERCE_PRODUCTS_DATA: EcommerceProduct[] = [
@@ -439,20 +440,90 @@ const ORDERS_PAGE_SIZE = 4
 /**
  * E-commerce Products page component
  */
+// Map API Product to EcommerceProduct format
+const mapProductToEcommerceProduct = (product: Product): EcommerceProduct => {
+  const price = parseFloat(product.priceMinor) / 100
+  const categoryName = product.categories?.[0]?.category?.name || 'Uncategorized'
+  
+  return {
+    id: product.id,
+    name: product.title,
+    category: categoryName,
+    price: `${price.toLocaleString()} ${product.currency || 'QAR'}`,
+    stock: `${product.stock || 0} units`,
+    status: product.status === 'active' ? 'active' : 'inactive',
+    imageUrl: product.media?.[0]?.url,
+  }
+}
+
 export default function EcommerceProducts() {
   const navigate = useNavigate()
   // E-commerce Products state
   const [productSearch, setProductSearch] = useState('')
   const [productsPage, setProductsPage] = useState(1)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [totalPages, setTotalPages] = useState(1)
 
   // Admin Orders state
   const [orderActiveTab, setOrderActiveTab] = useState<(typeof ORDER_TAB_OPTIONS)[number]['key']>('all')
   const [orderSearch, setOrderSearch] = useState('')
   const [ordersPage, setOrdersPage] = useState(1)
 
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const response = await productsApi.getAll({
+          page: productsPage,
+          limit: PRODUCTS_PAGE_SIZE,
+        })
+
+        // Debug logging
+        console.log('Products API Response:', response)
+        console.log('Products Data:', response.data)
+        console.log('Products Count:', response.data?.length || 0)
+        console.log('Pagination:', response.pagination)
+
+        // Handle response structure
+        const productsData = response.data || []
+        setProducts(productsData)
+        setTotalPages(response.pagination?.totalPages || 1)
+
+        if (productsData.length === 0) {
+          console.warn('No products returned from API')
+        }
+      } catch (err: any) {
+        console.error('Error fetching products:', err)
+        console.error('Error details:', {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+        })
+        setError(err.response?.data?.message || err.message || 'Failed to fetch products')
+        setProducts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [productsPage])
+
   // Filter products
   const filteredProducts = useMemo(() => {
-    let result = [...ECOMMERCE_PRODUCTS_DATA]
+    // Only include pure e-commerce products (exclude bidding products)
+    const ecommerceProducts = products.filter((product) => {
+      const productType = product.attributes?.productType
+      // Default to 'ecommerce' if not explicitly marked as 'bidding'
+      return productType !== 'bidding'
+    })
+
+    let result = ecommerceProducts.map(mapProductToEcommerceProduct)
 
     if (productSearch.trim()) {
       const query = productSearch.toLowerCase()
@@ -460,13 +531,10 @@ export default function EcommerceProducts() {
     }
 
     return result
-  }, [productSearch])
+  }, [products, productSearch])
 
-  const productsTotalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PAGE_SIZE))
-  const paginatedProducts = useMemo(() => {
-    const start = (productsPage - 1) * PRODUCTS_PAGE_SIZE
-    return filteredProducts.slice(start, start + PRODUCTS_PAGE_SIZE)
-  }, [filteredProducts, productsPage])
+  const productsTotalPages = totalPages
+  const paginatedProducts = filteredProducts
 
   // Filter orders
   const orderTabOptionsWithCounts = useMemo(
@@ -552,9 +620,50 @@ export default function EcommerceProducts() {
         {/* Products Table */}
         <div className="rounded-xl bg-white shadow-sm">
           <div className="py-2 sm:py-4">
-            <div className="overflow-x-auto">
-              <EcommerceProductsTable products={paginatedProducts} />
-            </div>
+            {loading ? (
+              <div className="flex min-h-[240px] flex-col items-center justify-center py-12 text-center">
+                <p className="text-base font-semibold text-gray-800">Loading products...</p>
+              </div>
+            ) : error ? (
+              <div className="flex min-h-[240px] flex-col items-center justify-center py-12 text-center">
+                <p className="text-base font-semibold text-red-600">Error: {error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-700"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <EcommerceProductsTable 
+                  products={paginatedProducts} 
+                  onProductDeleted={() => {
+                    // Refresh products list
+                    const fetchProducts = async () => {
+                      try {
+                        setLoading(true)
+                        setError(null)
+                        const response = await productsApi.getAll({
+                          page: productsPage,
+                          limit: PRODUCTS_PAGE_SIZE,
+                        })
+                        const productsData = response.data || []
+                        setProducts(productsData)
+                        setTotalPages(response.pagination?.totalPages || 1)
+                      } catch (err: any) {
+                        console.error('Error fetching products:', err)
+                        setError(err.response?.data?.message || err.message || 'Failed to fetch products')
+                        setProducts([])
+                      } finally {
+                        setLoading(false)
+                      }
+                    }
+                    fetchProducts()
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Pagination */}

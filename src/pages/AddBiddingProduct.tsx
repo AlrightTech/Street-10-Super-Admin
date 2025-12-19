@@ -171,7 +171,9 @@ export default function AddBiddingProduct() {
       const depositAmount = reservePriceMinor ? Math.round(reservePriceMinor * 0.1) : Math.round(startingPriceMinor * 0.1) // 10% of reserve or starting price
 
       // Create product attributes from form data
+      // Mark this as a bidding product so we can exclude it from the e-commerce list
       const attributes = {
+        productType: 'bidding',
         condition: formData.condition,
         dimensions: formData.dimensions,
         weight: formData.weight,

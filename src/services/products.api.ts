@@ -40,6 +40,7 @@ export interface CreateProductData {
   categoryIds?: string[];
   attributes?: any;
   langData?: any;
+  mediaUrls?: string[];
 }
 
 export interface UpdateProductData {
@@ -51,6 +52,7 @@ export interface UpdateProductData {
   categoryIds?: string[];
   attributes?: any;
   langData?: any;
+  mediaUrls?: string[];
 }
 
 export interface ProductFilters {
@@ -64,10 +66,20 @@ export interface ProductFilters {
 export const productsApi = {
   // Get all products
   getAll: async (filters?: ProductFilters): Promise<PaginatedResponse<Product>> => {
-    const response = await api.get<ApiResponse<PaginatedResponse<Product>>>('/products', {
+    const response = await api.get<ApiResponse<Product[]>>('/products', {
       params: filters,
     });
-    return response.data.data;
+    // Backend returns: { success: true, data: [...products], pagination: {...} }
+    // Frontend expects: { data: [...products], pagination: {...} }
+    return {
+      data: response.data.data || [],
+      pagination: response.data.pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 1,
+      },
+    };
   },
 
   // Get product by ID

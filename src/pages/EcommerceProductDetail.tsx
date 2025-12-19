@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
 import { EyeIcon, XIcon, CalendarIcon } from '../components/icons/Icons'
 import SelectDropdown from '../components/ui/SelectDropdown'
+import { productsApi, type Product } from '../services/products.api'
 
 interface EcommerceProductDetail {
   id: string
@@ -45,46 +46,47 @@ export default function EcommerceProductDetail() {
 
   useEffect(() => {
     const loadProduct = async () => {
+      if (!productId) return
+      
       setLoading(true)
       try {
-        // Simulate API call - replace with actual API call
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        // Fetch product from API
+        const apiProduct = await productsApi.getById(productId)
         
-        // Mock data - replace with actual API response
-        const mockProduct: EcommerceProductDetail = {
-          id: productId || '1',
-          name: 'Apple AirPods Pro (2nd Generation)',
-          category: 'Electronics',
-          description: 'Experience next-level sound with the Apple AirPods Pro (2nd generation) Featuring personalized Spatial Audio, longer battery life, and the Apple H2 chip for a magical listening experience.',
-          images: [
-            'https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600&h=600&fit=crop',
-            'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=600&fit=crop',
-          ],
-          condition: 'Excellent',
-          brand: 'Apple',
-          regularPrice: 249.99,
-          salePrice: 199.99,
-          stockQuantity: 45,
-          productSlug: 'apple-airpods-pro-2nd-generation',
-          weight: '0.056 kg',
-          dimensions: '3.05 x 2.18 x 2.40 cm',
-          metaTitle: 'Apple AirPods Pro 2nd Gen - Premium Wireless Earbuds',
-          metaDescription: 'Shop Apple AirPods Pro 2nd Generation with personalized Spatial Audio, Active Noise Cancellation, and up to 6 hours of listening time.',
-          videoUrl: 'https://www.youtube.com/watch?v=example',
+        // Map API product to EcommerceProductDetail format
+        const price = parseFloat(apiProduct.priceMinor) / 100
+        const categoryName = apiProduct.categories?.[0]?.category?.name || 'Uncategorized'
+        const images = apiProduct.media?.map(m => m.url) || []
+        const attributes = apiProduct.attributes || {}
+        
+        const mappedProduct: EcommerceProductDetail = {
+          id: apiProduct.id,
+          name: apiProduct.title,
+          category: categoryName,
+          description: apiProduct.description || '',
+          images: images.length > 0 ? images : ['https://via.placeholder.com/600'],
+          condition: attributes.condition || 'New',
+          brand: attributes.brand || '',
+          regularPrice: price,
+          salePrice: attributes.discountPrice ? parseFloat(attributes.discountPrice) / 100 : price,
+          stockQuantity: apiProduct.stock || 0,
+          productSlug: attributes.productUrlSlug || apiProduct.id,
+          weight: attributes.weight || '',
+          dimensions: attributes.dimensions || '',
+          metaTitle: attributes.metaTitle || apiProduct.title,
+          metaDescription: attributes.metaDescription || apiProduct.description || '',
+          videoUrl: attributes.videoUrl,
           performance: {
-            totalViews: 1234,
-            totalOrders: 89,
-            revenue: 17791,
-            conversionRate: 7.2,
-            totalSaved: 44,
-            totalShared: 900,
+            totalViews: 0,
+            totalOrders: 0,
+            revenue: 0,
+            conversionRate: 0,
+            totalSaved: 0,
+            totalShared: 0,
           },
         }
         
-        setProduct(mockProduct)
+        setProduct(mappedProduct)
       } catch (error) {
         console.error('Error loading product:', error)
       } finally {

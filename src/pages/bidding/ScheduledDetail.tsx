@@ -1,18 +1,23 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { BiddingProduct } from '../../components/bidding/BiddingProductsTable'
+import { auctionsApi } from '../../services/auctions.api'
 
 interface ScheduledDetailProps {
   product: BiddingProduct
   onClose: () => void
+  onAuctionStarted?: () => void // Callback to refresh parent list
 }
 
 /**
  * Scheduled Product Detail page
  */
-export default function ScheduledDetail({ product, onClose: _onClose }: ScheduledDetailProps) {
+export default function ScheduledDetail({ product, onClose: _onClose, onAuctionStarted }: ScheduledDetailProps) {
   const navigate = useNavigate()
   const [selectedImage, setSelectedImage] = useState(0)
+  const [isStarting, setIsStarting] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   const handleEditProduct = () => {
     navigate(`/building-products/${product.id}/edit`)
@@ -23,13 +28,37 @@ export default function ScheduledDetail({ product, onClose: _onClose }: Schedule
     navigate(`/building-products/${product.id}/edit`)
   }
 
-  const handleStartAuction = () => {
-    if (window.confirm('Are you sure you want to start this auction now? This will change the status from Scheduled to Active.')) {
-      // In a real app, this would make an API call to update the product status
-      console.log('Starting auction for product:', product.id)
-      alert('Auction started successfully!')
-      // Navigate back to products list or refresh
-      navigate('/building-products')
+  const handleStartAuction = async () => {
+    if (!window.confirm('Are you sure you want to start this auction now? This will change the status from Scheduled to Live.')) {
+      return
+    }
+
+    try {
+      setIsStarting(true)
+      setStatusError(null)
+      setStatusMessage(null)
+
+      // Call API to update auction state to "live"
+      await auctionsApi.updateState(product.id, 'live')
+      
+      setStatusMessage('Auction started successfully! The auction is now live.')
+      
+      // Call callback to refresh parent list if provided
+      if (onAuctionStarted) {
+        onAuctionStarted()
+      }
+      
+      // Navigate back to products list after a short delay
+      setTimeout(() => {
+        navigate('/building-products')
+      }, 1500)
+    } catch (error: any) {
+      console.error('Error starting auction:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to start auction'
+      setStatusError(errorMessage)
+      alert(`Error: ${errorMessage}`)
+    } finally {
+      setIsStarting(false)
     }
   }
 
@@ -75,6 +104,18 @@ export default function ScheduledDetail({ product, onClose: _onClose }: Schedule
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Status Messages */}
+      {statusMessage && (
+        <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+          <p className="text-sm font-medium text-green-800">{statusMessage}</p>
+        </div>
+      )}
+      {statusError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+          <p className="text-sm font-medium text-red-800">{statusError}</p>
+        </div>
+      )}
+
       {/* Top Header Section - Outside white card */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
         <div>
@@ -259,9 +300,10 @@ export default function ScheduledDetail({ product, onClose: _onClose }: Schedule
 
                 <button
                   onClick={handleStartAuctionNow}
-                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#118D57] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0F7A4A] cursor-pointer"
+                  disabled={isStarting}
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#118D57] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#0F7A4A] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Start Auction Now
+                  {isStarting ? 'Starting...' : 'Start Auction Now'}
                 </button>
               </div>
             </div>
@@ -279,9 +321,10 @@ export default function ScheduledDetail({ product, onClose: _onClose }: Schedule
                 </button>
                 <button
                   onClick={handleStartAuction}
-                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer"
+                  disabled={isStarting}
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Start Auction
+                  {isStarting ? 'Starting...' : 'Start Auction'}
                 </button>
                 <button
                   onClick={handleCancelAuction}

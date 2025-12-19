@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import EcommerceProductsActionMenu from './EcommerceProductsActionMenu'
+import { productsApi } from '../../services/products.api'
 
 export interface EcommerceProduct {
   id: string
@@ -14,21 +16,40 @@ export interface EcommerceProduct {
 interface EcommerceProductsTableProps {
   products: EcommerceProduct[]
   emptyState?: React.ReactNode
+  onProductDeleted?: () => void
 }
 
-export default function EcommerceProductsTable({ products, emptyState }: EcommerceProductsTableProps) {
+export default function EcommerceProductsTable({ products, emptyState, onProductDeleted }: EcommerceProductsTableProps) {
   const navigate = useNavigate()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleView = (productId: string) => {
     navigate(`/ecommerce-products/${productId}`)
   }
 
-  const handleDelete = (productId: string, productName: string) => {
+  const handleEdit = (productId: string) => {
+    navigate(`/ecommerce-products/${productId}/edit`)
+  }
+
+  const handleDelete = async (productId: string, productName: string) => {
     // Show confirmation dialog
     const confirmed = window.confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)
-    if (confirmed) {
-      console.log('Delete product:', productId)
-      // Add API call here to delete the product
+    if (!confirmed) return
+
+    try {
+      setDeletingId(productId)
+      await productsApi.delete(productId)
+      alert('Product deleted successfully!')
+      // Refresh the list by calling the callback
+      if (onProductDeleted) {
+        onProductDeleted()
+      }
+    } catch (error: any) {
+      console.error('Error deleting product:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete product'
+      alert(`Error: ${errorMessage}`)
+    } finally {
+      setDeletingId(null)
     }
   }
   if (products.length === 0) {
@@ -98,6 +119,7 @@ export default function EcommerceProductsTable({ products, emptyState }: Ecommer
                   <TableCell align="center">
                     <EcommerceProductsActionMenu
                       onView={() => handleView(product.id)}
+                      onEdit={() => handleEdit(product.id)}
                       onDelete={() => handleDelete(product.id, product.name)}
                     />
                   </TableCell>

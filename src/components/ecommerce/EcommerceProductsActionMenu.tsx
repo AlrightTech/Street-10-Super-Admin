@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 interface EcommerceProductsActionMenuProps {
   onView?: () => void
+  onEdit?: () => void
   onDelete?: () => void
   className?: string
   align?: 'left' | 'right'
@@ -9,6 +10,7 @@ interface EcommerceProductsActionMenuProps {
 
 export default function EcommerceProductsActionMenu({ 
   onView, 
+  onEdit,
   onDelete, 
   className = '', 
   align = 'right' 
@@ -48,6 +50,12 @@ export default function EcommerceProductsActionMenu({
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation()
     onView?.()
+    setOpen(false)
+  }
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onEdit?.()
     setOpen(false)
   }
 
@@ -102,6 +110,16 @@ export default function EcommerceProductsActionMenu({
                 className="flex w-full cursor-pointer items-center px-4 py-2.5 text-sm font-medium text-gray-700 transition-all duration-150 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:bg-gray-50"
               >
                 <span>View</span>
+              </button>
+            )}
+            {onEdit && (
+              <button
+                type="button"
+                onClick={handleEdit}
+                role="menuitem"
+                className="flex w-full cursor-pointer items-center px-4 py-2.5 text-sm font-medium text-gray-700 transition-all duration-150 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:bg-gray-50"
+              >
+                <span>Edit</span>
               </button>
             )}
             {onDelete && (

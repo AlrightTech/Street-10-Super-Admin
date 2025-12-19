@@ -2,75 +2,112 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { UploadIcon, XIcon } from '../components/icons/Icons'
 import SelectDropdown from '../components/ui/SelectDropdown'
+import { productsApi } from '../services/products.api'
+import { categoriesApi, type Category } from '../services/categories.api'
 
 export default function EditEcommerceProduct() {
   const { productId } = useParams<{ productId: string }>()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
-    productTitle: 'Apple AirPods Pro (2nd Generation)',
-    category: 'electronics',
-    condition: 'excellent',
-    productDescription: 'A rare vintage Rolex Submariner watch from HFS in excellent condition. The timepiece features the iconic black dial with luminous markers, unidirectional rotating bezel, and automatic movement. The watch has been serviced and comes with original box and papers. A true collector\'s item with historical significance and timeless appeal.',
-    metaTitle: 'Apple AirPods Pro 2nd Gen + Premium Wireless Earbuds',
-    metaDescription: 'Shop Apple AirPods Pro 2nd Generation with...',
-    productUrlSlug: 'apple-airpods-pro-2nd-generation',
-    price: '799.99',
-    discountPrice: '599.99',
-    stockQuantity: '12',
-    stockStatus: 'in-stock',
-    brand: 'Apple',
-    weight: '0.056 kg',
-    dimensions: '5.06 x 2.18 x 2.40cm',
+    productTitle: '',
+    categoryId: '',
+    condition: '',
+    productDescription: '',
+    metaTitle: '',
+    metaDescription: '',
+    productUrlSlug: '',
+    price: '',
+    discountPrice: '',
+    stockQuantity: '1',
+    stockStatus: '',
+    brand: '',
+    weight: '',
+    dimensions: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>([])
   const [documentFiles, setDocumentFiles] = useState<string[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(true)
 
+  // Fetch categories from API
   useEffect(() => {
-    // Load existing product data for editing
-    const loadProduct = async () => {
-      if (productId) {
-        try {
-          // TODO: Replace with actual API call
-          // const product = await getEcommerceProductById(productId)
-          // setFormData({
-          //   productTitle: product.name,
-          //   category: product.category,
-          //   condition: product.condition,
-          //   productDescription: product.description,
-          //   metaTitle: product.metaTitle,
-          //   metaDescription: product.metaDescription,
-          //   productUrlSlug: product.productSlug,
-          //   price: product.regularPrice.toString(),
-          //   discountPrice: product.salePrice.toString(),
-          //   stockQuantity: product.stockQuantity.toString(),
-          //   stockStatus: product.stockStatus || 'in-stock',
-          //   brand: product.brand,
-          //   weight: product.weight,
-          //   dimensions: product.dimensions,
-          // })
-          // setMediaFiles(product.images || [])
-          // setDocumentFiles(product.documents || [])
-          
-          // For now, using mock data that's already set in initial state
-          console.log('Loading product for editing:', productId)
-        } catch (error) {
-          console.error('Error loading product:', error)
-          alert('Failed to load product data. Please try again.')
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true)
+        const tree = await categoriesApi.getTree()
+        // Flatten tree to get all categories
+        const flattenCategories = (cats: Category[]): Category[] => {
+          const result: Category[] = []
+          cats.forEach(cat => {
+            result.push(cat)
+            if (cat.children && cat.children.length > 0) {
+              result.push(...flattenCategories(cat.children))
+            }
+          })
+          return result
         }
+        setCategories(flattenCategories(tree).filter(cat => cat.isActive))
+      } catch (err: any) {
+        console.error('Error fetching categories:', err)
+        setError('Failed to load categories')
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+    fetchCategories()
+  }, [])
+
+  // Convert category tree to dropdown options
+  const categoryOptions = categories.map(cat => ({
+    value: cat.id,
+    label: cat.name
+  }))
+
+  // Load existing product data for editing
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!productId) return
+      
+      setLoading(true)
+      try {
+        const product = await productsApi.getById(productId)
+        
+        const price = parseFloat(product.priceMinor) / 100
+        const attributes = product.attributes || {}
+        const categoryId = product.categories?.[0]?.category?.id || ''
+        
+        setFormData({
+          productTitle: product.title,
+          categoryId: categoryId,
+          condition: attributes.condition || '',
+          productDescription: product.description || '',
+          metaTitle: attributes.metaTitle || '',
+          metaDescription: attributes.metaDescription || '',
+          productUrlSlug: attributes.productUrlSlug || '',
+          price: price.toString(),
+          discountPrice: attributes.discountPrice ? (parseFloat(attributes.discountPrice) / 100).toString() : '',
+          stockQuantity: (product.stock || 0).toString(),
+          stockStatus: attributes.stockStatus || '',
+          brand: attributes.brand || '',
+          weight: attributes.weight || '',
+          dimensions: attributes.dimensions || '',
+        })
+        
+        setMediaFiles(product.media?.map(m => m.url) || [])
+      } catch (err: any) {
+        console.error('Error loading product:', err)
+        setError(err.response?.data?.message || 'Failed to load product data')
+        alert('Failed to load product data. Please try again.')
+      } finally {
+        setLoading(false)
       }
     }
     
     loadProduct()
   }, [productId])
-
-  const categoryOptions = [
-    { value: 'electronics', label: 'Electronics' },
-    { value: 'clothing', label: 'Clothing' },
-    { value: 'home-garden', label: 'Home & Garden' },
-    { value: 'sports', label: 'Sports' },
-    { value: 'books', label: 'Books' },
-  ]
 
   const conditionOptions = [
     { value: 'excellent', label: 'Excellent' },
@@ -156,26 +193,86 @@ export default function EditEcommerceProduct() {
     setDocumentFiles(documentFiles.filter((_, i) => i !== index))
   }
 
+  // Convert files to data URLs (for now - in production, upload to S3/DO Spaces first)
+  const convertFileToDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!productId) return
+    
     setIsSubmitting(true)
+    setError(null)
 
     try {
-      // API call to update product - replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      console.log('Updating product:', productId)
-      console.log('Updated product data:', formData)
-      console.log('Media files:', mediaFiles)
-      console.log('Document files:', documentFiles)
-      
-      // TODO: Replace with actual API call
-      // await updateEcommerceProduct(productId, formData, mediaFiles, documentFiles)
+      // Validation
+      if (!formData.productTitle.trim()) {
+        setError('Product title is required')
+        return
+      }
+      if (!formData.categoryId) {
+        setError('Category is required')
+        return
+      }
+      if (!formData.price || parseFloat(formData.price) <= 0) {
+        setError('Valid price is required')
+        return
+      }
+      if (!formData.stockQuantity || parseInt(formData.stockQuantity) < 0) {
+        setError('Valid stock quantity is required')
+        return
+      }
+
+      // Convert existing media URLs (keep them as-is if they're already URLs)
+      // For new files uploaded, we'd need to handle file uploads separately
+      // For now, we'll use the existing mediaFiles array which contains URLs
+      const mediaUrls = mediaFiles.filter(url => url.startsWith('http') || url.startsWith('data:'))
+
+      // Convert price to minor units (cents)
+      const priceMinor = Math.round(parseFloat(formData.price) * 100)
+      const stock = parseInt(formData.stockQuantity) || 1
+
+      // Create product attributes from form data
+      const attributes = {
+        condition: formData.condition || undefined,
+        brand: formData.brand || undefined,
+        weight: formData.weight || undefined,
+        dimensions: formData.dimensions || undefined,
+        stockStatus: formData.stockStatus || undefined,
+        discountPrice: formData.discountPrice ? Math.round(parseFloat(formData.discountPrice) * 100) : undefined,
+        metaTitle: formData.metaTitle || undefined,
+        metaDescription: formData.metaDescription || undefined,
+        productUrlSlug: formData.productUrlSlug || undefined,
+      }
+
+      // Update product via API
+      await productsApi.update(productId, {
+        title: formData.productTitle,
+        description: formData.productDescription || undefined,
+        priceMinor: priceMinor,
+        stock: stock,
+        status: 'active',
+        categoryIds: [formData.categoryId],
+        attributes: attributes,
+        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+      })
+
+      alert('Product updated successfully!')
       
       // Navigate back to product detail page
       navigate(`/ecommerce-products/${productId}`)
-    } catch (error) {
-      console.error('Error updating product:', error)
-      alert('Failed to update product. Please try again.')
+    } catch (err: any) {
+      console.error('Error updating product:', err)
+      console.error('Error response:', err.response?.data)
+      const errorMessage = err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || err.message || 'Failed to update product'
+      setError(errorMessage)
+      alert(`Error: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -185,13 +282,30 @@ export default function EditEcommerceProduct() {
     navigate(`/ecommerce-products/${productId}`)
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex min-h-[400px] flex-col items-center justify-center py-12 text-center">
+          <p className="text-base font-semibold text-gray-800">Loading product...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">E-commerce Products</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Edit Product</h1>
         <p className="mt-1 text-sm text-gray-600">Dashboard : Edit Product</p>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -214,16 +328,22 @@ export default function EditEcommerceProduct() {
             </div>
 
             <div>
-              <label htmlFor="category" className="block text-sm font-normal text-[#888888] mb-1.5">
+              <label htmlFor="categoryId" className="block text-sm font-normal text-[#888888] mb-1.5">
                 Category
               </label>
-              <SelectDropdown
-                value={formData.category}
-                options={categoryOptions}
-                onChange={(value) => handleSelectChange('category', value)}
-                placeholder="Select Category"
-                className="w-full"
-              />
+              {loadingCategories ? (
+                <div className="w-full rounded-lg bg-[#F3F5F6] px-4 py-2.5 text-sm text-gray-500">
+                  Loading categories...
+                </div>
+              ) : (
+                <SelectDropdown
+                  value={formData.categoryId}
+                  options={categoryOptions}
+                  onChange={(value) => handleSelectChange('categoryId', value)}
+                  placeholder="Select Category"
+                  className="w-full"
+                />
+              )}
             </div>
 
             <div>

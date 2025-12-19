@@ -4,7 +4,8 @@ import BiddingProductsActionMenu from './BiddingProductsActionMenu'
 export type BiddingProductStatus = 'ended-unsold' | 'payment-requested' | 'fully-paid-sold' | 'scheduled'
 
 export interface BiddingProduct {
-  id: string
+  id: string // Auction ID
+  productId: string // Product ID (for deletion)
   name: string
   category: string
   startingPrice: string
@@ -19,9 +20,10 @@ interface BiddingProductsTableProps {
   products: BiddingProduct[]
   emptyState?: React.ReactNode
   onView?: (product: BiddingProduct) => void
+  onDelete?: (product: BiddingProduct) => void
 }
 
-export default function BiddingProductsTable({ products, emptyState, onView }: BiddingProductsTableProps) {
+export default function BiddingProductsTable({ products, emptyState, onView, onDelete }: BiddingProductsTableProps) {
   if (products.length === 0) {
     return (
       <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
@@ -98,6 +100,7 @@ export default function BiddingProductsTable({ products, emptyState, onView }: B
                   <TableCell align="center" className="py-2 whitespace-nowrap">
                     <BiddingProductsActionMenu
                       onView={() => onView?.(product)}
+                      onDelete={() => onDelete?.(product)}
                       align="right"
                     />
                   </TableCell>

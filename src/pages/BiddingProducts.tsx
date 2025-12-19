@@ -6,6 +6,7 @@ import SearchBar from '../components/ui/SearchBar'
 import BiddingProductsTable, { type BiddingProduct } from '../components/bidding/BiddingProductsTable'
 import { getProductDetailRoute } from '../utils/biddingProducts'
 import { auctionsApi } from '../services/auctions.api'
+import { productsApi } from '../services/products.api'
 import { mapAuctionToBiddingProduct } from '../utils/auctionMapper'
 
 // Unused - keeping for reference
@@ -265,6 +266,57 @@ export default function BiddingProducts() {
     navigate(route)
   }
 
+  const handleDeleteProduct = async (product: BiddingProduct) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(`Are you sure you want to delete "${product.name}"? This will delete the product and its auction. This action cannot be undone.`)
+    if (!confirmed) return
+
+    try {
+      // Delete the product (this will cascade delete the auction)
+      await productsApi.delete(product.productId)
+      alert('Product and auction deleted successfully!')
+      
+      // Refresh the auctions list
+      const fetchAuctions = async () => {
+        try {
+          setLoading(true)
+          setError(null)
+          
+          let stateFilter: string | undefined
+          if (statusFilter !== 'All Status') {
+            const statusMap: Record<string, string> = {
+              'Ended - Unsold': 'ended',
+              'Payment Requested': 'live',
+              'Fully Paid - Sold': 'settled',
+              'Scheduled': 'scheduled',
+            }
+            stateFilter = statusMap[statusFilter]
+          }
+
+          const response = await auctionsApi.getAll({
+            state: stateFilter,
+            page: currentPage,
+            limit: PAGE_SIZE,
+          })
+
+          setAuctions(response.data || [])
+          setTotalPages(response.pagination?.totalPages || 1)
+        } catch (err: any) {
+          console.error('Error fetching auctions:', err)
+          setError(err.response?.data?.message || 'Failed to fetch auctions')
+          setAuctions([])
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchAuctions()
+    } catch (error: any) {
+      console.error('Error deleting product:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete product'
+      alert(`Error: ${errorMessage}`)
+    }
+  }
+
   const handleSortChange = (value: string) => {
     setSortBy(value)
     setCurrentPage(1) // Reset to first page when sorting changes
@@ -359,7 +411,11 @@ export default function BiddingProducts() {
               </div>
             </div>
           ) : (
-            <BiddingProductsTable products={paginatedProducts} onView={handleViewProduct} />
+            <BiddingProductsTable 
+              products={paginatedProducts} 
+              onView={handleViewProduct}
+              onDelete={handleDeleteProduct}
+            />
           )}
 
           {/* Pagination */}

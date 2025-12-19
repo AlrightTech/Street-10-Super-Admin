@@ -12,29 +12,36 @@ export default function ScheduledDetailRoute() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  useEffect(() => {
-    const fetchAuction = async () => {
-      if (!id) {
-        setLoading(false)
-        return
-      }
-
-      try {
-        setLoading(true)
-        setError(null)
-        const auction = await auctionsApi.getById(id)
-        const biddingProduct = mapAuctionToBiddingProduct(auction)
-        setProduct(biddingProduct)
-      } catch (err: any) {
-        console.error('Error fetching auction:', err)
-        setError(err.response?.data?.message || 'Failed to load auction')
-      } finally {
-        setLoading(false)
-      }
+  const fetchAuction = async () => {
+    if (!id) {
+      setLoading(false)
+      return
     }
 
+    try {
+      setLoading(true)
+      setError(null)
+      const auction = await auctionsApi.getById(id)
+      const biddingProduct = mapAuctionToBiddingProduct(auction)
+      setProduct(biddingProduct)
+    } catch (err: any) {
+      console.error('Error fetching auction:', err)
+      setError(err.response?.data?.message || 'Failed to load auction')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchAuction()
   }, [id])
+
+  const handleAuctionStarted = async () => {
+    // Refresh the auction data after starting
+    if (id) {
+      await fetchAuction()
+    }
+  }
   
   if (loading) {
     return (
@@ -63,6 +70,6 @@ export default function ScheduledDetailRoute() {
     )
   }
   
-  return <ScheduledDetail product={product} onClose={() => navigate('/building-products')} />
+  return <ScheduledDetail product={product} onClose={() => navigate('/building-products')} onAuctionStarted={handleAuctionStarted} />
 }
 

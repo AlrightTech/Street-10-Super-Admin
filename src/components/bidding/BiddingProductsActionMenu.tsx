@@ -3,11 +3,12 @@ import { MoreVerticalIcon, EyeIcon } from '../icons/Icons'
 
 interface BiddingProductsActionMenuProps {
   onView?: () => void
+  onDelete?: () => void
   className?: string
   align?: 'left' | 'right'
 }
 
-export default function BiddingProductsActionMenu({ onView, className = '', align = 'right' }: BiddingProductsActionMenuProps) {
+export default function BiddingProductsActionMenu({ onView, onDelete, className = '', align = 'right' }: BiddingProductsActionMenuProps) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -40,8 +41,15 @@ export default function BiddingProductsActionMenu({ onView, className = '', alig
     }
   }, [open])
 
-  const handleView = () => {
+  const handleView = (e: React.MouseEvent) => {
+    e.stopPropagation()
     onView?.()
+    setOpen(false)
+  }
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDelete?.()
     setOpen(false)
   }
 
@@ -86,6 +94,16 @@ export default function BiddingProductsActionMenu({ onView, className = '', alig
               >
                 <EyeIcon className="h-4 w-4 text-gray-500" />
                 <span>View</span>
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                role="menuitem"
+                className="flex w-full cursor-pointer items-center px-4 py-2.5 text-sm font-medium text-red-600 transition-all duration-150 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:bg-red-50"
+              >
+                <span>Delete</span>
               </button>
             )}
           </div>

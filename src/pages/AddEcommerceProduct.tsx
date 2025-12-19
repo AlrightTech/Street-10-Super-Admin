@@ -1,37 +1,68 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UploadIcon } from '../components/icons/Icons'
 import SelectDropdown from '../components/ui/SelectDropdown'
+import { productsApi } from '../services/products.api'
+import { categoriesApi, type Category } from '../services/categories.api'
 
 export default function AddEcommerceProduct() {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     productTitle: '',
-    category: '',
+    categoryId: '',
     condition: '',
-    productDescription: 'A rare vintage Rolex Submariner watch from HFS in excellent condition. The timepiece features the iconic black dial with luminous markers, unidirectional rotating bezel, and automatic movement. The watch has been serviced and comes with original box and papers. A true collector\'s item with historical significance and timeless appeal.',
+    productDescription: '',
     metaTitle: '',
     metaDescription: '',
     productUrlSlug: '',
-    price: '0.0',
-    discountPrice: '0.0',
-    stockQuantity: '0.0',
+    price: '',
+    discountPrice: '',
+    stockQuantity: '1',
     stockStatus: '',
-    brand: '0.0',
-    weight: '0.0',
-    dimensions: '0.0',
+    brand: '',
+    weight: '',
+    dimensions: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [mediaFiles, setMediaFiles] = useState<File[]>([])
   const [documentFiles, setDocumentFiles] = useState<File[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(true)
 
-  const categoryOptions = [
-    { value: 'electronics', label: 'Electronics' },
-    { value: 'clothing', label: 'Clothing' },
-    { value: 'home-garden', label: 'Home & Garden' },
-    { value: 'sports', label: 'Sports' },
-    { value: 'books', label: 'Books' },
-  ]
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true)
+        const tree = await categoriesApi.getTree()
+        // Flatten tree to get all categories
+        const flattenCategories = (cats: Category[]): Category[] => {
+          const result: Category[] = []
+          cats.forEach(cat => {
+            result.push(cat)
+            if (cat.children && cat.children.length > 0) {
+              result.push(...flattenCategories(cat.children))
+            }
+          })
+          return result
+        }
+        setCategories(flattenCategories(tree).filter(cat => cat.isActive))
+      } catch (err: any) {
+        console.error('Error fetching categories:', err)
+        setError('Failed to load categories')
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+    fetchCategories()
+  }, [])
+
+  // Convert category tree to dropdown options
+  const categoryOptions = categories.map(cat => ({
+    value: cat.id,
+    label: cat.name
+  }))
 
   const conditionOptions = [
     { value: 'new', label: 'New' },
@@ -111,21 +142,104 @@ export default function AddEcommerceProduct() {
     setDocumentFiles(documentFiles.filter((_, i) => i !== index))
   }
 
+  // Convert files to data URLs (for now - in production, upload to S3/DO Spaces first)
+  const convertFileToDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setError(null)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      console.log('Product data:', formData)
-      console.log('Media files:', mediaFiles)
-      console.log('Document files:', documentFiles)
+      // Validation
+      if (!formData.productTitle.trim()) {
+        setError('Product title is required')
+        return
+      }
+      if (!formData.categoryId) {
+        setError('Category is required')
+        return
+      }
+      if (!formData.price || parseFloat(formData.price) <= 0) {
+        setError('Valid price is required')
+        return
+      }
+      if (!formData.stockQuantity || parseInt(formData.stockQuantity) < 0) {
+        setError('Valid stock quantity is required')
+        return
+      }
+
+      // Convert media files to URLs
+      const mediaUrls: string[] = []
+      for (const file of mediaFiles) {
+        try {
+          const dataUrl = await convertFileToDataURL(file)
+          mediaUrls.push(dataUrl)
+        } catch (err) {
+          console.error('Error converting file:', err)
+        }
+      }
+
+      // If no media files, use placeholder
+      if (mediaUrls.length === 0) {
+        mediaUrls.push('https://via.placeholder.com/400')
+      }
+
+      // Convert price to minor units (cents)
+      const priceMinor = Math.round(parseFloat(formData.price) * 100)
+      const stock = parseInt(formData.stockQuantity) || 1
+
+      // Create product attributes from form data
+      // Mark this as an e-commerce product so we can separate it from bidding products
+      const attributes = {
+        productType: 'ecommerce',
+        condition: formData.condition || undefined,
+        brand: formData.brand || undefined,
+        weight: formData.weight || undefined,
+        dimensions: formData.dimensions || undefined,
+        stockStatus: formData.stockStatus || undefined,
+        discountPrice: formData.discountPrice ? Math.round(parseFloat(formData.discountPrice) * 100) : undefined,
+        metaTitle: formData.metaTitle || undefined,
+        metaDescription: formData.metaDescription || undefined,
+        productUrlSlug: formData.productUrlSlug || undefined,
+      }
+
+      // Create product via API
+      const product = await productsApi.create({
+        title: formData.productTitle,
+        description: formData.productDescription || undefined,
+        priceMinor: priceMinor,
+        currency: 'QAR',
+        stock: stock,
+        status: 'active',
+        categoryIds: [formData.categoryId],
+        attributes: attributes,
+        mediaUrls: mediaUrls,
+      })
+
+      alert('Product created successfully!')
       
-      // Navigate back to products page
+      // Navigate back to e-commerce products page after success
       navigate('/ecommerce-products')
-    } catch (error) {
-      console.error('Error submitting product:', error)
+    } catch (err: any) {
+      console.error('Error creating product:', err)
+      console.error('Error response:', err.response?.data)
+      console.error('Error details:', {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        errors: err.response?.data?.errors,
+        data: err.response?.data
+      })
+      const errorMessage = err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || err.message || 'Failed to create product'
+      setError(errorMessage)
+      alert(`Error: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -164,16 +278,22 @@ export default function AddEcommerceProduct() {
             </div>
 
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-[#888888] mb-1.5">
+              <label htmlFor="categoryId" className="block text-sm font-medium text-[#888888] mb-1.5">
                 Category
               </label>
-              <SelectDropdown
-                value={formData.category}
-                options={categoryOptions}
-                onChange={(value) => handleSelectChange('category', value)}
-                placeholder="Select Category"
-                className="w-full"
-              />
+              {loadingCategories ? (
+                <div className="w-full rounded-lg bg-[#F3F5F6] px-4 py-2.5 text-sm text-gray-500">
+                  Loading categories...
+                </div>
+              ) : (
+                <SelectDropdown
+                  value={formData.categoryId}
+                  options={categoryOptions}
+                  onChange={(value) => handleSelectChange('categoryId', value)}
+                  placeholder="Select Category"
+                  className="w-full"
+                />
+              )}
             </div>
 
             <div>
@@ -459,18 +579,26 @@ export default function AddEcommerceProduct() {
           </div>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex justify-end gap-3">
           <button
             type="button"
             onClick={handleCancel}
-            className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+            disabled={isSubmitting}
+            className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || loadingCategories}
             className="px-6 py-2.5 text-sm font-medium text-white bg-[#F7931E] rounded-lg hover:bg-[#E8840D] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isSubmitting ? 'Publishing...' : 'Publish Product'}
