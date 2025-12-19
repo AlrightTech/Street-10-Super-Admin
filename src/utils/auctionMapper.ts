@@ -65,7 +65,7 @@ export const mapAuctionToBiddingProduct = (auction: Auction): BiddingProduct => 
   const status = mapAuctionStateToStatus(auction.state)
   
   // Get category from product categories or default
-  const category = auction.product.categories?.[0]?.category?.name || 'Uncategorized'
+  const category = (auction.product as any).categories?.[0]?.category?.name || 'Uncategorized'
   
   return {
     id: auction.id, // Auction ID

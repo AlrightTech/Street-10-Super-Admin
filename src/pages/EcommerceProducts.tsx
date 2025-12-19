@@ -7,7 +7,8 @@ import AdminOrdersTable, { type AdminOrder, type AdminOrderStatus } from '../com
 import OrdersFilterTabs from '../components/orders/OrdersFilterTabs'
 import { productsApi, type Product } from '../services/products.api'
 
-// Sample data for E-commerce Products
+// Sample data for E-commerce Products (unused, kept for reference)
+/*
 const ECOMMERCE_PRODUCTS_DATA: EcommerceProduct[] = [
   {
     id: '1',
@@ -299,6 +300,7 @@ const ECOMMERCE_PRODUCTS_DATA: EcommerceProduct[] = [
     imageUrl: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=100&h=100&fit=crop',
   },
 ]
+*/
 
 // Sample data for Admin Orders
 const ADMIN_ORDERS_DATA: AdminOrder[] = [

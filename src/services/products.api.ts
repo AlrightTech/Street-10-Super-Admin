@@ -71,9 +71,10 @@ export const productsApi = {
     });
     // Backend returns: { success: true, data: [...products], pagination: {...} }
     // Frontend expects: { data: [...products], pagination: {...} }
+    const apiResponse = response.data as any;
     return {
-      data: response.data.data || [],
-      pagination: response.data.pagination || {
+      data: apiResponse.data || [],
+      pagination: apiResponse.pagination || {
         page: 1,
         limit: 20,
         total: 0,

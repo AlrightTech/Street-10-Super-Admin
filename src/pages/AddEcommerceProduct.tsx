@@ -212,7 +212,7 @@ export default function AddEcommerceProduct() {
       }
 
       // Create product via API
-      const product = await productsApi.create({
+      await productsApi.create({
         title: formData.productTitle,
         description: formData.productDescription || undefined,
         priceMinor: priceMinor,

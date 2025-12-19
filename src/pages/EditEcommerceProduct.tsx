@@ -194,14 +194,15 @@ export default function EditEcommerceProduct() {
   }
 
   // Convert files to data URLs (for now - in production, upload to S3/DO Spaces first)
-  const convertFileToDataURL = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  }
+  // Unused function - kept for reference
+  // const convertFileToDataURL = (file: File): Promise<string> => {
+  //   return new Promise((resolve, reject) => {
+  //     const reader = new FileReader()
+  //     reader.onload = () => resolve(reader.result as string)
+  //     reader.onerror = reject
+  //     reader.readAsDataURL(file)
+  //   })
+  // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

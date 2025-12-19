@@ -196,7 +196,7 @@ export default function AddBiddingProduct() {
       })
 
       // Step 2: Create auction
-      const auction = await auctionsApi.create({
+      await auctionsApi.create({
         productId: product.id,
         type: 'english', // Default to English auction
         startAt: startDateTime.toISOString(),

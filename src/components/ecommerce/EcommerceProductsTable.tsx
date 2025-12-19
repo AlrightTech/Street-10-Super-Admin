@@ -21,7 +21,7 @@ interface EcommerceProductsTableProps {
 
 export default function EcommerceProductsTable({ products, emptyState, onProductDeleted }: EcommerceProductsTableProps) {
   const navigate = useNavigate()
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [_deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleView = (productId: string) => {
     navigate(`/ecommerce-products/${productId}`)

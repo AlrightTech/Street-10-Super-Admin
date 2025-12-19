@@ -75,7 +75,7 @@ export default function EditBiddingProduct() {
         
         setFormData({
           productTitle: product.title,
-          categoryId: product.categories?.[0]?.category?.id || '',
+          categoryId: (product as any).categories?.[0]?.category?.id || '',
           description: product.description || '',
           startingPrice: (parseFloat(auctionData.reservePrice || auctionData.depositAmount) / 100).toString(),
           reservePrice: auctionData.reservePrice ? (parseFloat(auctionData.reservePrice) / 100).toString() : '',
@@ -162,9 +162,9 @@ export default function EditBiddingProduct() {
 
       // Convert prices to minor units
       const startingPriceMinor = Math.round(parseFloat(formData.startingPrice) * 100)
-      const reservePriceMinor = formData.reservePrice ? Math.round(parseFloat(formData.reservePrice) * 100) : undefined
-      const buyNowPriceMinor = formData.buyNowPrice ? Math.round(parseFloat(formData.buyNowPrice) * 100) : undefined
-      const minIncrement = formData.minIncrement ? Math.round(parseFloat(formData.minIncrement) * 100) : Math.round(startingPriceMinor * 0.1)
+      // const reservePriceMinor = formData.reservePrice ? Math.round(parseFloat(formData.reservePrice) * 100) : undefined
+      // const buyNowPriceMinor = formData.buyNowPrice ? Math.round(parseFloat(formData.buyNowPrice) * 100) : undefined
+      // const minIncrement = formData.minIncrement ? Math.round(parseFloat(formData.minIncrement) * 100) : Math.round(startingPriceMinor * 0.1)
 
       // Update product
       await productsApi.update(auction.productId, {
@@ -192,6 +192,7 @@ export default function EditBiddingProduct() {
       // Navigate back to the product detail page
       const route = getProductDetailRoute({
         id: id,
+        productId: auction.productId,
         name: formData.productTitle,
         category: categories.find(c => c.id === formData.categoryId)?.name || '',
         startingPrice: formData.startingPrice,
@@ -215,6 +216,7 @@ export default function EditBiddingProduct() {
     if (id && auction) {
       const route = getProductDetailRoute({
         id: id,
+        productId: auction.productId,
         name: formData.productTitle,
         category: categories.find(c => c.id === formData.categoryId)?.name || '',
         startingPrice: formData.startingPrice,

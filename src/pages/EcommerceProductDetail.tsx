@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
 import { EyeIcon, XIcon, CalendarIcon } from '../components/icons/Icons'
 import SelectDropdown from '../components/ui/SelectDropdown'
-import { productsApi, type Product } from '../services/products.api'
+import { productsApi } from '../services/products.api'
 
 interface EcommerceProductDetail {
   id: string

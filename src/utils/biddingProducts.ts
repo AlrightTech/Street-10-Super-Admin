@@ -4,6 +4,7 @@ import type { BiddingProduct } from '../components/bidding/BiddingProductsTable'
 export const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
   {
     id: '1',
+    productId: '1',
     name: 'Vintage Rolex Submariner Watch',
     category: 'Luxury Goods',
     startingPrice: '$5,000',
@@ -15,6 +16,7 @@ export const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
   },
   {
     id: '2',
+    productId: '2',
     name: 'Rare Baseball Card Collection',
     category: 'Collectibles',
     startingPrice: '$200',
@@ -26,6 +28,7 @@ export const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
   },
   {
     id: '3',
+    productId: '3',
     name: 'Original Oil Painting Landscape',
     category: 'Art',
     startingPrice: '$800',
@@ -37,6 +40,7 @@ export const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
   },
   {
     id: '4',
+    productId: '4',
     name: 'Antique Persian Rug',
     category: 'Home Decor',
     startingPrice: '$1,200',
@@ -48,6 +52,7 @@ export const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
   },
   {
     id: '5',
+    productId: '5',
     name: 'Vintage Camera Collection',
     category: 'Collectibles',
     startingPrice: '$500',
@@ -59,6 +64,7 @@ export const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
   },
   {
     id: '6',
+    productId: '6',
     name: 'Designer Handbag Collection',
     category: 'Luxury Goods',
     startingPrice: '$2,000',
@@ -70,6 +76,7 @@ export const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
   },
   {
     id: '7',
+    productId: '7',
     name: 'Rare Coin Collection',
     category: 'Collectibles',
     startingPrice: '$1,500',
@@ -81,6 +88,7 @@ export const BIDDING_PRODUCTS_DATA: BiddingProduct[] = [
   },
   {
     id: '8',
+    productId: '8',
     name: 'Modern Art Sculpture',
     category: 'Art',
     startingPrice: '$3,000',
