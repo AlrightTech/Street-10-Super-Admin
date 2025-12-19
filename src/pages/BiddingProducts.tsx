@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CalendarIcon } from '../components/icons/Icons'
 import FilterDropdown from '../components/finance/FilterDropdown'
 import SearchBar from '../components/ui/SearchBar'
 import BiddingProductsTable, { type BiddingProduct } from '../components/bidding/BiddingProductsTable'
-import { BIDDING_PRODUCTS_DATA, getProductDetailRoute } from '../utils/biddingProducts'
+import { getProductDetailRoute } from '../utils/biddingProducts'
+import { auctionsApi } from '../services/auctions.api'
+import { mapAuctionToBiddingProduct } from '../utils/auctionMapper'
 
 // Unused - keeping for reference
 /*
@@ -100,7 +102,7 @@ const BIDDING_PRODUCTS_DATA_OLD: BiddingProduct[] = [
 ]
 */
 
-const PAGE_SIZE = 4
+const PAGE_SIZE = 20
 
 /**
  * Bidding Products page component
@@ -111,6 +113,49 @@ export default function BiddingProducts() {
   const [sortBy, setSortBy] = useState('Sort By Date')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [currentPage, setCurrentPage] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [auctions, setAuctions] = useState<any[]>([])
+  const [totalPages, setTotalPages] = useState(1)
+
+  // Fetch auctions from API
+  useEffect(() => {
+    const fetchAuctions = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // Map frontend status filter to backend state
+        let stateFilter: string | undefined
+        if (statusFilter !== 'All Status') {
+          const statusMap: Record<string, string> = {
+            'Ended - Unsold': 'ended',
+            'Payment Requested': 'live',
+            'Fully Paid - Sold': 'settled',
+            'Scheduled': 'scheduled',
+          }
+          stateFilter = statusMap[statusFilter]
+        }
+
+        const response = await auctionsApi.getAll({
+          state: stateFilter,
+          page: currentPage,
+          limit: PAGE_SIZE,
+        })
+
+        setAuctions(response.data || [])
+        setTotalPages(response.pagination?.totalPages || 1)
+      } catch (err: any) {
+        console.error('Error fetching auctions:', err)
+        setError(err.response?.data?.message || 'Failed to fetch auctions')
+        setAuctions([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAuctions()
+  }, [currentPage, statusFilter])
 
   // Parse date from timeLeft string (e.g., "Ended 15/02/2024")
   const parseDate = (timeLeft: string): Date => {
@@ -123,7 +168,8 @@ export default function BiddingProducts() {
   }
 
   const filteredProducts = useMemo(() => {
-    let result = [...BIDDING_PRODUCTS_DATA]
+    // Convert auctions to bidding products
+    let result = auctions.map(mapAuctionToBiddingProduct)
 
     // Filter by search value
     if (searchValue.trim()) {
@@ -161,18 +207,18 @@ export default function BiddingProducts() {
     }
 
     return result
-  }, [searchValue, statusFilter, sortBy])
-
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))
+  }, [auctions, searchValue, sortBy])
 
   const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return filteredProducts.slice(start, start + PAGE_SIZE)
-  }, [filteredProducts, currentPage])
+    // Products are already paginated from API, but we apply search/sort client-side
+    return filteredProducts
+  }, [filteredProducts])
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return
     setCurrentPage(page)
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const getPageNumbers = () => {
@@ -293,7 +339,28 @@ export default function BiddingProducts() {
 
         {/* Products Table */}
         <div className="rounded-xl bg-white shadow-sm border border-gray-200 overflow-hidden">
-          <BiddingProductsTable products={paginatedProducts} onView={handleViewProduct} />
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#F7941D] border-r-transparent"></div>
+                <p className="mt-4 text-sm text-gray-600">Loading auctions...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <p className="text-sm font-medium text-red-600">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D]"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          ) : (
+            <BiddingProductsTable products={paginatedProducts} onView={handleViewProduct} />
+          )}
 
           {/* Pagination */}
           <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
