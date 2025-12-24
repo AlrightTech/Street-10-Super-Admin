@@ -1,7 +1,6 @@
-import { Fragment, type ReactNode } from 'react'
+import { Fragment, type ReactNode, useState } from 'react'
 import type { CategoryRecord } from '../../pages/Categories'
 import { EditIcon, TrashIcon, LaptopIcon, SmartphoneIcon, ShirtIcon, UserIcon, HomeIcon } from '../icons/Icons'
-import { LinkIcon } from '../icons/Icons'
 
 interface CategoriesTableProps {
   categories: CategoryRecord[]
@@ -59,6 +58,30 @@ function CategoryIcon({ iconName }: { iconName: string }) {
   return <IconComponent className={`h-5 w-5 ${colorMap[iconName] || 'text-gray-600'}`} />
 }
 
+/**
+ * Category icon display component that handles both image URLs and icon names
+ */
+function CategoryIconDisplay({ icon, categoryName }: { icon: string; categoryName: string }) {
+  const [imageError, setImageError] = useState(false)
+
+  // Check if icon is an image URL (data URL or HTTP URL)
+  const isImageUrl = icon && (icon.startsWith('data:') || icon.startsWith('http'))
+
+  if (isImageUrl && !imageError) {
+    return (
+      <img
+        src={icon}
+        alt={categoryName}
+        className="w-5 h-5 object-contain flex-shrink-0"
+        onError={() => setImageError(true)}
+      />
+    )
+  }
+
+  // Fallback to icon component
+  return <CategoryIcon iconName={icon || 'home'} />
+}
+
 export default function CategoriesTable({
   categories,
   onEdit,
@@ -93,7 +116,6 @@ export default function CategoriesTable({
                   <tr>
                     <TableHeader>ID</TableHeader>
                     <TableHeader>Category Name</TableHeader>
-                    <TableHeader>Parent Category</TableHeader>
                     <TableHeader>Status</TableHeader>
                     <TableHeader align="center">Actions</TableHeader>
                   </tr>
@@ -104,21 +126,11 @@ export default function CategoriesTable({
                       <TableCell>{String(startIndex + idx + 1).padStart(3, '0')}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <CategoryIcon iconName={category.icon} />
+                          <CategoryIconDisplay icon={category.icon} categoryName={category.name} />
                           <span className="text-gray-700 text-xs sm:text-sm font-medium truncate max-w-[150px] sm:max-w-none">
                             {category.name}
                           </span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {category.parentCategory ? (
-                          <span className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs sm:text-sm cursor-pointer truncate max-w-[120px] sm:max-w-none">
-                            <LinkIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                            <span className="truncate">{category.parentCategory}</span>
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-xs sm:text-sm">-</span>
-                        )}
                       </TableCell>
                       <TableCell>
                         <StatusToggle checked={category.status === 'active'} onChange={() => onToggleStatus?.(category)} />

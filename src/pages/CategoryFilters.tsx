@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CategoriesFilterTabs from '../components/categories/CategoriesFilterTabs'
 import { PlusIcon } from '../components/icons/Icons'
+import { filtersApi, type Filter as BackendFilter } from '../services/filters.api'
+import { categoriesApi } from '../services/categories.api'
 
 const TAB_OPTIONS: { key: string; label: string }[] = [
   { key: 'categories', label: 'Categories' },
@@ -19,92 +21,88 @@ export interface Filter {
   status: 'active' | 'inactive'
 }
 
-// Mock filter data
-const INITIAL_FILTERS: Filter[] = [
-  {
-    id: 'filter-001',
-    filterName: 'Mileage',
-    inputType: 'number',
-    options: [],
-    description: '',
-    category: 'Cars',
-    status: 'active',
-  },
-  {
-    id: 'filter-002',
-    filterName: 'Sun Roof',
-    inputType: 'radio',
-    options: ['Yes', 'No'],
-    description: '',
-    category: 'Cars',
-    status: 'active',
-  },
-  {
-    id: 'filter-003',
-    filterName: 'Cylinders',
-    inputType: 'radio',
-    options: ['4', '6', '8'],
-    description: '',
-    category: 'Cars',
-    status: 'active',
-  },
-]
-
 export default function CategoryFilters() {
   const navigate = useNavigate()
-  const [filters, setFilters] = useState<Filter[]>(INITIAL_FILTERS)
-  const [previewValues, setPreviewValues] = useState<Record<string, string>>({
-    'filter-001': '25000',
-    'filter-002': 'No',
-    'filter-003': '4',
+  const [filters, setFilters] = useState<Filter[]>([])
+  const [previewValues, setPreviewValues] = useState<Record<string, string>>({})
+  const [assignedFilterIds, setAssignedFilterIds] = useState<Set<string>>(new Set())
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const mapBackendFilter = (f: BackendFilter): Filter => ({
+    id: f.id,
+    filterName: f.i18n?.en?.label || f.key,
+    inputType:
+      f.type === 'number'
+        ? 'number'
+        : f.type === 'multi-select'
+        ? 'checkbox'
+        : f.type === 'boolean' || f.type === 'select'
+        ? 'radio'
+        : 'text',
+    options: Array.isArray(f.options) ? f.options : [],
+    description: f.i18n?.en?.placeholder,
+    category: undefined,
+    status: 'active',
   })
 
-  // Load filters from localStorage
+  // Load filters from API and check which ones are assigned to categories
   useEffect(() => {
-    const loadFilters = () => {
-      const saved = localStorage.getItem('categoryFilters')
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setFilters(parsed)
+    const loadFilters = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const backendFilters = await filtersApi.getAll()
+        const mapped = backendFilters.map(mapBackendFilter)
+        setFilters(mapped)
+
+        const previews: Record<string, string> = {}
+        mapped.forEach((f) => {
+          if (f.inputType === 'number') {
+            previews[f.id] = ''
+          } else if (f.inputType === 'radio' && f.options.length > 0) {
+            previews[f.id] = f.options[0]
+          } else {
+            previews[f.id] = ''
           }
-        } catch (error) {
-          console.error('Failed to parse saved filters:', error)
+        })
+        setPreviewValues(previews)
+
+        // Check which filters are assigned to categories/subcategories
+        const assignedIds = new Set<string>()
+        try {
+          const { data: allCategories } = await categoriesApi.getAll({
+            page: 1,
+            limit: 1000,
+          })
+
+          // Check each category to see which filters are assigned
+          for (const category of allCategories) {
+            try {
+              const categoryFilters = await categoriesApi.getCategoryFilters(category.id)
+              categoryFilters.forEach((cf: any) => {
+                assignedIds.add(cf.filterId)
+              })
+            } catch (err) {
+              // Skip if we can't fetch filters for this category
+              console.warn(`Failed to fetch filters for category ${category.id}:`, err)
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to load category assignments:', err)
         }
-      } else {
-        localStorage.setItem('categoryFilters', JSON.stringify(INITIAL_FILTERS))
-        setFilters(INITIAL_FILTERS)
+
+        setAssignedFilterIds(assignedIds)
+      } catch (err: any) {
+        console.error('Failed to load filters:', err)
+        setError(err.response?.data?.message || 'Failed to load filters')
+      } finally {
+        setIsLoading(false)
       }
     }
 
     loadFilters()
-
-    // Listen for updates
-    const handleUpdate = () => {
-      loadFilters()
-    }
-
-    window.addEventListener('categoryFiltersUpdated', handleUpdate)
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'categoryFilters') {
-        loadFilters()
-      }
-    })
-    window.addEventListener('focus', loadFilters)
-
-    return () => {
-      window.removeEventListener('categoryFiltersUpdated', handleUpdate)
-      window.removeEventListener('focus', loadFilters)
-    }
   }, [])
-
-  // Save filters to localStorage whenever they change
-  useEffect(() => {
-    if (filters.length > 0) {
-      localStorage.setItem('categoryFilters', JSON.stringify(filters))
-    }
-  }, [filters])
 
   const handleTabChange = (tabKey: string) => {
     if (tabKey === 'categories') {
@@ -121,14 +119,28 @@ export default function CategoryFilters() {
     navigate(`/categories/edit-filter/${filter.id}`)
   }
 
-  const handleDelete = (filterId: string) => {
-    setFilters((prev) => prev.filter((f) => f.id !== filterId))
-    // Remove preview value if exists
-    setPreviewValues((prev) => {
-      const updated = { ...prev }
-      delete updated[filterId]
-      return updated
-    })
+  const handleDelete = async (filterId: string) => {
+    if (!window.confirm('Are you sure you want to delete this filter?')) {
+      return
+    }
+
+    try {
+      await filtersApi.delete(filterId)
+      setFilters((prev) => prev.filter((f) => f.id !== filterId))
+      setPreviewValues((prev) => {
+        const updated = { ...prev }
+        delete updated[filterId]
+        return updated
+      })
+      setAssignedFilterIds((prev) => {
+        const updated = new Set(prev)
+        updated.delete(filterId)
+        return updated
+      })
+    } catch (err: any) {
+      console.error('Failed to delete filter:', err)
+      // Error is handled by disabling the button, so we don't show alert
+    }
   }
 
   const handleAddNewFilter = () => {
@@ -192,8 +204,18 @@ export default function CategoryFilters() {
           {/* Existing Filters Section */}
           <div className="mb-8">
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Existing Filters</h2>
-            
-            {filters.length === 0 ? (
+
+            {error && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="flex min-h-[200px] flex-col items-center justify-center text-sm text-gray-600">
+                Loading filters...
+              </div>
+            ) : filters.length === 0 ? (
               <div className="flex min-h-[200px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
                 <p className="text-base font-semibold text-gray-800">No filters available</p>
                 <p className="mt-1 max-w-sm text-sm text-gray-500">Add a new filter to get started.</p>
@@ -244,7 +266,17 @@ export default function CategoryFilters() {
                             <button
                               type="button"
                               onClick={() => handleDelete(filter.id)}
-                              className="text-red-600 hover:text-red-800 transition-colors cursor-pointer font-medium"
+                              disabled={assignedFilterIds.has(filter.id)}
+                              className={`transition-colors font-medium ${
+                                assignedFilterIds.has(filter.id)
+                                  ? 'text-gray-400 cursor-not-allowed opacity-50'
+                                  : 'text-red-600 hover:text-red-800 cursor-pointer'
+                              }`}
+                              title={
+                                assignedFilterIds.has(filter.id)
+                                  ? 'Cannot delete filter that is assigned to categories or subcategories'
+                                  : 'Delete filter'
+                              }
                             >
                               Delete
                             </button>

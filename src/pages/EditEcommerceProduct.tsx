@@ -27,6 +27,7 @@ export default function EditEcommerceProduct() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>([])
   const [documentFiles, setDocumentFiles] = useState<string[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -100,7 +101,6 @@ export default function EditEcommerceProduct() {
       } catch (err: any) {
         console.error('Error loading product:', err)
         setError(err.response?.data?.message || 'Failed to load product data')
-        alert('Failed to load product data. Please try again.')
       } finally {
         setLoading(false)
       }
@@ -140,7 +140,7 @@ export default function EditEcommerceProduct() {
         const fileUrls = newFiles.map(file => URL.createObjectURL(file))
         setMediaFiles([...mediaFiles, ...fileUrls.slice(0, remainingSlots)])
       } else {
-        alert('Maximum 10 images allowed')
+        setError('Maximum 10 images allowed')
       }
     }
   }
@@ -170,7 +170,7 @@ export default function EditEcommerceProduct() {
         const fileUrls = imageFiles.map(file => URL.createObjectURL(file))
         setMediaFiles([...mediaFiles, ...fileUrls.slice(0, remainingSlots)])
       } else {
-        alert('Maximum 10 images allowed')
+        setError('Maximum 10 images allowed')
       }
     } else {
       const docFiles = files.filter(file => 
@@ -210,6 +210,7 @@ export default function EditEcommerceProduct() {
     
     setIsSubmitting(true)
     setError(null)
+    setSuccessMessage(null)
 
     try {
       // Validation
@@ -264,16 +265,17 @@ export default function EditEcommerceProduct() {
         mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
       })
 
-      alert('Product updated successfully!')
-      
-      // Navigate back to product detail page
-      navigate(`/ecommerce-products/${productId}`)
+      setSuccessMessage('Product updated successfully!')
+
+      // Navigate back to product detail page after a short delay
+      setTimeout(() => {
+        navigate(`/ecommerce-products/${productId}`)
+      }, 800)
     } catch (err: any) {
       console.error('Error updating product:', err)
       console.error('Error response:', err.response?.data)
       const errorMessage = err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || err.message || 'Failed to update product'
       setError(errorMessage)
-      alert(`Error: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -305,6 +307,13 @@ export default function EditEcommerceProduct() {
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {successMessage && !error && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <p className="text-sm text-green-800">{successMessage}</p>
         </div>
       )}
 

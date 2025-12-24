@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PencilIcon, TrashIcon } from '../components/icons/Icons'
+import { mainControlApi, type LogosData, type ContactData, type TermsCondition } from '../services/main-control.api'
 
 /**
  * Main Control page component
@@ -34,31 +35,27 @@ interface TermsCondition {
 
 export default function MainControl() {
   const [activeFilter, setActiveFilter] = useState('logs-control')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  // Logos state
+  const [logos, setLogos] = useState<LogosData>({
+    websiteLogo: null,
+    appLogo: null,
+    favicon: null,
+  })
 
   // Contact Information state
-  const [phoneNumbers, setPhoneNumbers] = useState<ContactDetail[]>([
-    { id: '1', label: 'Phone Number', value: '333-9655-99889' },
-    { id: '2', label: '2 Phone Number', value: '333-9655-99889' },
-  ])
+  const [phoneNumbers, setPhoneNumbers] = useState<ContactDetail[]>([])
   const [emailAddress, setEmailAddress] = useState<ContactDetail>({
     id: 'email',
     label: 'Email Address',
-    value: 'Solo.street10@gmail.com',
+    value: '',
   })
-  const [footerOneFeatures, setFooterOneFeatures] = useState<FooterFeature[]>([
-    { id: '1', label: 'Contact Us', value: 'Contact Us' },
-    { id: '2', label: 'Help Center', value: 'Help Center' },
-  ])
-  const [footerTwoFeatures, setFooterTwoFeatures] = useState<FooterFeature[]>([
-    { id: '1', label: 'Bidding', value: 'Bidding' },
-    { id: '2', label: 'E-Commerce', value: 'E-Commerce' },
-    { id: '3', label: 'Vendors', value: 'Vendors' },
-    { id: '4', label: 'Privacy policy link', value: 'dummy' },
-  ])
-  const [socialMediaLinks, setSocialMediaLinks] = useState<SocialMediaLink[]>([
-    { id: '1', name: 'Facebook', icon: 'facebook', url: 'https://www.facebook.com/' },
-    { id: '2', name: 'LinkedIn', icon: 'linkedin', url: 'https://www.linkedin.com/' },
-  ])
+  const [footerOneFeatures, setFooterOneFeatures] = useState<FooterFeature[]>([])
+  const [footerTwoFeatures, setFooterTwoFeatures] = useState<FooterFeature[]>([])
+  const [socialMediaLinks, setSocialMediaLinks] = useState<SocialMediaLink[]>([])
 
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -215,6 +212,219 @@ export default function MainControl() {
   ])
   const [isEditingAbout, setIsEditingAbout] = useState(false)
 
+  // Load all settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        const allSettings = await mainControlApi.getAll()
+
+        // Set logos
+        if (allSettings.logos) {
+          setLogos(allSettings.logos)
+        }
+
+        // Set contact information
+        if (allSettings.contact) {
+          setPhoneNumbers(allSettings.contact.phoneNumbers || [])
+          setEmailAddress(allSettings.contact.email || { id: 'email', label: 'Email Address', value: '' })
+          setFooterOneFeatures(allSettings.contact.footerOneFeatures || [])
+          setFooterTwoFeatures(allSettings.contact.footerTwoFeatures || [])
+          setSocialMediaLinks(allSettings.contact.socialMediaLinks || [])
+        }
+
+        // Set terms & conditions
+        if (allSettings.terms?.sections) {
+          setTermsConditions(allSettings.terms.sections)
+        }
+
+        // Set privacy policy
+        if (allSettings.privacy?.sections) {
+          setPrivacyPolicy(allSettings.privacy.sections)
+        }
+
+        // Set help center
+        if (allSettings.help?.sections) {
+          setHelpCenter(allSettings.help.sections)
+        }
+
+        // Set about us
+        if (allSettings.about?.sections) {
+          setAboutUs(allSettings.about.sections)
+        }
+      } catch (err: any) {
+        console.error('Failed to load settings:', err)
+        setError(err.response?.data?.message || 'Failed to load settings')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadSettings()
+  }, [])
+
+  // Clear messages after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [successMessage])
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [error])
+
+  // File upload handler for logos
+  const handleLogoUpload = async (type: 'website' | 'app' | 'favicon', file: File) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      // Convert file to base64 or data URL
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        try {
+          const dataUrl = reader.result as string
+          // For now, we'll use the data URL directly
+          // In production, you'd upload to a cloud storage service and get a URL
+          const updated = await mainControlApi.uploadLogo(type, dataUrl)
+          setLogos(updated)
+          setSuccessMessage(`${type === 'website' ? 'Website' : type === 'app' ? 'App' : 'Favicon'} logo uploaded successfully`)
+        } catch (err: any) {
+          console.error('Failed to upload logo:', err)
+          setError(err.response?.data?.message || 'Failed to upload logo')
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      reader.onerror = () => {
+        setError('Failed to read file')
+        setIsLoading(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (err: any) {
+      console.error('Failed to upload logo:', err)
+      setError(err.response?.data?.message || 'Failed to upload logo')
+      setIsLoading(false)
+    }
+  }
+
+  // Save logos handler
+  const handleSaveLogos = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const updated = await mainControlApi.updateLogos(logos)
+      setLogos(updated)
+      setSuccessMessage('Logos updated successfully')
+    } catch (err: any) {
+      console.error('Failed to save logos:', err)
+      setError(err.response?.data?.message || 'Failed to save logos')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Save contact information handler
+  const handleSaveContact = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const contact: ContactData = {
+        phoneNumbers,
+        email: emailAddress,
+        footerOneFeatures,
+        footerTwoFeatures,
+        socialMediaLinks,
+      }
+      const updated = await mainControlApi.updateContact(contact)
+      setPhoneNumbers(updated.phoneNumbers || [])
+      setEmailAddress(updated.email || { id: 'email', label: 'Email Address', value: '' })
+      setFooterOneFeatures(updated.footerOneFeatures || [])
+      setFooterTwoFeatures(updated.footerTwoFeatures || [])
+      setSocialMediaLinks(updated.socialMediaLinks || [])
+      setSuccessMessage('Contact information updated successfully')
+    } catch (err: any) {
+      console.error('Failed to save contact:', err)
+      setError(err.response?.data?.message || 'Failed to save contact information')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Save terms & conditions handler
+  const handleSaveTerms = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const updated = await mainControlApi.updateTerms(termsConditions)
+      setTermsConditions(updated.sections || [])
+      setSuccessMessage('Terms & Conditions updated successfully')
+      setIsEditingTerms(false)
+    } catch (err: any) {
+      console.error('Failed to save terms:', err)
+      setError(err.response?.data?.message || 'Failed to save terms & conditions')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Save privacy policy handler
+  const handleSavePrivacy = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const updated = await mainControlApi.updatePrivacy(privacyPolicy)
+      setPrivacyPolicy(updated.sections || [])
+      setSuccessMessage('Privacy Policy updated successfully')
+      setIsEditingPrivacy(false)
+    } catch (err: any) {
+      console.error('Failed to save privacy:', err)
+      setError(err.response?.data?.message || 'Failed to save privacy policy')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Save help center handler
+  const handleSaveHelp = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const updated = await mainControlApi.updateHelp(helpCenter)
+      setHelpCenter(updated.sections || [])
+      setSuccessMessage('Help Center updated successfully')
+      setIsEditingHelp(false)
+    } catch (err: any) {
+      console.error('Failed to save help:', err)
+      setError(err.response?.data?.message || 'Failed to save help center')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Save about us handler
+  const handleSaveAbout = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const updated = await mainControlApi.updateAbout(aboutUs)
+      setAboutUs(updated.sections || [])
+      setSuccessMessage('About Us updated successfully')
+      setIsEditingAbout(false)
+    } catch (err: any) {
+      console.error('Failed to save about:', err)
+      setError(err.response?.data?.message || 'Failed to save about us')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const filters = [
     { id: 'logs-control', label: 'Logos Control' },
     { id: 'contact-information', label: 'Contact Information' },
@@ -248,34 +458,57 @@ export default function MainControl() {
               <div className="mb-3 sm:mb-4">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Preview</label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 sm:p-4 bg-gray-50 flex items-center justify-center" style={{ minHeight: '100px' }}>
-                  <img 
-                    src="/Images/Street10-logo.png" 
-                    alt="Website Logo" 
-                    className="max-h-16 sm:max-h-20 object-contain"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement
-                      target.style.display = 'none'
-                    }}
-                  />
+                  {logos.websiteLogo ? (
+                    <img 
+                      src={logos.websiteLogo} 
+                      alt="Website Logo" 
+                      className="max-h-16 sm:max-h-20 object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <p className="text-xs text-gray-400">No logo uploaded</p>
+                  )}
                 </div>
               </div>
 
               {/* Change Logo Section */}
               <div className="mb-3 sm:mb-4">
-                <label className="block text-xs sm:text-sm font-medium
-                 text-gray-700 mb-1.5 sm:mb-2">Change logo</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors" style={{ minHeight: '120px' }}>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Change logo</label>
+                <input
+                  type="file"
+                  id="website-logo-upload"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      handleLogoUpload('website', file)
+                    }
+                  }}
+                />
+                <label
+                  htmlFor="website-logo-upload"
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
+                  style={{ minHeight: '120px' }}
+                >
                   <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
-                </div>
+                </label>
               </div>
 
               {/* Save Button */}
               <div className="flex justify-center sm:justify-end">
-                <button className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F7931E] text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer">
-                  Save Changes
+                <button
+                  onClick={handleSaveLogos}
+                  disabled={isLoading}
+                  className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F7931E] text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -298,33 +531,57 @@ export default function MainControl() {
               <div className="mb-3 sm:mb-4">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Preview</label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 sm:p-4 bg-gray-50 flex items-center justify-center" style={{ minHeight: '100px' }}>
-                  <img 
-                    src="/Images/Street10-logo.png" 
-                    alt="App Logo" 
-                    className="max-h-16 sm:max-h-20 object-contain"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement
-                      target.style.display = 'none'
-                    }}
-                  />
+                  {logos.appLogo ? (
+                    <img 
+                      src={logos.appLogo} 
+                      alt="App Logo" 
+                      className="max-h-16 sm:max-h-20 object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <p className="text-xs text-gray-400">No logo uploaded</p>
+                  )}
                 </div>
               </div>
 
               {/* Change Logo Section */}
               <div className="mb-3 sm:mb-4">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Change logo</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors" style={{ minHeight: '120px' }}>
+                <input
+                  type="file"
+                  id="app-logo-upload"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      handleLogoUpload('app', file)
+                    }
+                  }}
+                />
+                <label
+                  htmlFor="app-logo-upload"
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
+                  style={{ minHeight: '120px' }}
+                >
                   <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
-                </div>
+                </label>
               </div>
 
               {/* Save Button */}
               <div className="flex justify-center sm:justify-end">
-                <button className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F7931E] text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer">
-                  Save Changes
+                <button
+                  onClick={handleSaveLogos}
+                  disabled={isLoading}
+                  className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F7931E] text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -347,33 +604,57 @@ export default function MainControl() {
               <div className="mb-3 sm:mb-4">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Preview</label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 sm:p-4 bg-gray-50 flex items-center justify-center" style={{ minHeight: '100px' }}>
-                  <img 
-                    src="/Images/Street10-logo.png" 
-                    alt="Favicon" 
-                    className="max-h-16 sm:max-h-20 object-contain"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement
-                      target.style.display = 'none'
-                    }}
-                  />
+                  {logos.favicon ? (
+                    <img 
+                      src={logos.favicon} 
+                      alt="Favicon" 
+                      className="max-h-16 sm:max-h-20 object-contain"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <p className="text-xs text-gray-400">No favicon uploaded</p>
+                  )}
                 </div>
               </div>
 
               {/* Change Logo Section */}
               <div className="mb-3 sm:mb-4">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Change logo</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors" style={{ minHeight: '120px' }}>
+                <input
+                  type="file"
+                  id="favicon-upload"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      handleLogoUpload('favicon', file)
+                    }
+                  }}
+                />
+                <label
+                  htmlFor="favicon-upload"
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
+                  style={{ minHeight: '120px' }}
+                >
                   <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
-                </div>
+                </label>
               </div>
 
               {/* Save Button */}
               <div className="flex justify-center sm:justify-end">
-                <button className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F7931E] text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer">
-                  Save Changes
+                <button
+                  onClick={handleSaveLogos}
+                  disabled={isLoading}
+                  className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F7931E] text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>
@@ -796,8 +1077,12 @@ export default function MainControl() {
 
             {/* Save Changes Button */}
             <div className="flex justify-center sm:justify-end pt-4">
-              <button className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer">
-                Save Changes
+              <button
+                onClick={handleSaveContact}
+                disabled={isLoading}
+                className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
@@ -810,7 +1095,7 @@ export default function MainControl() {
           setIsEditingTerms(true)
         }
 
-        const handleSaveTerms = () => {
+        const handleSaveSingleTerm = () => {
           if (!editingId || !editingType || editingType !== 'terms') return
 
           setTermsConditions((prev) =>
@@ -819,7 +1104,6 @@ export default function MainControl() {
           setEditingId(null)
           setEditingValue('')
           setEditingType(null)
-          setIsEditingTerms(false)
         }
 
         const handleCancelTerms = () => {
@@ -827,14 +1111,6 @@ export default function MainControl() {
           setEditingValue('')
           setEditingType(null)
           setIsEditingTerms(false)
-        }
-
-        const handleUpdateAllTerms = () => {
-          // Save all changes and exit edit mode
-          setIsEditingTerms(false)
-          setEditingId(null)
-          setEditingValue('')
-          setEditingType(null)
         }
 
         return (
@@ -857,7 +1133,7 @@ export default function MainControl() {
                           />
                           <div className="absolute right-2 top-2 flex items-center gap-1">
                             <button
-                              onClick={handleSaveTerms}
+                              onClick={handleSaveSingleTerm}
                               className="text-green-600 hover:text-green-700 cursor-pointer"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -894,10 +1170,11 @@ export default function MainControl() {
             {/* Edit And Update Button */}
             <div className="flex justify-center sm:justify-end pt-4">
               <button
-                onClick={isEditingTerms ? handleUpdateAllTerms : () => setIsEditingTerms(true)}
-                className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer"
+                onClick={isEditingTerms ? handleSaveTerms : () => setIsEditingTerms(true)}
+                disabled={isLoading}
+                className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Edit And Update
+                {isLoading ? 'Saving...' : isEditingTerms ? 'Save And Update' : 'Edit And Update'}
               </button>
             </div>
           </div>
@@ -910,7 +1187,7 @@ export default function MainControl() {
           setIsEditingPrivacy(true)
         }
 
-        const handleSavePrivacy = () => {
+        const handleSaveSinglePrivacy = () => {
           if (!editingId || !editingType || editingType !== 'privacy') return
 
           setPrivacyPolicy((prev) =>
@@ -919,7 +1196,6 @@ export default function MainControl() {
           setEditingId(null)
           setEditingValue('')
           setEditingType(null)
-          setIsEditingPrivacy(false)
         }
 
         const handleCancelPrivacy = () => {
@@ -927,14 +1203,6 @@ export default function MainControl() {
           setEditingValue('')
           setEditingType(null)
           setIsEditingPrivacy(false)
-        }
-
-        const handleUpdateAllPrivacy = () => {
-          // Save all changes and exit edit mode
-          setIsEditingPrivacy(false)
-          setEditingId(null)
-          setEditingValue('')
-          setEditingType(null)
         }
 
         return (
@@ -957,7 +1225,7 @@ export default function MainControl() {
                           />
                           <div className="absolute right-2 top-2 flex items-center gap-1">
                             <button
-                              onClick={handleSavePrivacy}
+                              onClick={handleSaveSinglePrivacy}
                               className="text-green-600 hover:text-green-700 cursor-pointer"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -994,10 +1262,11 @@ export default function MainControl() {
             {/* Edit And Update Button */}
             <div className="flex justify-center sm:justify-end pt-4">
               <button
-                onClick={isEditingPrivacy ? handleUpdateAllPrivacy : () => setIsEditingPrivacy(true)}
-                className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer"
+                onClick={isEditingPrivacy ? handleSavePrivacy : () => setIsEditingPrivacy(true)}
+                disabled={isLoading}
+                className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Edit And Update
+                {isLoading ? 'Saving...' : isEditingPrivacy ? 'Save And Update' : 'Edit And Update'}
               </button>
             </div>
           </div>
@@ -1010,7 +1279,7 @@ export default function MainControl() {
           setIsEditingHelp(true)
         }
 
-        const handleSaveHelp = () => {
+        const handleSaveSingleHelp = () => {
           if (!editingId || !editingType || editingType !== 'help') return
 
           setHelpCenter((prev) =>
@@ -1019,7 +1288,6 @@ export default function MainControl() {
           setEditingId(null)
           setEditingValue('')
           setEditingType(null)
-          setIsEditingHelp(false)
         }
 
         const handleCancelHelp = () => {
@@ -1027,14 +1295,6 @@ export default function MainControl() {
           setEditingValue('')
           setEditingType(null)
           setIsEditingHelp(false)
-        }
-
-        const handleUpdateAllHelp = () => {
-          // Save all changes and exit edit mode
-          setIsEditingHelp(false)
-          setEditingId(null)
-          setEditingValue('')
-          setEditingType(null)
         }
 
         return (
@@ -1057,7 +1317,7 @@ export default function MainControl() {
                           />
                           <div className="absolute right-2 top-2 flex items-center gap-1">
                             <button
-                              onClick={handleSaveHelp}
+                              onClick={handleSaveSingleHelp}
                               className="text-green-600 hover:text-green-700 cursor-pointer"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1094,10 +1354,11 @@ export default function MainControl() {
             {/* Edit And Update Button */}
             <div className="flex justify-center sm:justify-end pt-4">
               <button
-                onClick={isEditingHelp ? handleUpdateAllHelp : () => setIsEditingHelp(true)}
-                className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer"
+                onClick={isEditingHelp ? handleSaveHelp : () => setIsEditingHelp(true)}
+                disabled={isLoading}
+                className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Edit And Update
+                {isLoading ? 'Saving...' : isEditingHelp ? 'Save And Update' : 'Edit And Update'}
               </button>
             </div>
           </div>
@@ -1110,7 +1371,7 @@ export default function MainControl() {
           setIsEditingAbout(true)
         }
 
-        const handleSaveAbout = () => {
+        const handleSaveSingleAbout = () => {
           if (!editingId || !editingType || editingType !== 'about') return
 
           setAboutUs((prev) =>
@@ -1119,7 +1380,6 @@ export default function MainControl() {
           setEditingId(null)
           setEditingValue('')
           setEditingType(null)
-          setIsEditingAbout(false)
         }
 
         const handleCancelAbout = () => {
@@ -1127,14 +1387,6 @@ export default function MainControl() {
           setEditingValue('')
           setEditingType(null)
           setIsEditingAbout(false)
-        }
-
-        const handleUpdateAllAbout = () => {
-          // Save all changes and exit edit mode
-          setIsEditingAbout(false)
-          setEditingId(null)
-          setEditingValue('')
-          setEditingType(null)
         }
 
         return (
@@ -1157,7 +1409,7 @@ export default function MainControl() {
                           />
                           <div className="absolute right-2 top-2 flex items-center gap-1">
                             <button
-                              onClick={handleSaveAbout}
+                              onClick={handleSaveSingleAbout}
                               className="text-green-600 hover:text-green-700 cursor-pointer"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1194,10 +1446,11 @@ export default function MainControl() {
             {/* Edit And Update Button */}
             <div className="flex justify-center sm:justify-end pt-4">
               <button
-                onClick={isEditingAbout ? handleUpdateAllAbout : () => setIsEditingAbout(true)}
-                className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer"
+                onClick={isEditingAbout ? handleSaveAbout : () => setIsEditingAbout(true)}
+                disabled={isLoading}
+                className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Edit And Update
+                {isLoading ? 'Saving...' : isEditingAbout ? 'Save And Update' : 'Edit And Update'}
               </button>
             </div>
           </div>
@@ -1235,8 +1488,26 @@ export default function MainControl() {
         </div>
       </div>
 
+      {/* Error and Success Messages */}
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      {successMessage && (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          {successMessage}
+        </div>
+      )}
+
       {/* Content Area */}
       <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-6 shadow-sm">
+        {isLoading && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-[#F7931E]"></div>
+            <span>Loading...</span>
+          </div>
+        )}
         {renderContent()}
       </div>
     </div>

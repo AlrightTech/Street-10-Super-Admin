@@ -7,6 +7,7 @@ import { type SubCategoryCardData } from '../components/categories/SubCategoryCa
 import SearchBar from '../components/ui/SearchBar'
 import FilterDropdown from '../components/users/FilterDropdown'
 import { PlusIcon } from '../components/icons/Icons'
+import { categoriesApi, type Category } from '../services/categories.api'
 
 export type CategoryStatus = 'active' | 'inactive'
 
@@ -18,33 +19,6 @@ export interface CategoryRecord {
   status: CategoryStatus
 }
 
-const CATEGORIES_DATA: CategoryRecord[] = [
-  { id: '001', name: 'Electronics', icon: 'laptop', parentCategory: null, status: 'active' },
-  { id: '002', name: 'Smartphones', icon: 'smartphone', parentCategory: 'Electronics', status: 'active' },
-  { id: '003', name: 'Fashion', icon: 'shirt', parentCategory: null, status: 'inactive' },
-  { id: '004', name: "Men's Clothing", icon: 'person', parentCategory: 'Fashion', status: 'active' },
-  { id: '005', name: 'Home & Garden', icon: 'home', parentCategory: null, status: 'active' },
-  { id: '006', name: 'Computers', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
-  { id: '007', name: 'Accessories', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
-  { id: '008', name: 'Women Clothing', icon: 'person', parentCategory: 'Fashion', status: 'active' },
-  { id: '009', name: 'Kitchen', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-  { id: '010', name: 'Furniture', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-  { id: '011', name: 'Tablets', icon: 'smartphone', parentCategory: 'Electronics', status: 'active' },
-  { id: '012', name: 'Watches', icon: 'shirt', parentCategory: 'Fashion', status: 'inactive' },
-  { id: '013', name: 'Shoes', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
-  { id: '014', name: 'Bags', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
-  { id: '015', name: 'Jewelry', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
-  { id: '016', name: 'Appliances', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-  { id: '017', name: 'Garden Tools', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-  { id: '018', name: 'Cameras', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
-  { id: '019', name: 'Audio', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
-  { id: '020', name: 'Gaming', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
-  { id: '021', name: 'TV & Video', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
-  { id: '022', name: 'Kids Clothing', icon: 'person', parentCategory: 'Fashion', status: 'active' },
-  { id: '023', name: 'Bedding', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-  { id: '024', name: 'Lighting', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-]
-
 const TAB_OPTIONS: { key: string; label: string }[] = [
   { key: 'categories', label: 'Categories' },
   { key: 'sub-category', label: 'Sub Category' },
@@ -53,90 +27,6 @@ const TAB_OPTIONS: { key: string; label: string }[] = [
 
 const PAGE_SIZE = 5
 const SUB_CATEGORY_PAGE_SIZE = 6
-
-// Mock subcategory data matching reference image
-export const MOCK_SUB_CATEGORIES: SubCategoryCardData[] = [
-  {
-    id: 'sub-001',
-    title: 'Brands',
-    description: 'Fashion & Apparel',
-    subCategoryCount: 5,
-    items: [
-      { id: 'item-1', name: 'Gucci' },
-      { id: 'item-2', name: 'Locust' },
-      { id: 'item-3', name: 'H&M' },
-      { id: 'item-4', name: 'Zory' },
-    ],
-    icon: 'B',
-    status: 'active',
-  },
-  {
-    id: 'sub-002',
-    title: 'Car Brand',
-    description: 'Cars',
-    subCategoryCount: 10,
-    items: [
-      { id: 'item-5', name: 'Pajeros' },
-      { id: 'item-6', name: 'Nissan' },
-      { id: 'item-7', name: 'Toyota' },
-    ],
-    icon: 'C',
-    status: 'active',
-  },
-  {
-    id: 'sub-003',
-    title: 'Cloth Type',
-    description: 'Clothes',
-    subCategoryCount: 10,
-    items: [
-      { id: 'item-8', name: 'Men' },
-      { id: 'item-9', name: 'Women' },
-      { id: 'item-10', name: 'Kids' },
-    ],
-    icon: 'CT',
-    status: 'active',
-  },
-  {
-    id: 'sub-004',
-    title: 'Sizes',
-    description: 'Fashion & Apparel',
-    subCategoryCount: 5,
-    items: [
-      { id: 'item-11', name: 'L' },
-      { id: 'item-12', name: 'XS' },
-      { id: 'item-13', name: 'S' },
-      { id: 'item-14', name: 'XL' },
-    ],
-    icon: 'S',
-    status: 'active',
-  },
-  {
-    id: 'sub-005',
-    title: 'Automobiles',
-    description: 'Cars',
-    subCategoryCount: 10,
-    items: [
-      { id: 'item-15', name: 'Car' },
-      { id: 'item-16', name: 'Bikes' },
-      { id: 'item-17', name: 'Trucks' },
-    ],
-    icon: 'A',
-    status: 'active',
-  },
-  {
-    id: 'sub-006',
-    title: 'Colors',
-    description: 'Clothes',
-    subCategoryCount: 10,
-    items: [
-      { id: 'item-18', name: 'White' },
-      { id: 'item-19', name: 'Black' },
-      { id: 'item-20', name: 'Yellow' },
-    ],
-    icon: 'C',
-    status: 'active',
-  },
-]
 
 export default function Categories() {
   const navigate = useNavigate()
@@ -147,58 +37,104 @@ export default function Categories() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('All Categories')
   const [currentPage, setCurrentPage] = useState(1)
   const [subCategoryCurrentPage, setSubCategoryCurrentPage] = useState(1)
-  const [categories, setCategories] = useState<CategoryRecord[]>(CATEGORIES_DATA)
-  const [subCategories, setSubCategories] = useState<SubCategoryCardData[]>(() => {
-    // Load from localStorage or use mock data
-    const saved = localStorage.getItem('subCategories')
-    if (saved) {
+  const [categories, setCategories] = useState<CategoryRecord[]>([])
+  const [totalCategories, setTotalCategories] = useState(0)
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false)
+  const [categoriesError, setCategoriesError] = useState<string | null>(null)
+  const [subCategories, setSubCategories] = useState<SubCategoryCardData[]>([])
+  const [isLoadingSubCategories, setIsLoadingSubCategories] = useState(false)
+  const [subCategoriesError, setSubCategoriesError] = useState<string | null>(null)
+
+  // Load categories from backend
+  useEffect(() => {
+    const fetchCategories = async () => {
       try {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed
+        setIsLoadingCategories(true)
+        setCategoriesError(null)
+
+        const { data, pagination } = await categoriesApi.getAll({
+          page: currentPage,
+          limit: PAGE_SIZE,
+          search: searchCategoriesValue || searchValue || undefined,
+          // Only list top-level categories in the main Categories tab
+          parentId: 'null',
+        })
+
+        // Map backend categories to CategoryRecord for table
+        const records: CategoryRecord[] = data.map((cat: Category) => {
+          const langData = (cat.langData || {}) as any
+          const iconUrl = langData.en?.iconUrl || null
+          // Use iconUrl if available, otherwise fall back to placeholder
+          return {
+            id: cat.id,
+            name: cat.name,
+            icon: iconUrl || 'home', // Use actual icon URL if available
+            parentCategory: (cat as any).parent?.name || null,
+            status: cat.isActive ? 'active' : 'inactive',
+          }
+        })
+
+        setCategories(records)
+        setTotalCategories(pagination.total)
+      } catch (error: any) {
+        console.error('Failed to load categories:', error)
+        setCategoriesError(error.response?.data?.message || 'Failed to load categories')
+      } finally {
+        setIsLoadingCategories(false)
+      }
+    }
+
+    fetchCategories()
+  }, [currentPage, searchCategoriesValue, searchValue])
+
+  // Load subcategories from backend category tree
+  useEffect(() => {
+    const loadSubCategories = async () => {
+      try {
+        setIsLoadingSubCategories(true)
+        setSubCategoriesError(null)
+        const tree = await categoriesApi.getTree()
+
+        const result: SubCategoryCardData[] = []
+
+        const walk = (cat: Category) => {
+          if (cat.children && cat.children.length > 0) {
+            const lang = (cat.langData || {}) as any
+            const desc = lang.en?.description || ''
+            // Use iconUrl (image) if available, otherwise fall back to first letter
+            const icon = lang.en?.iconUrl || (cat.name && cat.name.charAt(0).toUpperCase()) || 'C'
+
+            result.push({
+              id: cat.id,
+              title: cat.name,
+              description: desc,
+              subCategoryCount: cat.children.length,
+              icon,
+              status: cat.isActive ? 'active' : 'inactive',
+              items: cat.children.map((child) => ({
+                id: child.id,
+                name: child.name,
+              })),
+            })
+
+            cat.children.forEach(walk)
+          }
         }
-      } catch (error) {
-        console.error('Failed to parse saved subcategories:', error)
-      }
-    }
-    // Initialize localStorage with mock data if empty
-    localStorage.setItem('subCategories', JSON.stringify(MOCK_SUB_CATEGORIES))
-    return MOCK_SUB_CATEGORIES
-  })
 
-  const filteredCategories = useMemo(() => {
-    let result = [...categories]
-
-    // Filter by search (title)
-    if (searchValue.trim()) {
-      const query = searchValue.toLowerCase()
-      result = result.filter((category) => category.name.toLowerCase().includes(query))
-    }
-
-    // Filter by category search
-    if (searchCategoriesValue.trim()) {
-      const query = searchCategoriesValue.toLowerCase()
-      result = result.filter((category) => category.name.toLowerCase().includes(query))
-    }
-
-    // Filter by category dropdown
-    if (selectedCategoryFilter !== 'All Categories') {
-      if (selectedCategoryFilter === 'Top Level') {
-        result = result.filter((category) => category.parentCategory === null)
-      } else {
-        result = result.filter((category) => category.parentCategory === selectedCategoryFilter)
+        tree.forEach(walk)
+        setSubCategories(result)
+      } catch (error: any) {
+        console.error('Failed to load subcategories:', error)
+        setSubCategoriesError(error.response?.data?.message || 'Failed to load subcategories')
+      } finally {
+        setIsLoadingSubCategories(false)
       }
     }
 
-    return result
-  }, [categories, searchValue, searchCategoriesValue, selectedCategoryFilter])
+    void loadSubCategories()
+  }, [])
 
-  const totalPages = Math.max(1, Math.ceil(filteredCategories.length / PAGE_SIZE))
-
-  const paginatedCategories = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return filteredCategories.slice(start, start + PAGE_SIZE)
-  }, [filteredCategories, currentPage])
+  const totalPages = Math.max(1, Math.ceil(totalCategories / PAGE_SIZE))
 
   const handleTabChange = (tabKey: string) => {
     if (tabKey === 'filter') {
@@ -229,30 +165,44 @@ export default function Categories() {
     navigate(`/categories/edit/${category.id}`)
   }
 
-  const handleDelete = (category: CategoryRecord) => {
-    // Calculate remaining categories before updating state
-    const remainingCategories = categories.filter((c) => c.id !== category.id)
-    const totalPages = Math.ceil(remainingCategories.length / PAGE_SIZE)
-    
-    // Update categories state
-    setCategories(remainingCategories)
-    
-    // Reset pagination if current page becomes empty
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages)
-    } else if (totalPages === 0) {
-      setCurrentPage(1)
+  const handleDelete = async (category: CategoryRecord) => {
+    if (!window.confirm(`Are you sure you want to delete "${category.name}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      await categoriesApi.delete(category.id)
+      // Refetch by keeping same page; effect will run because categories state changes after fetch
+      setCategories((prev) => prev.filter((c) => c.id !== category.id))
+      setTotalCategories((prev) => Math.max(0, prev - 1))
+      if ((totalCategories - 1) <= (currentPage - 1) * PAGE_SIZE && currentPage > 1) {
+        setCurrentPage(currentPage - 1)
+      }
+    } catch (error: any) {
+      console.error('Failed to delete category:', error)
+      alert(error.response?.data?.message || 'Failed to delete category')
     }
   }
 
-  const handleToggleStatus = (category: CategoryRecord) => {
-    setCategories((prevCategories) =>
-      prevCategories.map((cat) =>
-        cat.id === category.id
-          ? { ...cat, status: cat.status === 'active' ? 'inactive' : 'active' }
-          : cat
+  const handleToggleStatus = async (category: CategoryRecord) => {
+    try {
+      const updated = await categoriesApi.update(category.id, {
+        isActive: category.status !== 'active',
+      })
+      setCategories((prev) =>
+        prev.map((cat) =>
+          cat.id === category.id
+            ? {
+                ...cat,
+                status: updated.isActive ? 'active' : 'inactive',
+              }
+            : cat,
+        ),
       )
-    )
+    } catch (error: any) {
+      console.error('Failed to update category status:', error)
+      alert(error.response?.data?.message || 'Failed to update category status')
+    }
   }
 
   // Filter subcategories
@@ -287,63 +237,9 @@ export default function Categories() {
     navigate(`/categories/edit-subcategory/${subCategory.id}`)
   }
 
-  const handleRemoveSubCategoryItem = (subCategoryId: string, itemId: string) => {
-    setSubCategories((prev) => {
-      const updated = prev.map((subCat) =>
-        subCat.id === subCategoryId
-          ? {
-              ...subCat,
-              items: subCat.items.filter((item: { id: string }) => item.id !== itemId),
-              subCategoryCount: Math.max(0, subCat.subCategoryCount - 1),
-            }
-          : subCat
-      )
-      // Save to localStorage
-      localStorage.setItem('subCategories', JSON.stringify(updated))
-      return updated
-    })
+  const handleRemoveSubCategoryItem = () => {
+    // Item removal is handled inside AddSubCategory via backend updates.
   }
-
-  // Load subcategories from localStorage when component mounts or when updated
-  useEffect(() => {
-    const loadSubCategories = () => {
-      const saved = localStorage.getItem('subCategories')
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setSubCategories(parsed)
-          }
-        } catch (error) {
-          console.error('Failed to parse saved subcategories:', error)
-        }
-      }
-    }
-
-    loadSubCategories()
-
-    // Listen for custom event (when AddSubCategory updates subcategories)
-    const handleSubCategoriesUpdate = () => {
-      loadSubCategories()
-    }
-
-    // Listen for storage changes (when updated in another tab)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'subCategories') {
-        loadSubCategories()
-      }
-    }
-
-    window.addEventListener('subCategoriesUpdated', handleSubCategoriesUpdate)
-    window.addEventListener('storage', handleStorageChange)
-    window.addEventListener('focus', loadSubCategories)
-
-    return () => {
-      window.removeEventListener('subCategoriesUpdated', handleSubCategoriesUpdate)
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('focus', loadSubCategories)
-    }
-  }, [])
 
   // Get unique parent categories for dropdown
   const parentCategories = useMemo(() => {
@@ -379,7 +275,6 @@ export default function Categories() {
       {activeTab === 'sub-category' && (
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900">Filter</h2>
             <div className="w-full sm:w-auto sm:max-w-md">
               <SearchBar
                 placeholder="Search by Title"
@@ -401,11 +296,22 @@ export default function Categories() {
             <div className="px-4 sm:px-6 py-4 sm:py-6">
               {/* Sub Categories Grid */}
               <div>
-                <SubCategoriesGrid
-                  subCategories={paginatedSubCategories}
-                  onEdit={handleSubCategoryEdit}
-                  onRemoveItem={handleRemoveSubCategoryItem}
-                />
+                {subCategoriesError && (
+                  <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {subCategoriesError}
+                  </div>
+                )}
+                {isLoadingSubCategories ? (
+                  <div className="flex min-h-[200px] items-center justify-center text-sm text-gray-600">
+                    Loading subcategories...
+                  </div>
+                ) : (
+                  <SubCategoriesGrid
+                    subCategories={paginatedSubCategories}
+                    onEdit={handleSubCategoryEdit}
+                    onRemoveItem={handleRemoveSubCategoryItem}
+                  />
+                )}
               </div>
             </div>
 
@@ -545,19 +451,30 @@ export default function Categories() {
                   />
                 </div>
                 <p className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap text-left sm:text-right">
-                  Total Categories: {filteredCategories.length}
+                  Total Categories: {totalCategories}
                 </p>
               </div>
 
               {/* Table Section */}
               <div className="overflow-x-auto p-3">
-                <CategoriesTable
-                  categories={paginatedCategories}
-                  startIndex={(currentPage - 1) * PAGE_SIZE}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onToggleStatus={handleToggleStatus}
-                />
+                {categoriesError && (
+                  <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {categoriesError}
+                  </div>
+                )}
+                {isLoadingCategories ? (
+                  <div className="flex min-h-[200px] items-center justify-center text-sm text-gray-600">
+                    Loading categories...
+                  </div>
+                ) : (
+                  <CategoriesTable
+                    categories={categories}
+                    startIndex={(currentPage - 1) * PAGE_SIZE}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onToggleStatus={handleToggleStatus}
+                  />
+                )}
               </div>
             </div>
 

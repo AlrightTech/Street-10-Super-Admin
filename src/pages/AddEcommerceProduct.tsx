@@ -25,6 +25,7 @@ export default function AddEcommerceProduct() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [mediaFiles, setMediaFiles] = useState<File[]>([])
   const [documentFiles, setDocumentFiles] = useState<File[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -93,7 +94,7 @@ export default function AddEcommerceProduct() {
       if (remainingSlots > 0) {
         setMediaFiles([...mediaFiles, ...newFiles.slice(0, remainingSlots)])
       } else {
-        alert('Maximum 10 images allowed')
+        setError('Maximum 10 images allowed')
       }
     }
   }
@@ -120,7 +121,7 @@ export default function AddEcommerceProduct() {
       if (remainingSlots > 0) {
         setMediaFiles([...mediaFiles, ...imageFiles.slice(0, remainingSlots)])
       } else {
-        alert('Maximum 10 images allowed')
+          setError('Maximum 10 images allowed')
       }
     } else {
       const docFiles = files.filter(file => 
@@ -156,6 +157,7 @@ export default function AddEcommerceProduct() {
     e.preventDefault()
     setIsSubmitting(true)
     setError(null)
+    setSuccessMessage(null)
 
     try {
       // Validation
@@ -224,10 +226,12 @@ export default function AddEcommerceProduct() {
         mediaUrls: mediaUrls,
       })
 
-      alert('Product created successfully!')
-      
-      // Navigate back to e-commerce products page after success
-      navigate('/ecommerce-products')
+      setSuccessMessage('Product created successfully!')
+
+      // Navigate back to e-commerce products page after a short delay
+      setTimeout(() => {
+        navigate('/ecommerce-products')
+      }, 800)
     } catch (err: any) {
       console.error('Error creating product:', err)
       console.error('Error response:', err.response?.data)
@@ -239,7 +243,6 @@ export default function AddEcommerceProduct() {
       })
       const errorMessage = err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || err.message || 'Failed to create product'
       setError(errorMessage)
-      alert(`Error: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -583,6 +586,13 @@ export default function AddEcommerceProduct() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {successMessage && !error && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-green-800">{successMessage}</p>
           </div>
         )}
 

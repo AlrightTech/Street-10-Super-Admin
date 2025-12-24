@@ -4,6 +4,7 @@ import type { BiddingProduct } from '../../components/bidding/BiddingProductsTab
 
 interface FullyPaidSoldDetailProps {
   product: BiddingProduct
+  mediaUrls?: string[] // All product media URLs
   onClose: () => void
 }
 
@@ -62,20 +63,20 @@ const BIDDING_HISTORY: BidHistoryItem[] = [
 /**
  * Fully Paid - Sold Product Detail page
  */
-export default function FullyPaidSoldDetail({ product, onClose: _onClose }: FullyPaidSoldDetailProps) {
+export default function FullyPaidSoldDetail({ product, mediaUrls, onClose: _onClose }: FullyPaidSoldDetailProps) {
   const navigate = useNavigate()
   const [selectedImage, setSelectedImage] = useState(0)
 
   const handleEditProduct = () => {
     navigate(`/building-products/${product.id}/edit`)
   }
-  const productImages = [
-    product.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-  ]
+  
+  // Use provided mediaUrls or fallback to single imageUrl, or placeholder
+  const productImages = mediaUrls && mediaUrls.length > 0 
+    ? mediaUrls 
+    : product.imageUrl 
+      ? [product.imageUrl]
+      : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop']
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -122,24 +123,26 @@ export default function FullyPaidSoldDetail({ product, onClose: _onClose }: Full
                     />
                   </div>
                   {/* Thumbnail Images */}
-                  <div className="grid grid-cols-4 gap-2 sm:gap-3">
-                    {productImages.slice(0, 4).map((img, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => setSelectedImage(index)}
-                        className={`h-16 sm:h-20 w-full rounded-lg overflow-hidden border-2 transition ${
-                          selectedImage === index ? 'border-[#F7931E]' : 'border-gray-200'
-                        }`}
-                      >
-                        <img
-                          src={img}
-                          alt={`${product.name} ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
+                  {productImages.length > 1 && (
+                    <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                      {productImages.slice(0, 4).map((img, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setSelectedImage(index)}
+                          className={`h-16 sm:h-20 w-full rounded-lg overflow-hidden border-2 transition ${
+                            selectedImage === index ? 'border-[#F7931E]' : 'border-gray-200'
+                          }`}
+                        >
+                          <img
+                            src={img}
+                            alt={`${product.name} ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Product Information */}

@@ -9,6 +9,7 @@ export default function PaymentRequestedDetailRoute() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [product, setProduct] = useState<BiddingProduct | null>(null)
+  const [mediaUrls, setMediaUrls] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
@@ -25,6 +26,10 @@ export default function PaymentRequestedDetailRoute() {
         const auction = await auctionsApi.getById(id)
         const biddingProduct = mapAuctionToBiddingProduct(auction)
         setProduct(biddingProduct)
+        // Extract all media URLs from the auction product
+        const media = auction.product.media || []
+        const urls = media.map(m => m.url).filter(Boolean)
+        setMediaUrls(urls.length > 0 ? urls : [biddingProduct.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop'])
       } catch (err: any) {
         console.error('Error fetching auction:', err)
         setError(err.response?.data?.message || 'Failed to load auction')
@@ -63,6 +68,6 @@ export default function PaymentRequestedDetailRoute() {
     )
   }
   
-  return <PaymentRequestedDetail product={product} onClose={() => navigate('/building-products')} />
+  return <PaymentRequestedDetail product={product} mediaUrls={mediaUrls} onClose={() => navigate('/building-products')} />
 }
 

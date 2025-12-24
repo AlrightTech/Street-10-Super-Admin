@@ -34,6 +34,7 @@ export default function AddBiddingProduct() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   // Fetch categories
   useEffect(() => {
@@ -74,15 +75,34 @@ export default function AddBiddingProduct() {
 
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setMediaFiles([...mediaFiles, ...Array.from(e.target.files)])
+      const newFiles = Array.from(e.target.files)
+      const remainingSlots = 10 - mediaFiles.length
+      if (remainingSlots > 0) {
+        setMediaFiles([...mediaFiles, ...newFiles.slice(0, remainingSlots)])
+      } else {
+        setError('Maximum 10 media files allowed')
+      }
+      // Reset input to allow selecting same file again
+      e.target.value = ''
     }
   }
 
   const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setDocumentFiles([...documentFiles, ...Array.from(e.target.files)])
+      // Reset input to allow selecting same file again
+      e.target.value = ''
     }
   }
+
+  const removeMediaFile = (index: number) => {
+    setMediaFiles(mediaFiles.filter((_, i) => i !== index))
+  }
+
+  const removeDocumentFile = (index: number) => {
+    setDocumentFiles(documentFiles.filter((_, i) => i !== index))
+  }
+
 
   // Convert files to data URLs (for now - in production, upload to S3/DO Spaces first)
   const convertFileToDataURL = (file: File): Promise<string> => {
@@ -100,33 +120,36 @@ export default function AddBiddingProduct() {
     setError(null)
 
     try {
+      // Clear any previous success message
+      setSuccessMessage(null)
+
       // Validate required fields
       if (!formData.productTitle.trim()) {
-        alert('Product title is required')
+        setError('Product title is required')
         setIsSubmitting(false)
         return
       }
 
       if (!formData.categoryId) {
-        alert('Category is required')
+        setError('Category is required')
         setIsSubmitting(false)
         return
       }
 
       if (!formData.startingPrice || parseFloat(formData.startingPrice) <= 0) {
-        alert('Starting price must be greater than 0')
+        setError('Starting price must be greater than 0')
         setIsSubmitting(false)
         return
       }
 
       if (!formData.biddingMinimumAmount || parseFloat(formData.biddingMinimumAmount) <= 0) {
-        alert('Bidding minimum amount is required')
+        setError('Bidding minimum amount is required')
         setIsSubmitting(false)
         return
       }
 
       if (!formData.auctionStartDate || !formData.auctionEndDate) {
-        alert('Auction start and end dates are required')
+        setError('Auction start and end dates are required')
         setIsSubmitting(false)
         return
       }
@@ -136,13 +159,13 @@ export default function AddBiddingProduct() {
       const endDateTime = new Date(`${formData.auctionEndDate}T${formData.auctionEndTime || '23:59'}`)
 
       if (startDateTime >= endDateTime) {
-        alert('End date must be after start date')
+        setError('End date must be after start date')
         setIsSubmitting(false)
         return
       }
 
       if (startDateTime < new Date()) {
-        alert('Start date cannot be in the past')
+        setError('Start date cannot be in the past')
         setIsSubmitting(false)
         return
       }
@@ -208,10 +231,12 @@ export default function AddBiddingProduct() {
         autoExtendSeconds: 0,
       })
 
-      alert('Product and auction created successfully!')
-      
-      // Navigate back to bidding products page after success
-      navigate('/building-products')
+      setSuccessMessage('Product and auction created successfully!')
+
+      // Navigate back to bidding products page after a short delay so the user can see the message
+      setTimeout(() => {
+        navigate('/building-products')
+      }, 800)
     } catch (err: any) {
       console.error('Error adding product:', err)
       console.error('Error response:', err.response?.data)
@@ -223,7 +248,6 @@ export default function AddBiddingProduct() {
       })
       const errorMessage = err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || err.message || 'Failed to create product'
       setError(errorMessage)
-      alert(`Error: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -329,7 +353,7 @@ export default function AddBiddingProduct() {
           <div>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Upload Media</h2>
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#F7931E] transition-colors">
               <div className="flex flex-col items-center justify-center space-y-3">
                 <div className="flex items-center space-x-2 text-gray-400">
                   <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -357,6 +381,53 @@ export default function AddBiddingProduct() {
                 + Add Another Media
               </label>
             </div>
+            {mediaFiles.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-sm font-medium text-gray-700">
+                  Selected Media Files ({mediaFiles.length}/10):
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {mediaFiles.map((file, index) => (
+                    <div key={index} className="relative border border-gray-200 rounded-lg p-2 bg-gray-50">
+                      {file.type.startsWith('image/') ? (
+                        <div className="relative">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            className="w-full h-24 object-cover rounded"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeMediaFile(index)}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                            title="Remove"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-700 truncate flex-1">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeMediaFile(index)}
+                            className="ml-2 text-red-600 hover:text-red-700 text-xs"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1 truncate" title={file.name}>
+                        {file.name}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           </div>
 
@@ -364,7 +435,7 @@ export default function AddBiddingProduct() {
           <div>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Add Document</h2>
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#F7931E] transition-colors">
               <div className="flex flex-col items-center justify-center space-y-3">
                 <div className="flex items-center space-x-2 text-gray-400">
                   <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -373,21 +444,56 @@ export default function AddBiddingProduct() {
                   <UploadIcon className="h-6 w-6" />
                 </div>
                 <p className="text-sm font-medium text-gray-700">Upload Doc Here</p>
+                <p className="text-xs text-gray-500">Support PDF, DOC, DOCX up to 10MB each</p>
               </div>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx"
+                onChange={handleDocumentUpload}
+                className="hidden"
+                id="document-upload"
+              />
               <label
                 htmlFor="document-upload"
                 className="mt-4 inline-block cursor-pointer text-sm text-[#F7931E] hover:text-[#E8840D]"
               >
                 + Add Another Document
               </label>
-              <input
-                type="file"
-                multiple
-                onChange={handleDocumentUpload}
-                className="hidden"
-                id="document-upload"
-              />
             </div>
+            {documentFiles.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-sm font-medium text-gray-700">
+                  Selected Documents ({documentFiles.length}):
+                </p>
+                <div className="space-y-2">
+                  {documentFiles.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <svg className="h-8 w-8 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 truncate font-medium" title={file.name}>
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeDocumentFile(index)}
+                        className="ml-3 text-red-600 hover:text-red-700 text-sm font-medium px-3 py-1 rounded hover:bg-red-50 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <label htmlFor="documentTitle" className="block text-sm font-medium text-[#888888] mb-2">
                 Add Document Title
@@ -707,6 +813,13 @@ export default function AddBiddingProduct() {
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-200 p-4">
               <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {successMessage && !error && (
+            <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+              <p className="text-sm font-medium text-green-700">{successMessage}</p>
             </div>
           )}
 

@@ -3,6 +3,7 @@ import { UploadIcon, EyeIcon, EyeOffIcon, ChevronDownIcon, CheckIcon, MegaphoneI
 import TextField from '../components/ui/TextField'
 import SearchBar from '../components/ui/SearchBar'
 import StatusBadge from '../components/users/StatusBadge'
+import { profileApi } from "../services/profile.api";
 
 /**
  * Notification item interface
@@ -104,6 +105,11 @@ export default function Settings() {
     password: '',
   })
   const [showPassword, setShowPassword] = useState(false)
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null)
   const [accountPreferences, setAccountPreferences] = useState(() => {
     // Load dark mode preference from localStorage
     const savedDarkMode = localStorage.getItem('darkMode')
@@ -278,9 +284,57 @@ export default function Settings() {
     setActiveSection(sectionId)
   }
 
-  const handleSaveChanges = () => {
-    // Handle save logic here
-    console.log('Saving changes:', formData)
+  // Load current user profile when admin-profile section is active
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        setProfileError(null)
+        const user = await profileApi.getMe()
+        setFormData((prev) => ({
+          ...prev,
+          name: user.name || '',
+          email: user.email || '',
+        }))
+        setProfileImageUrl(user.profileImageUrl || null)
+        setProfileImagePreview(user.profileImageUrl || null)
+      } catch (error: any) {
+        console.error("Failed to load profile:", error)
+        setProfileError(error.response?.data?.message || "Failed to load profile")
+      }
+    }
+
+    if (activeSection === "admin-profile") {
+      void loadProfile()
+    }
+  }, [activeSection])
+
+  const handleSaveChanges = async () => {
+    try {
+      setProfileError(null)
+      setProfileSuccess(null)
+      setIsSavingProfile(true)
+
+      const updatePayload: any = {}
+      if (formData.name.trim()) updatePayload.name = formData.name.trim()
+      if (formData.email.trim()) updatePayload.email = formData.email.trim()
+      updatePayload.profileImageUrl = profileImagePreview || null
+
+      if (Object.keys(updatePayload).length > 0) {
+        await profileApi.updateMe(updatePayload)
+      }
+
+      if (formData.password.trim().length >= 6) {
+        await profileApi.changePassword(formData.password.trim())
+      }
+
+      setProfileSuccess("Profile updated successfully")
+      setFormData((prev) => ({ ...prev, password: '' }))
+    } catch (error: any) {
+      console.error("Failed to save profile:", error)
+      setProfileError(error.response?.data?.message || "Failed to update profile")
+    } finally {
+      setIsSavingProfile(false)
+    }
   }
 
   const handleDeleteAccount = () => {
@@ -1370,13 +1424,31 @@ export default function Settings() {
                 </div>
 
                 <div className="space-y-4 sm:space-y-5 lg:space-y-6">
+                  {profileError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {profileError}
+                    </div>
+                  )}
+                  {profileSuccess && (
+                    <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                      {profileSuccess}
+                    </div>
+                  )}
                   {/* Upload Image Section */}
                   <div>
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">Upload image</label>
                     <div className="flex items-center gap-3 sm:gap-4">
                       <div className="relative group">
                         <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group-hover:border-gray-400 transition-colors">
-                          <UploadIcon className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 lg:h-10 lg:w-10 text-gray-400" />
+                          {profileImagePreview ? (
+                            <img
+                              src={profileImagePreview}
+                              alt="Profile"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <UploadIcon className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 lg:h-10 lg:w-10 text-gray-400" />
+                          )}
                         </div>
                         <input
                           type="file"
@@ -1386,7 +1458,13 @@ export default function Settings() {
                             // Handle image upload
                             const file = e.target.files?.[0]
                             if (file) {
-                              console.log('Image selected:', file)
+                              const reader = new FileReader()
+                              reader.onloadend = () => {
+                                if (typeof reader.result === 'string') {
+                                  setProfileImagePreview(reader.result)
+                                }
+                              }
+                              reader.readAsDataURL(file)
                             }
                           }}
                         />
@@ -1400,6 +1478,7 @@ export default function Settings() {
                     label="Name"
                     type="text"
                     placeholder="Enter your name"
+                    value={formData.name}
                     onChange={(value) => setFormData((prev) => ({ ...prev, name: value }))}
                     className="w-full"
                   />
@@ -1410,6 +1489,7 @@ export default function Settings() {
                     label="Email"
                     type="email"
                     placeholder="Enter your email"
+                    value={formData.email}
                     onChange={(value) => setFormData((prev) => ({ ...prev, email: value }))}
                     className="w-full"
                   />
@@ -1456,9 +1536,10 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={handleSaveChanges}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 cursor-pointer sm:ml-auto w-full sm:w-auto"
+                  disabled={isSavingProfile}
+                  className="bg-gray-500 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 cursor-pointer sm:ml-auto w-full sm:w-auto"
                 >
-                  Save Changes
+                  {isSavingProfile ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </>

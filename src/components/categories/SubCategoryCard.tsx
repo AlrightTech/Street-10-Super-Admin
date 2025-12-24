@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { EditIcon, XIcon } from '../icons/Icons'
 
 export interface SubCategoryItem {
@@ -22,6 +23,11 @@ interface SubCategoryCardProps {
 }
 
 export default function SubCategoryCard({ subCategory, onEdit, onRemoveItem }: SubCategoryCardProps) {
+  const [imageError, setImageError] = useState(false)
+
+  // Check if icon is an image URL (data URL or HTTP URL)
+  const isImageUrl = subCategory.icon && (subCategory.icon.startsWith('data:') || subCategory.icon.startsWith('http'))
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 flex flex-col h-full">
       {/* Header: Icon and Badge */}
@@ -29,10 +35,19 @@ export default function SubCategoryCard({ subCategory, onEdit, onRemoveItem }: S
 
       <div className="flex items-start justify-between mb-4">
         {/* Blue Icon Square */}
-        <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-lg sm:text-xl font-semibold">
-            {subCategory.icon || 'B'}
-          </span>
+        <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {isImageUrl && !imageError ? (
+            <img
+              src={subCategory.icon}
+              alt={subCategory.title}
+              className="w-full h-full object-cover"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <span className="text-white text-lg sm:text-xl font-semibold">
+              {subCategory.icon || 'B'}
+            </span>
+          )}
         </div>
         {/* Active All Badge */}
        

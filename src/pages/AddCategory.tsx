@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import CategoriesFilterTabs from '../components/categories/CategoriesFilterTabs'
 import { PlusIcon, UploadIcon } from '../components/icons/Icons'
-import { type CategoryRecord } from './Categories'
+import { categoriesApi } from '../services/categories.api'
+import { filtersApi, type Filter as BackendFilter } from '../services/filters.api'
 
 const TAB_OPTIONS: { key: string; label: string }[] = [
   { key: 'categories', label: 'Categories' },
@@ -17,50 +18,10 @@ const FilterIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
   </svg>
 )
 
-// Initial filter options - fallback if localStorage is empty
-const INITIAL_FILTER_OPTIONS = [
-  { id: 'brand', label: 'Brand' },
-  { id: 'mileage', label: 'Mileage' },
-  { id: 'model-year', label: 'Model Year' },
-  { id: 'gear-type', label: 'Gear Type' },
-  { id: 'engine-capacity', label: 'Engine Capacity' },
-  { id: 'conditions', label: 'Conditions' },
-  { id: 'fuel-type', label: 'Fuel Type' },
-  { id: 'color', label: 'Color' },
-]
-
 export interface FilterOption {
   id: string
   label: string
 }
-
-// Mock data - in a real app, this would come from an API
-const MOCK_CATEGORIES: CategoryRecord[] = [
-  { id: '001', name: 'Electronics', icon: 'laptop', parentCategory: null, status: 'active' },
-  { id: '002', name: 'Smartphones', icon: 'smartphone', parentCategory: 'Electronics', status: 'active' },
-  { id: '003', name: 'Fashion', icon: 'shirt', parentCategory: null, status: 'inactive' },
-  { id: '004', name: "Men's Clothing", icon: 'person', parentCategory: 'Fashion', status: 'active' },
-  { id: '005', name: 'Home & Garden', icon: 'home', parentCategory: null, status: 'active' },
-  { id: '006', name: 'Computers', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
-  { id: '007', name: 'Accessories', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
-  { id: '008', name: 'Women Clothing', icon: 'person', parentCategory: 'Fashion', status: 'active' },
-  { id: '009', name: 'Kitchen', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-  { id: '010', name: 'Furniture', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-  { id: '011', name: 'Tablets', icon: 'smartphone', parentCategory: 'Electronics', status: 'active' },
-  { id: '012', name: 'Watches', icon: 'shirt', parentCategory: 'Fashion', status: 'inactive' },
-  { id: '013', name: 'Shoes', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
-  { id: '014', name: 'Bags', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
-  { id: '015', name: 'Jewelry', icon: 'shirt', parentCategory: 'Fashion', status: 'active' },
-  { id: '016', name: 'Appliances', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-  { id: '017', name: 'Garden Tools', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-  { id: '018', name: 'Cameras', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
-  { id: '019', name: 'Audio', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
-  { id: '020', name: 'Gaming', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
-  { id: '021', name: 'TV & Video', icon: 'laptop', parentCategory: 'Electronics', status: 'active' },
-  { id: '022', name: 'Kids Clothing', icon: 'person', parentCategory: 'Fashion', status: 'active' },
-  { id: '023', name: 'Bedding', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-  { id: '024', name: 'Lighting', icon: 'home', parentCategory: 'Home & Garden', status: 'active' },
-]
 
 export default function AddCategory() {
   const { id } = useParams<{ id?: string }>()
@@ -70,70 +31,56 @@ export default function AddCategory() {
   const [categoryName, setCategoryName] = useState('')
   const [description, setDescription] = useState('')
   const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set())
-  const [filterOptions, setFilterOptions] = useState<FilterOption[]>(INITIAL_FILTER_OPTIONS)
+  const [initialAssignedFilters, setInitialAssignedFilters] = useState<Set<string>>(new Set())
+  const [filterOptions, setFilterOptions] = useState<FilterOption[]>([])
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [iconDataUrl, setIconDataUrl] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Load filters from localStorage (synced with EditFilter page)
+  // Load filters from backend
   useEffect(() => {
-    const loadFilters = () => {
-      const savedFilters = localStorage.getItem('filterOptions')
-      if (savedFilters) {
-        try {
-          const parsed = JSON.parse(savedFilters)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setFilterOptions(parsed)
-          }
-        } catch (error) {
-          console.error('Failed to parse saved filters:', error)
-          setFilterOptions(INITIAL_FILTER_OPTIONS)
-        }
-      } else {
-        setFilterOptions(INITIAL_FILTER_OPTIONS)
+    const loadFilters = async () => {
+      try {
+        const backendFilters = await filtersApi.getAll()
+        const options: FilterOption[] = backendFilters.map((f: BackendFilter) => ({
+          id: f.id,
+          label: f.i18n?.en?.label || f.key,
+        }))
+        setFilterOptions(options)
+      } catch (err: any) {
+        console.error('Failed to load filters:', err)
       }
     }
 
-    loadFilters()
-
-    // Listen for storage changes (when EditFilter updates filters in another tab)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'filterOptions') {
-        loadFilters()
-      }
-    }
-
-    // Listen for custom event (when EditFilter updates filters in same tab)
-    const handleFilterUpdate = () => {
-      loadFilters()
-    }
-
-    // Also check on focus (when user returns from EditFilter page)
-    const handleFocus = () => {
-      loadFilters()
-    }
-
-    window.addEventListener('storage', handleStorageChange)
-    window.addEventListener('filterOptionsUpdated', handleFilterUpdate)
-    window.addEventListener('focus', handleFocus)
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('filterOptionsUpdated', handleFilterUpdate)
-      window.removeEventListener('focus', handleFocus)
-    }
+    void loadFilters()
   }, [])
 
   // Load category data in edit mode
   useEffect(() => {
-    if (isEditMode && id) {
-      const category = MOCK_CATEGORIES.find((c) => c.id === id)
-      if (category) {
-        setCategoryName(category.name)
-        // In a real app, you would load description and selected filters from the category data
-        setDescription('') // Placeholder - would come from category data
-        setSelectedFilters(new Set()) // Placeholder - would come from category data
+    const loadCategory = async () => {
+      if (isEditMode && id) {
+        try {
+          const category = await categoriesApi.getById(id)
+          setCategoryName(category.name)
+          const desc = (category.langData as any)?.en?.description || ''
+          setDescription(desc)
+          const icon = (category.langData as any)?.en?.iconUrl || null
+          if (icon) setIconDataUrl(icon)
+
+          const assignments = await categoriesApi.getCategoryFilters(id)
+          const assignedIds = new Set<string>(assignments.map((a: any) => a.filterId))
+          setSelectedFilters(new Set(assignedIds))
+          setInitialAssignedFilters(new Set(assignedIds))
+        } catch (err: any) {
+          console.error('Failed to load category:', err)
+          setError(err.response?.data?.message || 'Failed to load category')
+        }
       }
     }
+
+    void loadCategory()
   }, [id, isEditMode])
 
   const handleTabChange = (tabKey: string) => {
@@ -166,12 +113,31 @@ export default function AddCategory() {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    // Handle file drop here
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0]
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') {
+            setIconDataUrl(reader.result)
+          }
+        }
+        reader.readAsDataURL(file)
+      }
+    }
   }
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      // Handle file upload here
+      const file = e.target.files[0]
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setIconDataUrl(reader.result)
+        }
+      }
+      reader.readAsDataURL(file)
     }
   }
 
@@ -180,10 +146,66 @@ export default function AddCategory() {
   }
 
   const handleAddCategory = () => {
-    // Handle add/edit category logic here
-    // eslint-disable-next-line no-console
-    console.log(isEditMode ? 'Update category:' : 'Add category:', { categoryName, description, selectedFilters, id })
-    navigate('/categories')
+    if (!categoryName.trim()) {
+      setError('Category name is required')
+      return
+    }
+
+    const save = async () => {
+      try {
+        setIsSubmitting(true)
+        setError(null)
+
+        const langData = {
+          en: {
+            name: categoryName.trim(),
+            description: description.trim() || undefined,
+            iconUrl: iconDataUrl || undefined,
+          },
+        }
+
+        let categoryId = id || ''
+
+        if (isEditMode && id) {
+          const updated = await categoriesApi.update(id, {
+            name: categoryName.trim(),
+            langData,
+          })
+          categoryId = updated.id
+        } else {
+          const created = await categoriesApi.create({
+            name: categoryName.trim(),
+            langData,
+          } as any)
+          categoryId = created.id
+        }
+
+        // Sync filters assignments
+        const added = Array.from(selectedFilters).filter((fid) => !initialAssignedFilters.has(fid))
+        const removed = Array.from(initialAssignedFilters).filter((fid) => !selectedFilters.has(fid))
+
+        await Promise.all([
+          ...added.map((filterId, index) =>
+            categoriesApi.assignFilterToCategory(categoryId, {
+              filterId,
+              displayOrder: index,
+              required: false,
+              visibility: 'detail',
+            }),
+          ),
+          ...removed.map((filterId) => categoriesApi.removeFilterFromCategory(categoryId, filterId)),
+        ])
+
+        navigate('/categories')
+      } catch (err: any) {
+        console.error('Failed to save category:', err)
+        setError(err.response?.data?.message || 'Failed to save category')
+      } finally {
+        setIsSubmitting(false)
+      }
+    }
+
+    void save()
   }
 
   return (
@@ -229,6 +251,11 @@ export default function AddCategory() {
       {/* Main Content Card */}
       <section className="rounded-xl bg-white shadow-sm">
         <div className="px-4 sm:px-6 py-6">
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
           {/* Add New Category Section */}
           <div className="mb-6">
 
@@ -283,17 +310,35 @@ export default function AddCategory() {
                     onChange={handleFileInput}
                     className="hidden"
                   />
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-orange-100">
-                      <UploadIcon className="h-6 w-6 sm:h-8 sm:w-8 text-[#E8851C]" />
+                  {iconDataUrl ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-2 border-[#F7931E] bg-white">
+                        <img
+                          src={iconDataUrl}
+                          alt="Category icon preview"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm sm:text-base font-medium text-gray-700 mb-1">
+                          Icon selected ✓
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-500">Click to change</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm sm:text-base font-medium text-gray-700 mb-1">
-                        Upload category icon
-                      </p>
-                      <p className="text-xs sm:text-sm text-gray-500">Or Drag & Drop File</p>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-orange-100">
+                        <UploadIcon className="h-6 w-6 sm:h-8 sm:w-8 text-[#E8851C]" />
+                      </div>
+                      <div>
+                        <p className="text-sm sm:text-base font-medium text-gray-700 mb-1">
+                          Upload category icon
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-500">Or Drag & Drop File</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -320,7 +365,12 @@ export default function AddCategory() {
                 return (
                   <div
                     key={filter.id}
-                    onClick={() => handleFilterToggle(filter.id)}
+                    onClick={(e) => {
+                      // Only toggle if click is not on the checkbox
+                      if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                        handleFilterToggle(filter.id)
+                      }
+                    }}
                     className={`relative rounded-lg border-2 p-3 sm:p-4 cursor-pointer transition-all ${
                       isSelected
                         ? 'border-[#F7931E] bg-orange-50'
@@ -341,7 +391,11 @@ export default function AddCategory() {
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => handleFilterToggle(filter.id)}
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          handleFilterToggle(filter.id)
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                         className="w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
                       />
                     </div>

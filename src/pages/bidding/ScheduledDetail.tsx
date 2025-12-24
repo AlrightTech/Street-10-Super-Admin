@@ -5,6 +5,7 @@ import { auctionsApi } from '../../services/auctions.api'
 
 interface ScheduledDetailProps {
   product: BiddingProduct
+  mediaUrls?: string[] // All product media URLs
   onClose: () => void
   onAuctionStarted?: () => void // Callback to refresh parent list
 }
@@ -12,7 +13,7 @@ interface ScheduledDetailProps {
 /**
  * Scheduled Product Detail page
  */
-export default function ScheduledDetail({ product, onClose: _onClose, onAuctionStarted }: ScheduledDetailProps) {
+export default function ScheduledDetail({ product, mediaUrls, onClose: _onClose, onAuctionStarted }: ScheduledDetailProps) {
   const navigate = useNavigate()
   const [selectedImage, setSelectedImage] = useState(0)
   const [isStarting, setIsStarting] = useState(false)
@@ -94,13 +95,12 @@ export default function ScheduledDetail({ product, onClose: _onClose, onAuctionS
     window.open('https://example.com/review.pdf', '_blank')
   }
 
-  const productImages = [
-    product.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
-  ]
+  // Use provided mediaUrls or fallback to single imageUrl, or placeholder
+  const productImages = mediaUrls && mediaUrls.length > 0 
+    ? mediaUrls 
+    : product.imageUrl 
+      ? [product.imageUrl]
+      : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop']
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -159,24 +159,26 @@ export default function ScheduledDetail({ product, onClose: _onClose, onAuctionS
                     />
                   </div>
                   {/* Thumbnail Images */}
-                  <div className="grid grid-cols-4 gap-2 sm:gap-3">
-                    {productImages.slice(0, 4).map((img, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => setSelectedImage(index)}
-                        className={`h-16 sm:h-20 w-full rounded-lg overflow-hidden border-2 transition ${
-                          selectedImage === index ? 'border-[#F7931E]' : 'border-gray-200'
-                        }`}
-                      >
-                        <img
-                          src={img}
-                          alt={`${product.name} ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
+                  {productImages.length > 1 && (
+                    <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                      {productImages.slice(0, 4).map((img, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setSelectedImage(index)}
+                          className={`h-16 sm:h-20 w-full rounded-lg overflow-hidden border-2 transition ${
+                            selectedImage === index ? 'border-[#F7931E]' : 'border-gray-200'
+                          }`}
+                        >
+                          <img
+                            src={img}
+                            alt={`${product.name} ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Product Information */}

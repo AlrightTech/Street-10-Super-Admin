@@ -1,21 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { type Filter } from './CategoryFilters'
 import SelectDropdown from '../components/ui/SelectDropdown'
 import { XIcon } from '../components/icons/Icons'
-
-// Mock filter data
-const getInitialFilters = (): Filter[] => {
-  const saved = localStorage.getItem('categoryFilters')
-  if (saved) {
-    try {
-      return JSON.parse(saved)
-    } catch {
-      return []
-    }
-  }
-  return []
-}
+import { filtersApi, type Filter as BackendFilter } from '../services/filters.api'
+import { categoriesApi, type Category } from '../services/categories.api'
 
 export default function AddCategoryFilter() {
   const { id } = useParams<{ id?: string }>()
@@ -26,25 +14,103 @@ export default function AddCategoryFilter() {
   const [originalInputType, setOriginalInputType] = useState<'number' | 'radio' | 'checkbox' | 'text'>('text')
   const [options, setOptions] = useState<string[]>([])
   const [newOption, setNewOption] = useState('')
-  const [description, setDescription] = useState('')
-  const [category, setCategory] = useState('')
-  const [status, setStatus] = useState<'active' | 'inactive'>('active')
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [subCategories, setSubCategories] = useState<Category[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Load filter data in edit mode
+  // Load categories and subcategories
   useEffect(() => {
-    if (isEditMode && id) {
-      const filters = getInitialFilters()
-      const filter = filters.find((f) => f.id === id)
-      if (filter) {
-        setFilterName(filter.filterName)
-        setInputType(filter.inputType)
-        setOriginalInputType(filter.inputType)
-        setOptions(filter.options || [])
-        setDescription(filter.description || '')
-        setCategory(filter.category || '')
-        setStatus(filter.status)
+    const loadCategories = async () => {
+      try {
+        // Load top-level categories
+        const { data: topCategories } = await categoriesApi.getAll({
+          page: 1,
+          limit: 1000,
+          parentId: 'null',
+        })
+        setCategories(topCategories)
+
+        // Load all categories to get subcategories
+        const { data: allCategories } = await categoriesApi.getAll({
+          page: 1,
+          limit: 1000,
+        })
+        const subCats = allCategories.filter((cat) => cat.parentId !== null)
+        setSubCategories(subCats)
+      } catch (err: any) {
+        console.error('Failed to load categories:', err)
       }
     }
+
+    void loadCategories()
+  }, [])
+
+  // Load filter data in edit mode and fetch assigned categories/subcategories
+  useEffect(() => {
+    const load = async () => {
+      if (isEditMode && id) {
+        try {
+          setIsLoadingData(true)
+          setError(null)
+          const filter = await filtersApi.getById(id)
+          const label = filter.i18n?.en?.label || filter.key
+          setFilterName(label)
+          const mappedType: 'number' | 'radio' | 'checkbox' | 'text' =
+            filter.type === 'number'
+              ? 'number'
+              : filter.type === 'multi-select'
+              ? 'checkbox'
+              : filter.type === 'boolean' || filter.type === 'select'
+              ? 'radio'
+              : 'text'
+          setInputType(mappedType)
+          setOriginalInputType(mappedType)
+          setOptions(Array.isArray(filter.options) ? filter.options : [])
+          
+          // Load all categories and check which ones have this filter assigned
+          const { data: allCategories } = await categoriesApi.getAll({
+            page: 1,
+            limit: 1000,
+          })
+          
+          const assignedCategoryIds: string[] = []
+          const assignedSubCategoryIds: string[] = []
+          
+          // Check each category to see if it has this filter
+          for (const category of allCategories) {
+            try {
+              const categoryFilters = await categoriesApi.getCategoryFilters(category.id)
+              const hasFilter = categoryFilters.some((cf: any) => cf.filterId === id)
+              
+              if (hasFilter) {
+                if (category.parentId === null) {
+                  assignedCategoryIds.push(category.id)
+                } else {
+                  assignedSubCategoryIds.push(category.id)
+                }
+              }
+            } catch (err) {
+              // Skip if we can't fetch filters for this category
+              console.warn(`Failed to fetch filters for category ${category.id}:`, err)
+            }
+          }
+          
+          setSelectedCategories(assignedCategoryIds)
+          setSelectedSubCategories(assignedSubCategoryIds)
+        } catch (err: any) {
+          console.error('Failed to load filter:', err)
+          setError(err.response?.data?.message || 'Failed to load filter')
+        } finally {
+          setIsLoadingData(false)
+        }
+      }
+    }
+
+    load()
   }, [id, isEditMode])
 
   const handleAddOption = () => {
@@ -68,27 +134,140 @@ export default function AddCategoryFilter() {
       return
     }
 
-    const filters = getInitialFilters()
-    const filterData: Filter = {
-      id: isEditMode && id ? id : `filter-${Date.now()}`,
-      filterName: filterName.trim(),
-      inputType,
-      options: inputType === 'number' ? [] : options,
-      description: description.trim() || undefined,
-      category: category.trim() || undefined,
-      status,
+    const save = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const payload: Partial<BackendFilter> = {
+          key: filterName.trim().toLowerCase().replace(/\s+/g, '_'),
+          type:
+            inputType === 'number'
+              ? 'number'
+              : inputType === 'checkbox'
+              ? 'multi-select'
+              : inputType === 'radio'
+              ? 'select'
+              : 'text',
+          options: inputType === 'number' ? [] : options,
+          i18n: {
+            en: {
+              label: filterName.trim(),
+            },
+          },
+          isIndexed: inputType === 'number',
+        }
+
+        let filterId = id || ''
+        
+        if (isEditMode && id) {
+          const updated = await filtersApi.update(id, payload)
+          filterId = updated.id
+          
+          // Get all categories that currently have this filter
+          const { data: allCategories } = await categoriesApi.getAll({
+            page: 1,
+            limit: 1000,
+          })
+          
+          const currentlyAssignedCategoryIds: string[] = []
+          for (const category of allCategories) {
+            try {
+              const categoryFilters = await categoriesApi.getCategoryFilters(category.id)
+              const hasFilter = categoryFilters.some((cf: any) => cf.filterId === id)
+              if (hasFilter) {
+                currentlyAssignedCategoryIds.push(category.id)
+              }
+            } catch (err) {
+              // Skip
+            }
+          }
+          
+          // Remove filter from categories that are no longer selected
+          const toRemove = currentlyAssignedCategoryIds.filter(
+            (catId) => !selectedCategories.includes(catId) && !selectedSubCategories.includes(catId)
+          )
+          await Promise.all(
+            toRemove.map((catId) =>
+              categoriesApi.removeFilterFromCategory(catId, filterId).catch((err) => {
+                console.error(`Failed to remove filter from category ${catId}:`, err)
+              })
+            )
+          )
+          
+          // Add filter to newly selected categories
+          const toAddCategories = selectedCategories.filter((catId) => !currentlyAssignedCategoryIds.includes(catId))
+          const toAddSubCategories = selectedSubCategories.filter((catId) => !currentlyAssignedCategoryIds.includes(catId))
+          
+          await Promise.all([
+            ...toAddCategories.map((categoryId, index) =>
+              categoriesApi.assignFilterToCategory(categoryId, {
+                filterId,
+                displayOrder: index,
+                required: false,
+                visibility: 'detail',
+              }).catch((err) => {
+                console.error(`Failed to assign filter to category ${categoryId}:`, err)
+              })
+            ),
+            ...toAddSubCategories.map((subCategoryId, index) =>
+              categoriesApi.assignFilterToCategory(subCategoryId, {
+                filterId,
+                displayOrder: index,
+                required: false,
+                visibility: 'detail',
+              }).catch((err) => {
+                console.error(`Failed to assign filter to subcategory ${subCategoryId}:`, err)
+              })
+            ),
+          ])
+        } else {
+          const created = await filtersApi.create(payload as any)
+          filterId = created.id
+
+          // Assign filter to selected categories
+          if (selectedCategories.length > 0) {
+            await Promise.all(
+              selectedCategories.map((categoryId, index) =>
+                categoriesApi.assignFilterToCategory(categoryId, {
+                  filterId,
+                  displayOrder: index,
+                  required: false,
+                  visibility: 'detail',
+                }).catch((err) => {
+                  console.error(`Failed to assign filter to category ${categoryId}:`, err)
+                })
+              )
+            )
+          }
+
+          // Assign filter to selected subcategories
+          if (selectedSubCategories.length > 0) {
+            await Promise.all(
+              selectedSubCategories.map((subCategoryId, index) =>
+                categoriesApi.assignFilterToCategory(subCategoryId, {
+                  filterId,
+                  displayOrder: index,
+                  required: false,
+                  visibility: 'detail',
+                }).catch((err) => {
+                  console.error(`Failed to assign filter to subcategory ${subCategoryId}:`, err)
+                })
+              )
+            )
+          }
+        }
+
+        navigate('/categories/filters')
+      } catch (err: any) {
+        console.error('Failed to save filter:', err)
+        setError(err.response?.data?.message || 'Failed to save filter')
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    if (isEditMode && id) {
-      const updated = filters.map((f) => (f.id === id ? filterData : f))
-      localStorage.setItem('categoryFilters', JSON.stringify(updated))
-    } else {
-      const updated = [...filters, filterData]
-      localStorage.setItem('categoryFilters', JSON.stringify(updated))
-    }
-
-    window.dispatchEvent(new Event('categoryFiltersUpdated'))
-    navigate('/categories/filters')
+    void save()
   }
 
   return (
@@ -106,7 +285,18 @@ export default function AddCategoryFilter() {
       {/* Main Content Card */}
       <section className="rounded-xl bg-white shadow-sm">
         <div className="px-4 sm:px-6 py-6">
-          <div className="space-y-4">
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+          {isLoadingData && (
+            <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-[#F7931E]"></div>
+              <span>Loading filter data...</span>
+            </div>
+          )}
+          <div className={`space-y-4 ${isLoadingData ? 'opacity-50 pointer-events-none' : ''}`}>
             {/* Filter Name */}
             <div>
               <label htmlFor="filter-name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -138,7 +328,7 @@ export default function AddCategoryFilter() {
                   { value: 'checkbox', label: 'Checkbox' },
                 ]}
                 onChange={(value) => {
-                  setInputType(value as Filter['inputType'])
+                  setInputType(value as 'number' | 'radio' | 'checkbox' | 'text')
                   if (value === 'number') {
                     setOptions([])
                   }
@@ -154,10 +344,11 @@ export default function AddCategoryFilter() {
               )}
             </div>
 
-            {/* Options (show for radio/checkbox, or always in edit mode) */}
-            {(inputType === 'radio' || inputType === 'checkbox' || isEditMode) && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
+            {/* Options (always show, but only editable for radio/checkbox) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Options {inputType !== 'radio' && inputType !== 'checkbox' && '(Optional)'}
+              </label>
                 <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
                   {/* Header Row */}
                   <div className="grid grid-cols-[1fr_auto] gap-4 px-4 py-3 border-b border-gray-200 bg-gray-50">
@@ -167,125 +358,204 @@ export default function AddCategoryFilter() {
                   
                   {/* Options List */}
                   <div className="px-4 py-3 space-y-3">
-                    {(options.length > 0 ? options : ['Yes', 'No']).map((option, index) => {
-                      return (
+                    {options.length > 0 ? (
+                      options.map((option, index) => (
                         <div key={index} className="grid grid-cols-[1fr_auto] gap-4 items-center">
                           <input
                             type="text"
                             value={option}
+                            disabled={inputType !== 'radio' && inputType !== 'checkbox'}
                             onChange={(e) => {
-                              // If options array is empty, initialize it with mock data first
-                              const currentOptions = options.length > 0 ? options : ['Yes', 'No']
-                              const updated = [...currentOptions]
+                              const updated = [...options]
                               updated[index] = e.target.value
                               setOptions(updated)
                             }}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm outline-none focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E]"
+                            className={`w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm outline-none focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E] ${
+                              inputType !== 'radio' && inputType !== 'checkbox' ? 'bg-gray-50 cursor-not-allowed' : ''
+                            }`}
+                            placeholder="Enter option value"
                           />
                           <button
                             type="button"
-                            onClick={() => {
-                              // If options array is empty, initialize it first
-                              if (options.length === 0) {
-                                const filtered = ['Yes', 'No'].filter((opt) => opt !== option)
-                                setOptions(filtered)
-                              } else {
-                                handleRemoveOption(option)
-                              }
-                            }}
-                            className="p-2 text-red-600 hover:text-red-800 transition-colors cursor-pointer flex-shrink-0"
+                            onClick={() => handleRemoveOption(option)}
+                            disabled={inputType !== 'radio' && inputType !== 'checkbox'}
+                            className={`p-2 text-red-600 hover:text-red-800 transition-colors flex-shrink-0 ${
+                              inputType !== 'radio' && inputType !== 'checkbox' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                            }`}
                             aria-label={`Remove ${option}`}
                           >
                             <XIcon className="h-5 w-5" />
                           </button>
                         </div>
-                      )
-                    })}
+                      ))
+                    ) : (
+                      <div className="text-sm text-gray-500 py-2">
+                        {inputType === 'radio' || inputType === 'checkbox' 
+                          ? 'No options added yet. Click "Add Option" below to add options.'
+                          : 'Options are not applicable for this input type.'}
+                      </div>
+                    )}
                   </div>
                   
                   {/* Add Option Button - only show for radio/checkbox */}
                   {(inputType === 'radio' || inputType === 'checkbox') && (
                     <div className="px-4 pb-4">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (newOption.trim()) {
-                            handleAddOption()
-                          } else {
-                            // If no new option, add empty option to edit
-                            setOptions((prev) => [...prev, ''])
-                          }
-                        }}
-                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700 cursor-pointer"
-                      >
-                        <span className="text-lg">+</span>
-                        Add Option
-                      </button>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newOption}
+                          onChange={(e) => setNewOption(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              if (newOption.trim()) {
+                                handleAddOption()
+                              } else {
+                                setOptions((prev) => [...prev, ''])
+                              }
+                            }
+                          }}
+                          placeholder="Enter option name"
+                          className="flex-1 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm outline-none placeholder:text-gray-400 focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (newOption.trim()) {
+                              handleAddOption()
+                            } else {
+                              setOptions((prev) => [...prev, ''])
+                            }
+                          }}
+                          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700 cursor-pointer"
+                        >
+                          <span className="text-lg">+</span>
+                          Add Option
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
-            )}
 
-            {/* Description (Optional) */}
+            {/* Categories - Checkbox Selection */}
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                Description (Optional)
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Categories
               </label>
-              <textarea
-                id="description"
-                placeholder="Enter the car's total mileage in kilometers."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm outline-none placeholder:text-gray-400 focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E] resize-none"
-              />
-            </div>
-
-            {/* Category */}
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <input
-                id="category"
-                type="text"
-                placeholder="Enter category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm outline-none placeholder:text-gray-400 focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E]"
-              />
-              <p className="mt-1.5 text-xs text-gray-500">
-                This filter is linked to the {category || 'selected'} category.
-              </p>
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setStatus(status === 'active' ? 'inactive' : 'active')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full border border-transparent px-1 transition-colors ${
-                    status === 'active' ? 'bg-blue-600' : 'bg-gray-300'
-                  } cursor-pointer`}
-                  aria-pressed={status === 'active'}
-                  aria-label="Toggle status"
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform ${
-                      status === 'active' ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-                <span className="text-sm font-medium text-gray-700">
-                  {status === 'active' ? 'Active' : 'Inactive'}
-                </span>
+              <div className="rounded-lg border border-gray-200 bg-white p-4 max-h-60 overflow-y-auto">
+                {categories.length === 0 ? (
+                  <p className="text-sm text-gray-500">No categories available</p>
+                ) : (
+                  <div className="space-y-2">
+                    {categories.map((cat) => {
+                      const isSelected = selectedCategories.includes(cat.id)
+                      return (
+                        <label
+                          key={cat.id}
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCategories((prev) => [...prev, cat.id])
+                              } else {
+                                setSelectedCategories((prev) => prev.filter((id) => id !== cat.id))
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-700 flex-1">{cat.name}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-              <p className="mt-1.5 text-xs text-gray-500">
-                Inactive filters will be hidden from vendor product forms.
-              </p>
+              {selectedCategories.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {selectedCategories.map((catId) => {
+                    const cat = categories.find((c) => c.id === catId)
+                    return cat ? (
+                      <span
+                        key={catId}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200"
+                      >
+                        {cat.name}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCategories((prev) => prev.filter((id) => id !== catId))}
+                          className="text-orange-600 hover:text-orange-800"
+                        >
+                          <XIcon className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ) : null
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Subcategories - Checkbox Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Subcategories
+              </label>
+              <div className="rounded-lg border border-gray-200 bg-white p-4 max-h-60 overflow-y-auto">
+                {subCategories.length === 0 ? (
+                  <p className="text-sm text-gray-500">No subcategories available</p>
+                ) : (
+                  <div className="space-y-2">
+                    {subCategories.map((subCat) => {
+                      const isSelected = selectedSubCategories.includes(subCat.id)
+                      return (
+                        <label
+                          key={subCat.id}
+                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedSubCategories((prev) => [...prev, subCat.id])
+                              } else {
+                                setSelectedSubCategories((prev) => prev.filter((id) => id !== subCat.id))
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
+                          />
+                          <span className="text-sm text-gray-700 flex-1">{subCat.name}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              {selectedSubCategories.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {selectedSubCategories.map((subCatId) => {
+                    const subCat = subCategories.find((c) => c.id === subCatId)
+                    return subCat ? (
+                      <span
+                        key={subCatId}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                      >
+                        {subCat.name}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSubCategories((prev) => prev.filter((id) => id !== subCatId))}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <XIcon className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ) : null
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -295,9 +565,10 @@ export default function AddCategoryFilter() {
           <button
             type="button"
             onClick={handleSave}
-            className="w-full sm:w-auto rounded-lg bg-[#F7931E] px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white transition hover:bg-[#E8851C] focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer"
+            disabled={isLoading || isLoadingData}
+            className="w-full sm:w-auto rounded-lg bg-[#F7931E] px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white transition hover:bg-[#E8851C] focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save Changes
+            {isLoading ? 'Saving...' : isLoadingData ? 'Loading...' : 'Save Changes'}
           </button>
         </div>
       </section>
