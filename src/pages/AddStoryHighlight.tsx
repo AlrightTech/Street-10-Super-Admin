@@ -1,62 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CalendarIcon, CameraIcon, UploadIcon, PlusIcon, ChevronDownIcon, EditIcon, LinkIcon } from '../components/icons/Icons'
+import { CalendarIcon, CameraIcon, UploadIcon, ChevronDownIcon, EditIcon, LinkIcon, XIcon } from '../components/icons/Icons'
 import { type StoryHighlightFormData } from '../components/marketing/AddStoryHighlightModal'
-import { type StoryHighlight } from '../components/marketing/StoryHighlightTable'
-
-// Mock data - in a real app, this would come from an API
-const MOCK_HIGHLIGHTS: StoryHighlight[] = [
-  {
-    id: '1',
-    thumbnail: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=100&h=100&fit=crop',
-    title: 'BMW',
-    type: 'Story',
-    startDate: '12 Aug 2025',
-    endDate: '12 Aug 2025',
-    audience: 'User',
-    priority: 'High',
-    status: 'active',
-  },
-  {
-    id: '2',
-    thumbnail: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=100&h=100&fit=crop',
-    title: 'Mercedes',
-    type: 'Story',
-    startDate: '12 Aug 2025',
-    endDate: '15 Aug 2025',
-    audience: 'User',
-    priority: 'High',
-    status: 'active',
-  },
-  {
-    id: '3',
-    thumbnail: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=100&h=100&fit=crop',
-    title: 'Panches',
-    type: 'Story',
-    startDate: '12 Aug 2025',
-    endDate: '12 Aug 2025',
-    audience: 'User',
-    priority: 'Medium',
-    status: 'active',
-  },
-]
-
-// Helper function to convert date from "12 Aug 2025" to "2025-08-12"
-const parseDateString = (dateStr: string): string => {
-  const months: { [key: string]: string } = {
-    'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
-    'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
-    'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
-  }
-  const parts = dateStr.split(' ')
-  if (parts.length === 3) {
-    const day = parts[0].padStart(2, '0')
-    const month = months[parts[1]] || '01'
-    const year = parts[2]
-    return `${year}-${month}-${day}`
-  }
-  return ''
-}
+import { storyHighlightsApi, filesToDataUrls } from '../services/story-highlights.api'
 
 export default function AddStoryHighlight() {
   const { id } = useParams<{ id?: string }>()
@@ -76,9 +22,13 @@ export default function AddStoryHighlight() {
     mediaFiles: [],
   })
 
-  const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [previewFiles, setPreviewFiles] = useState<Array<{ file: File; preview: string; type: 'image' | 'video' }>>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   
   // Custom dropdown states
   const [isAudienceDropdownOpen, setIsAudienceDropdownOpen] = useState(false)
@@ -91,40 +41,53 @@ export default function AddStoryHighlight() {
   const priorityDropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (isEditMode && id) {
-      // Load existing story highlight data from mock data
-      // In a real app, you would fetch this from an API
-      const highlight = MOCK_HIGHLIGHTS.find((h) => h.id === id)
-      if (highlight) {
-        const highlightData = {
-          title: highlight.title,
-          startDate: parseDateString(highlight.startDate),
-          endDate: parseDateString(highlight.endDate),
-          audience: highlight.audience,
-          type: highlight.type === 'Story' ? 'Image' : highlight.type, // Map Story to Image for form
-          url: '',
-          priority: highlight.priority === 'High' ? 'High' : highlight.priority === 'Medium' ? 'Medium' : 'Low',
-          mediaFiles: [],
+    const fetchHighlight = async () => {
+      if (isEditMode && id) {
+        setIsLoadingData(true)
+        setError(null)
+        try {
+          const highlight = await storyHighlightsApi.getById(id)
+          const highlightData = {
+            title: highlight.title,
+            startDate: highlight.startDate.split('T')[0], // Extract date part from ISO string
+            endDate: highlight.endDate.split('T')[0],
+            audience: highlight.audience === 'user' ? 'User' : 'Vendor',
+            type: highlight.type === 'image' ? 'Image' : 'Video',
+            url: highlight.url || '',
+            priority: highlight.priority === 'high' ? 'High' : highlight.priority === 'medium' ? 'Medium' : 'Low',
+            mediaFiles: [],
+          }
+          setFormData(highlightData)
+          // Set preview files from media URLs (for display only, not actual File objects)
+          if (highlight.mediaUrls && highlight.mediaUrls.length > 0) {
+            const previews = highlight.mediaUrls.map((url) => {
+              const isVideo = highlight.type === 'video' || url.includes('video') || url.match(/\.(mp4|webm|ogg)$/i)
+              return {
+                file: null as any, // We don't have the actual File object in edit mode
+                preview: url,
+                type: (isVideo ? 'video' : 'image') as 'image' | 'video',
+                isExisting: true, // Flag to indicate this is from existing data
+              }
+            })
+            setPreviewFiles(previews as any)
+          } else if (highlight.thumbnailUrl) {
+            setPreviewFiles([{
+              file: null as any,
+              preview: highlight.thumbnailUrl,
+              type: 'image' as const,
+              isExisting: true,
+            } as any])
+          }
+        } catch (err: any) {
+          console.error('Error fetching story highlight:', err)
+          setError(err.response?.data?.message || 'Failed to load story highlight')
+        } finally {
+          setIsLoadingData(false)
         }
-        setFormData(highlightData)
-        // Set preview image from thumbnail
-        setPreviewImage(highlight.thumbnail.replace('w=100&h=100', 'w=1000&h=1000'))
-      } else {
-        // Fallback to default data if not found
-        const highlightData = {
-          title: 'Mercedes',
-          startDate: '2025-08-12',
-          endDate: '2025-08-15',
-          audience: 'User',
-          type: 'Image',
-          url: '',
-          priority: 'High',
-          mediaFiles: [],
-        }
-        setFormData(highlightData)
-        setPreviewImage('https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1000&h=1000&fit=crop')
       }
     }
+
+    fetchHighlight()
   }, [id, isEditMode])
 
   // Click-outside detection for dropdowns
@@ -150,24 +113,86 @@ export default function AddStoryHighlight() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleFileSelect = (files: FileList | null) => {
+  const handleFileSelect = async (files: FileList | null) => {
     if (files && files.length > 0) {
-      const file = files[0]
       const fileArray = Array.from(files)
+      
+      // Create previews for all files
+      const newPreviews = await Promise.all(
+        fileArray.map((file) => {
+          return new Promise<{ file: File; preview: string; type: 'image' | 'video' }>((resolve) => {
+            const isVideo = file.type.startsWith('video/')
+            if (isVideo) {
+              // For videos, create object URL
+              const videoUrl = URL.createObjectURL(file)
+              resolve({
+                file,
+                preview: videoUrl,
+                type: 'video',
+              })
+            } else {
+              // For images, use FileReader
+              const reader = new FileReader()
+              reader.onloadend = () => {
+                resolve({
+                  file,
+                  preview: reader.result as string,
+                  type: 'image',
+                })
+              }
+              reader.readAsDataURL(file)
+            }
+          })
+        })
+      )
+
+      setPreviewFiles((prev) => [...prev, ...newPreviews])
       setFormData((prev) => ({
         ...prev,
         mediaFiles: [...prev.mediaFiles, ...fileArray],
       }))
-      // Create preview for image files
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          setPreviewImage(reader.result as string)
-        }
-        reader.readAsDataURL(file)
-      }
     }
   }
+
+  const handleRemoveFile = (index: number) => {
+    const fileToRemove = previewFiles[index]
+    
+    // Revoke object URL if it's a video
+    if (fileToRemove.type === 'video' && fileToRemove.preview.startsWith('blob:')) {
+      URL.revokeObjectURL(fileToRemove.preview)
+    }
+
+    // Remove from preview files
+    const newPreviewFiles = previewFiles.filter((_, i) => i !== index)
+    setPreviewFiles(newPreviewFiles)
+
+    // Remove corresponding file from mediaFiles
+    // We need to track which files are new vs existing
+    const newFiles: File[] = []
+    
+    previewFiles.forEach((pf, i) => {
+      if (i !== index && pf.file) {
+        newFiles.push(pf.file)
+      }
+    })
+
+    setFormData((prev) => ({
+      ...prev,
+      mediaFiles: newFiles,
+    }))
+  }
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      // Cleanup all video blob URLs when component unmounts
+      previewFiles.forEach((pf) => {
+        if (pf.type === 'video' && pf.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(pf.preview)
+        }
+      })
+    }
+  }, [previewFiles])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -189,22 +214,90 @@ export default function AddStoryHighlight() {
     handleFileSelect(e.target.files)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    // eslint-disable-next-line no-console
-    console.log('Form submitted:', formData)
-    // Add your save logic here
-    // After saving, navigate back to marketing page
-    navigate('/marketing')
+    setIsLoading(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    try {
+      // Validate required fields
+      if (!formData.title.trim()) {
+        throw new Error('Title is required')
+      }
+      if (!formData.startDate) {
+        throw new Error('Start date is required')
+      }
+      if (!formData.endDate) {
+        throw new Error('End date is required')
+      }
+      if (!formData.audience) {
+        throw new Error('Audience is required')
+      }
+      if (new Date(formData.endDate) < new Date(formData.startDate)) {
+        throw new Error('End date must be after start date')
+      }
+
+      // Convert files to data URLs and combine with existing URLs
+      let mediaUrls: string[] = []
+      
+      // Get existing media URLs from preview files that don't have a file (from edit mode)
+      const existingUrls = previewFiles
+        .filter((pf) => !pf.file && (pf as any).isExisting)
+        .map((pf) => pf.preview)
+      
+      // Convert new files to data URLs
+      if (formData.mediaFiles.length > 0) {
+        const newUrls = await filesToDataUrls(formData.mediaFiles)
+        mediaUrls = [...existingUrls, ...newUrls]
+      } else {
+        mediaUrls = existingUrls
+      }
+
+      // Determine type based on uploaded files if not explicitly set
+      let highlightType = formData.type.toLowerCase() as 'image' | 'video'
+      if (previewFiles.length > 0) {
+        const hasVideo = previewFiles.some((pf) => pf.type === 'video')
+        if (hasVideo) {
+          highlightType = 'video'
+        }
+      }
+
+      // Prepare data for API
+      const apiData = {
+        title: formData.title.trim(),
+        startDate: new Date(formData.startDate).toISOString(),
+        endDate: new Date(formData.endDate).toISOString(),
+        audience: formData.audience.toLowerCase() as 'user' | 'vendor',
+        type: highlightType,
+        priority: (formData.priority === 'High' ? 'high' : formData.priority === 'Medium' ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+        url: formData.url.trim() || undefined,
+        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+        thumbnailUrl: mediaUrls.length > 0 ? mediaUrls[0] : undefined,
+      }
+
+      if (isEditMode && id) {
+        await storyHighlightsApi.update(id, apiData)
+        setSuccessMessage('Story highlight updated successfully!')
+      } else {
+        await storyHighlightsApi.create(apiData)
+        setSuccessMessage('Story highlight created successfully!')
+      }
+
+      // Navigate back after a short delay to show success message
+      setTimeout(() => {
+        navigate('/marketing')
+      }, 1500)
+    } catch (err: any) {
+      console.error('Error saving story highlight:', err)
+      setError(err.response?.data?.message || err.message || 'Failed to save story highlight')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleCancel = () => {
     navigate('/marketing')
-  }
-
-  const handleAddAnother = () => {
-    fileInputRef.current?.click()
   }
 
   return (
@@ -220,9 +313,31 @@ export default function AddStoryHighlight() {
         {isEditMode ? 'Edit Story Highlight' : 'Add Story Highlight'}
       </h2>
 
+      {/* Loading State */}
+      {isLoadingData && (
+        <div className="rounded-xl bg-white shadow-sm p-4 sm:p-6">
+          <p className="text-gray-500">Loading story highlight...</p>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4">
+          <p className="text-red-800 text-sm">{error}</p>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="rounded-xl bg-green-50 border border-green-200 p-4">
+          <p className="text-green-800 text-sm">{successMessage}</p>
+        </div>
+      )}
+
       {/* Form Container */}
-      <div className="rounded-xl bg-white shadow-sm p-4 sm:p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      {!isLoadingData && (
+        <div className="rounded-xl bg-white shadow-sm p-4 sm:p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div>
             <label htmlFor="title" className="mb-2 block text-sm font-normal text-gray-500">
@@ -508,15 +623,17 @@ export default function AddStoryHighlight() {
 
           {/* Upload Media Section */}
           <div>
-            <label className="mb-2 block text-sm font-normal text-gray-500">Upload Media</label>
+            <label className="mb-2 block text-sm font-normal text-gray-500">Upload Media (Images or Videos)</label>
+            
+            {/* Upload Area */}
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed ${
+              className={`relative flex min-h-[150px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed ${
                 isDragging ? 'border-[#F7931E] bg-[#F7931E]/5' : 'border-gray-300 bg-gray-50'
-              } p-8 transition-colors hover:border-[#F7931E] overflow-hidden`}
+              } p-6 transition-colors hover:border-[#F7931E]`}
             >
               <input
                 ref={fileInputRef}
@@ -526,45 +643,65 @@ export default function AddStoryHighlight() {
                 onChange={handleFileInputChange}
                 className="hidden"
               />
-              {previewImage ? (
-                <>
-                  <img
-                    src={previewImage}
-                    alt="Preview"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div className="relative z-10 flex flex-col items-center gap-4 pointer-events-none">
-                    <div className="flex items-center gap-4">
-                      <CameraIcon className="h-8 w-8 text-[#EE8E32]" />
-                      <UploadIcon className="h-8 w-8 text-[#EE8E32]" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-medium text-gray-900">Replace image/ Video</p>
-                      <p className="mt-1 text-xs text-gray-500">Recommended size: 1080x1080px, PNG</p>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="flex items-center gap-4">
-                    <CameraIcon className="h-8 w-8 text-[#EE8E32]" />
-                    <UploadIcon className="h-8 w-8 text-[#EE8E32]" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">(drag & drop for image/video). (Recommended size 1080x1080px, PNG)</p>
-                  </div>
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-4">
+                  <CameraIcon className="h-8 w-8 text-[#EE8E32]" />
+                  <UploadIcon className="h-8 w-8 text-[#EE8E32]" />
                 </div>
-              )}
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-700">Click or drag & drop to upload</p>
+                  <p className="mt-1 text-xs text-gray-500">Supports multiple images and videos</p>
+                  <p className="mt-1 text-xs text-gray-500">Recommended: 1080x1080px for images</p>
+                </div>
+              </div>
             </div>
-            {/* Add Another Picture/Video Link */}
-            <button
-              type="button"
-              onClick={handleAddAnother}
-              className="mt-2 flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 cursor-pointer transition-colors"
-            >
-              <PlusIcon className="h-4 w-4" />
-              Add Another Picture/Video
-            </button>
+
+            {/* Preview Grid */}
+            {previewFiles.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-3 text-sm font-medium text-gray-700">
+                  Uploaded Media ({previewFiles.length})
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {previewFiles.map((previewFile, index) => (
+                    <div key={index} className="relative group">
+                      <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100">
+                        {previewFile.type === 'video' ? (
+                          <video
+                            src={previewFile.preview}
+                            className="w-full h-full object-cover"
+                            controls={false}
+                            muted
+                          />
+                        ) : (
+                          <img
+                            src={previewFile.preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        {/* Remove Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRemoveFile(index)
+                          }}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                          title="Remove"
+                        >
+                          <XIcon className="h-4 w-4" />
+                        </button>
+                        {/* Type Badge */}
+                        <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                          {previewFile.type === 'video' ? 'Video' : 'Image'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -578,13 +715,15 @@ export default function AddStoryHighlight() {
             </button>
             <button
               type="submit"
-              className="w-full sm:w-auto rounded-lg bg-[#F7931E] px-6 py-2.5 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer"
+              disabled={isLoading}
+              className="w-full sm:w-auto rounded-lg bg-[#F7931E] px-6 py-2.5 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isEditMode ? 'Save Changes' : 'Save'}
+              {isLoading ? 'Saving...' : isEditMode ? 'Save Changes' : 'Save'}
             </button>
           </div>
         </form>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

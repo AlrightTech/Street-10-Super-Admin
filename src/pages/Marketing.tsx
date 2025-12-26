@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MarketingFilterTabs, { type MarketingFilterKey } from '../components/marketing/MarketingFilterTabs'
 import StoryHighlightTable, { type StoryHighlight } from '../components/marketing/StoryHighlightTable'
@@ -12,89 +12,32 @@ import { type PushNotificationActionType } from '../components/marketing/PushNot
 import FilterDropdown from '../components/finance/FilterDropdown'
 import SearchBar from '../components/ui/SearchBar'
 import { CalendarIcon, PlusIcon, FilterIcon, XIcon } from '../components/icons/Icons'
+import { storyHighlightsApi, type StoryHighlight as ApiStoryHighlight } from '../services/story-highlights.api'
 
-// Mock data for story highlights
-const MOCK_HIGHLIGHTS: StoryHighlight[] = [
-  {
-    id: '1',
-    thumbnail: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=100&h=100&fit=crop',
-    title: 'BMW',
-    type: 'Story',
-    startDate: '12 Aug 2025',
-    endDate: '12 Aug 2025',
-    audience: 'User',
-    priority: 'High',
-    status: 'active',
-  },
-  {
-    id: '2',
-    thumbnail: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=100&h=100&fit=crop',
-    title: 'Mercedes',
-    type: 'Story',
-    startDate: '12 Aug 2025',
-    endDate: '12 Aug 2025',
-    audience: 'Vendor',
-    priority: 'High',
-    status: 'active',
-  },
-  {
-    id: '3',
-    thumbnail: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=100&h=100&fit=crop',
-    title: 'Panches',
-    type: 'Story',
-    startDate: '12 Aug 2025',
-    endDate: '12 Aug 2025',
-    audience: 'User',
-    priority: 'Medium',
-    status: 'active',
-  },
-  {
-    id: '4',
-    thumbnail: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=100&h=100&fit=crop',
-    title: 'Mercedes',
-    type: 'Story',
-    startDate: '12 Aug 2025',
-    endDate: '12 Aug 2025',
-    audience: 'Vendor',
-    priority: 'Medium',
-    status: 'scheduled',
-  },
-  // Add more mock data to reach 47 total
-  // We already have: 3 active, 1 scheduled
-  // Need: 3 more active (total 6), 5 more scheduled (total 6), 6 expired, and 32 more for total 47
-  ...Array.from({ length: 43 }, (_, i) => {
-    let status: 'active' | 'scheduled' | 'expired' = 'active'
-    // First 6: expired
-    if (i < 6) {
-      status = 'expired'
-    }
-    // Next 5: scheduled (to reach 6 total including the 1 above)
-    else if (i < 11) {
-      status = 'scheduled'
-    }
-    // Next 3: active (to reach 6 total including the 3 above)
-    else if (i < 14) {
-      status = 'active'
-    }
-    // Rest: distribute evenly
-    else {
-      const remainder = (i - 14) % 3
-      status = remainder === 0 ? 'active' : remainder === 1 ? 'scheduled' : 'expired'
-    }
-    
-    return {
-      id: String(i + 5),
-      thumbnail: `https://images.unsplash.com/photo-${1552519507 + i}?w=100&h=100&fit=crop`,
-      title: `Story ${i + 5}`,
-      type: 'Story',
-      startDate: '12 Aug 2025',
-      endDate: '12 Aug 2025',
-      audience: i % 2 === 0 ? 'User' : 'Vendor',
-      priority: (i % 3 === 0 ? 'High' : i % 3 === 1 ? 'Medium' : 'Low') as 'High' | 'Medium' | 'Low',
-      status: status,
-    }
-  }),
-]
+// Helper function to format date from ISO string to "DD MMM YYYY"
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString)
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const day = date.getDate()
+  const month = months[date.getMonth()]
+  const year = date.getFullYear()
+  return `${day} ${month} ${year}`
+}
+
+// Helper function to convert API story highlight to UI story highlight
+const convertApiToUI = (apiHighlight: ApiStoryHighlight): StoryHighlight => {
+  return {
+    id: apiHighlight.id,
+    thumbnail: apiHighlight.thumbnailUrl || (apiHighlight.mediaUrls && apiHighlight.mediaUrls.length > 0 ? apiHighlight.mediaUrls[0] : ''),
+    title: apiHighlight.title,
+    type: apiHighlight.type === 'image' ? 'Image' : apiHighlight.type === 'video' ? 'Video' : 'Story',
+    startDate: formatDate(apiHighlight.startDate),
+    endDate: formatDate(apiHighlight.endDate),
+    audience: apiHighlight.audience === 'user' ? 'User' : 'Vendor',
+    priority: apiHighlight.priority === 'high' ? 'High' : apiHighlight.priority === 'medium' ? 'Medium' : 'Low',
+    status: apiHighlight.status,
+  }
+}
 
 // Mock data for banners
 const MOCK_BANNERS: Banner[] = [
@@ -432,12 +375,91 @@ export default function Marketing() {
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
   const [deleteProductName, setDeleteProductName] = useState<string>('')
 
+  // Story highlights state
+  const [highlights, setHighlights] = useState<StoryHighlight[]>([])
+  const [isLoadingHighlights, setIsLoadingHighlights] = useState(false)
+  const [highlightsError, setHighlightsError] = useState<string | null>(null)
+  const [highlightsPage, setHighlightsPage] = useState(1)
+  const [totalHighlights, setTotalHighlights] = useState(0)
+  const [totalHighlightsPages, setTotalHighlightsPages] = useState(1)
+
+  // Fetch story highlights
+  useEffect(() => {
+    const fetchHighlights = async () => {
+      if (activeTab !== 'story-highlight') return
+
+      setIsLoadingHighlights(true)
+      setHighlightsError(null)
+
+      try {
+        const filters: any = {
+          page: highlightsPage,
+          limit: 10,
+          sortBy: sortBy === 'Newest First' ? 'newest' : sortBy === 'Oldest First' ? 'oldest' : 'newest',
+        }
+
+        if (searchValue.trim()) {
+          filters.search = searchValue.trim()
+        }
+
+        if (audienceFilter !== 'All Audience') {
+          filters.audience = audienceFilter.toLowerCase()
+        }
+
+        if (statusFilter !== 'All Status') {
+          const statusMap: Record<string, 'active' | 'scheduled' | 'expired'> = {
+            'Active': 'active',
+            'Scheduled': 'scheduled',
+            'Expired': 'expired',
+          }
+          filters.status = statusMap[statusFilter]
+        }
+
+        if (activeFilter !== 'all') {
+          filters.status = activeFilter
+        }
+
+        const response = await storyHighlightsApi.getAll(filters)
+        const uiHighlights = response.data.map(convertApiToUI)
+        setHighlights(uiHighlights)
+        setTotalHighlights(response.pagination.total)
+        setTotalHighlightsPages(response.pagination.totalPages)
+      } catch (error: any) {
+        console.error('Error fetching story highlights:', error)
+        setHighlightsError(error.response?.data?.message || 'Failed to load story highlights')
+        setHighlights([])
+      } finally {
+        setIsLoadingHighlights(false)
+      }
+    }
+
+    fetchHighlights()
+  }, [activeTab, highlightsPage, sortBy, searchValue, audienceFilter, statusFilter, activeFilter])
+
+  // Fetch all highlights for counts (without pagination)
+  const [allHighlightsForCounts, setAllHighlightsForCounts] = useState<ApiStoryHighlight[]>([])
+  
+  useEffect(() => {
+    const fetchAllForCounts = async () => {
+      if (activeTab !== 'story-highlight') return
+
+      try {
+        const response = await storyHighlightsApi.getAll({ limit: 1000 })
+        setAllHighlightsForCounts(response.data)
+      } catch (error) {
+        console.error('Error fetching highlights for counts:', error)
+      }
+    }
+
+    fetchAllForCounts()
+  }, [activeTab, highlights])
+
   const filterTabsWithCounts = useMemo(
     () => {
-      const allCount = MOCK_HIGHLIGHTS.length
-      const scheduledCount = MOCK_HIGHLIGHTS.filter((h) => h.status === 'scheduled').length
-      const activeCount = MOCK_HIGHLIGHTS.filter((h) => h.status === 'active').length
-      const expiredCount = MOCK_HIGHLIGHTS.filter((h) => h.status === 'expired').length
+      const allCount = allHighlightsForCounts.length
+      const scheduledCount = allHighlightsForCounts.filter((h) => h.status === 'scheduled').length
+      const activeCount = allHighlightsForCounts.filter((h) => h.status === 'active').length
+      const expiredCount = allHighlightsForCounts.filter((h) => h.status === 'expired').length
 
       return [
         {
@@ -466,52 +488,45 @@ export default function Marketing() {
         },
       ]
     },
-    [],
+    [allHighlightsForCounts],
   )
 
-  const filteredHighlights = useMemo(() => {
-    let result = [...MOCK_HIGHLIGHTS]
-
-    if (activeFilter !== 'all') {
-      result = result.filter((highlight) => highlight.status === activeFilter)
-    }
-
-    if (searchValue.trim()) {
-      const query = searchValue.toLowerCase()
-      result = result.filter((highlight) => highlight.title.toLowerCase().includes(query))
-    }
-
-    if (audienceFilter !== 'All Audience') {
-      result = result.filter((highlight) => highlight.audience === audienceFilter)
-    }
-
-    if (statusFilter !== 'All Status') {
-      const statusMap: Record<string, MarketingFilterKey> = {
-        'Active': 'active',
-        'Scheduled': 'scheduled',
-        'Expired': 'expired',
-      }
-      const filterStatus = statusMap[statusFilter]
-      if (filterStatus) {
-        result = result.filter((highlight) => highlight.status === filterStatus)
-      }
-    }
-
-    // Limit to 10 rows
-    return result.slice(0, 10)
-  }, [activeFilter, searchValue, audienceFilter, statusFilter])
+  // Filtered highlights are now handled by the API, but we keep this for any client-side filtering if needed
+  const filteredHighlights = highlights
 
   const handleFilterChange = (filterKey: MarketingFilterKey) => {
     setActiveFilter(filterKey)
   }
 
-  const handleStoryAction = (highlight: StoryHighlight, action: StoryHighlightActionType) => {
+  const handleStoryAction = async (highlight: StoryHighlight, action: StoryHighlightActionType) => {
     // Handle action selection
     if (action === 'add-story') {
       navigate('/marketing/add-story')
     } else if (action === 'edit-story') {
       navigate(`/marketing/edit-story/${highlight.id}`)
+    } else if (action === 'delete-story') {
+      if (window.confirm(`Are you sure you want to delete "${highlight.title}"?`)) {
+        try {
+          await storyHighlightsApi.delete(highlight.id)
+          // Refresh highlights
+          const response = await storyHighlightsApi.getAll({
+            page: highlightsPage,
+            limit: 10,
+            sortBy: sortBy === 'Newest First' ? 'newest' : 'oldest',
+          })
+          const uiHighlights = response.data.map(convertApiToUI)
+          setHighlights(uiHighlights)
+          setTotalHighlights(response.pagination.total)
+          setTotalHighlightsPages(response.pagination.totalPages)
+        } catch (error: any) {
+          alert(error.response?.data?.message || 'Failed to delete story highlight')
+        }
+      }
     }
+  }
+
+  const handleNewHighlightClick = () => {
+    navigate('/marketing/add-story')
   }
 
   const handleBannerAction = (banner: Banner, action: BannerActionType) => {
@@ -558,10 +573,6 @@ export default function Marketing() {
   const handleDeleteCancel = () => {
     setDeleteProductId(null)
     setDeleteProductName('')
-  }
-
-  const handleNewHighlightClick = () => {
-    navigate('/marketing/add-story')
   }
 
   const handleNewBannerClick = () => {
@@ -1019,7 +1030,49 @@ export default function Marketing() {
               </div>
             </div>
             <div className="py-2">
-              <StoryHighlightTable highlights={filteredHighlights} onActionSelect={handleStoryAction} />
+              {isLoadingHighlights ? (
+                <div className="flex min-h-[240px] items-center justify-center">
+                  <p className="text-gray-500">Loading story highlights...</p>
+                </div>
+              ) : highlightsError ? (
+                <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-red-200 bg-red-50 py-12 text-center">
+                  <p className="text-base font-semibold text-red-800">Error loading story highlights</p>
+                  <p className="mt-1 max-w-sm text-sm text-red-600">{highlightsError}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <StoryHighlightTable highlights={filteredHighlights} onActionSelect={handleStoryAction} />
+                  {totalHighlightsPages > 1 && (
+                    <div className="mt-4 flex items-center justify-between px-4 sm:px-6">
+                      <div className="text-sm text-gray-700">
+                        Showing {((highlightsPage - 1) * 10) + 1} to {Math.min(highlightsPage * 10, totalHighlights)} of {totalHighlights} results
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setHighlightsPage((p) => Math.max(1, p - 1))}
+                          disabled={highlightsPage === 1}
+                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          onClick={() => setHighlightsPage((p) => Math.min(totalHighlightsPages, p + 1))}
+                          disabled={highlightsPage >= totalHighlightsPages}
+                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </section>
         </div>

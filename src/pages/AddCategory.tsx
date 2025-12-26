@@ -418,9 +418,10 @@ export default function AddCategory() {
           <button
             type="button"
             onClick={handleAddCategory}
-            className="w-full sm:w-auto rounded-lg bg-[#F7931E] px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white transition hover:bg-[#E8851C] focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer"
+            disabled={isSubmitting}
+            className="w-full sm:w-auto rounded-lg bg-[#F7931E] px-4 sm:px-6 py-2 sm:py-2.5 text-sm font-medium text-white transition hover:bg-[#E8851C] focus:outline-none focus:ring-2 focus:ring-[#F7931E] focus:ring-offset-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isEditMode ? 'Update Category' : 'Add Category'}
+            {isSubmitting ? 'Saving...' : (isEditMode ? 'Update Category' : 'Add Category')}
           </button>
         </div>
       </section>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MoreVerticalIcon } from '../icons/Icons'
 
-export type StoryHighlightActionType = 'add-story' | 'edit-story'
+export type StoryHighlightActionType = 'add-story' | 'edit-story' | 'delete-story'
 
 interface StoryHighlightActionMenuProps {
   onSelect?: (action: StoryHighlightActionType) => void
@@ -9,9 +9,9 @@ interface StoryHighlightActionMenuProps {
   align?: 'left' | 'right'
 }
 
-const ACTIONS: { key: StoryHighlightActionType; label: string }[] = [
-  { key: 'add-story', label: 'Add story' },
+const ACTIONS: { key: StoryHighlightActionType; label: string; isDestructive?: boolean }[] = [
   { key: 'edit-story', label: 'Edit story' },
+  { key: 'delete-story', label: 'Delete story', isDestructive: true },
 ]
 
 export default function StoryHighlightActionMenu({ onSelect, className = '', align = 'right' }: StoryHighlightActionMenuProps) {
@@ -65,7 +65,11 @@ export default function StoryHighlightActionMenu({ onSelect, className = '', ali
               type="button"
               onClick={() => handleSelect(action.key)}
               role="menuitem"
-              className="flex w-full items-center px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-50 hover:text-gray-900 cursor-pointer"
+              className={`flex w-full items-center px-4 py-2 text-sm transition hover:bg-gray-50 cursor-pointer ${
+                action.isDestructive
+                  ? 'text-red-600 hover:text-red-700'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
               {action.label}
             </button>

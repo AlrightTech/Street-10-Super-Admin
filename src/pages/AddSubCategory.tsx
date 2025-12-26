@@ -8,8 +8,6 @@ export default function AddSubCategory() {
   const navigate = useNavigate()
   const isEditMode = !!id
   const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [icon, setIcon] = useState('')
   const [items, setItems] = useState<Array<{ id: string; name: string; isNew?: boolean }>>([])
   const [newItemName, setNewItemName] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -45,10 +43,7 @@ export default function AddSubCategory() {
         try {
           setError(null)
           const category = await categoriesApi.getById(id)
-          const lang = (category.langData || {}) as any
           setTitle(category.name)
-          setDescription(lang.en?.description || '')
-          setIcon(lang.en?.icon || (category.name?.charAt(0).toUpperCase() ?? 'S'))
 
           const children = (category.children || []) as Category[]
           setExistingChildCategories(children)

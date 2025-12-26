@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { PencilIcon, TrashIcon } from '../components/icons/Icons'
-import { mainControlApi, type LogosData, type ContactData, type TermsCondition } from '../services/main-control.api'
+import { mainControlApi, type LogosData, type ContactData } from '../services/main-control.api'
 
 /**
  * Main Control page component

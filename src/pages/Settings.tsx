@@ -105,7 +105,6 @@ export default function Settings() {
     password: '',
   })
   const [showPassword, setShowPassword] = useState(false)
-  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null)
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
@@ -295,7 +294,6 @@ export default function Settings() {
           name: user.name || '',
           email: user.email || '',
         }))
-        setProfileImageUrl(user.profileImageUrl || null)
         setProfileImagePreview(user.profileImageUrl || null)
       } catch (error: any) {
         console.error("Failed to load profile:", error)
