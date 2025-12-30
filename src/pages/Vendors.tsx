@@ -65,10 +65,13 @@ export default function Vendors() {
       const transformedVendors: Vendor[] = result.data.map((vendor: any) => {
         // Convert UUID to numeric ID for frontend
         const numericId = parseInt(vendor.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
+        // Use ownerName from backend (which comes from companyDocs.businessDetails.ownerName or user.name)
+        // Fallback to user.name, then user.email prefix, then vendor.name
+        const ownerName = vendor.ownerName || vendor.user?.name || vendor.user?.email?.split('@')[0] || 'Vendor'
         return {
           id: numericId,
-          ownerName: vendor.user?.email?.split('@')[0] || vendor.name || 'Vendor',
-          businessName: vendor.name || 'Business',
+          ownerName: ownerName, // Owner's personal name
+          businessName: vendor.name || 'Business', // Business name
           status: (vendor.status === 'approved' ? 'approved' :
                   vendor.status === 'rejected' ? 'rejected' :
                   'pending') as VendorStatus,

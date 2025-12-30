@@ -483,6 +483,7 @@ export default function EcommerceProducts() {
         const response = await productsApi.getAll({
           page: productsPage,
           limit: PRODUCTS_PAGE_SIZE,
+          superadmin_only: 'true', // Only fetch superadmin products (vendorId = null)
         })
 
         // Debug logging
@@ -649,6 +650,7 @@ export default function EcommerceProducts() {
                         const response = await productsApi.getAll({
                           page: productsPage,
                           limit: PRODUCTS_PAGE_SIZE,
+                          superadmin_only: 'true', // Only fetch superadmin products (vendorId = null)
                         })
                         const productsData = response.data || []
                         setProducts(productsData)

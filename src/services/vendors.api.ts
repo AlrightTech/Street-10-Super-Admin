@@ -12,11 +12,14 @@ export interface Vendor {
   updatedAt: string;
   companyDocs?: any;
   ownerIdUrl?: string | null;
+  ownerName?: string; // Owner's personal name (from user.name or companyDocs.businessDetails.ownerName)
+  profileImageUrl?: string | null;
   user: {
     id: string;
     email: string;
     phone: string | null;
     status: string;
+    name?: string; // User's personal name (owner name)
   };
   accountManager: {
     id: string;

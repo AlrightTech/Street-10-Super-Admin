@@ -57,10 +57,11 @@ export interface UpdateProductData {
 
 export interface ProductFilters {
   category_id?: string;
-  vendor_id?: string;
+  vendor_id?: string | null; // null for superadmin products
   status?: string;
   page?: number;
   limit?: number;
+  superadmin_only?: string; // 'true' to filter only superadmin products (vendorId = null)
 }
 
 export const productsApi = {

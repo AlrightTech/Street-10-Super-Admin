@@ -121,19 +121,22 @@ export default function VendorRequestDetail() {
         const address = addressParts.length > 0 ? addressParts.join(', ') : 'N/A'
 
         // Transform API response to VendorRequestDetail format
+        // Use ownerName from backend (which comes from companyDocs.businessDetails.ownerName or user.name)
+        const ownerName = apiVendor.ownerName || apiVendor.user?.name || businessDetails.ownerName || apiVendor.user?.email?.split('@')[0] || 'Vendor'
+        
         const transformedDetail: VendorRequestDetail = {
           id: parseInt(id),
-          ownerName: apiVendor.name || apiVendor.user?.email?.split('@')[0] || 'Vendor',
+          ownerName: ownerName, // Owner's personal name
           avatar: profileImageUrl || '',
           contact: {
             email: apiVendor.email || apiVendor.user?.email || '',
             phone: apiVendor.phone || businessDetails.contactPersonPhone || apiVendor.user?.phone || '',
           },
           business: {
-            businessName: apiVendor.name || 'Business',
+            businessName: apiVendor.name || 'Business', // Business name
             vendorType: 'General',
             address: address,
-            contactPerson: businessDetails.contactPerson || apiVendor.name || 'Contact',
+            contactPerson: businessDetails.contactPerson || ownerName || 'Contact',
           },
           documents: documents.length > 0 ? documents : [
             {
@@ -246,6 +249,11 @@ export default function VendorRequestDetail() {
       await vendorsApi.getById(vendorId)
       const updated = { ...detail, status: 'approved' as any }
       setDetail(updated)
+      
+      // Redirect to vendors list after 2 seconds
+      setTimeout(() => {
+        navigate('/vendors')
+      }, 2000)
     } catch (error: any) {
       console.error('Error creating credentials:', error)
       alert(error?.response?.data?.message || 'Failed to create credentials')
@@ -596,7 +604,10 @@ export default function VendorRequestDetail() {
             <div className="relative w-full max-w-sm rounded-lg bg-white px-8 py-9 text-center shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
               <button
                 type="button"
-                onClick={() => setCredentialSuccessOpen(false)}
+                onClick={() => {
+                  setCredentialSuccessOpen(false)
+                  navigate('/vendors')
+                }}
                 className="absolute right-5 top-5 text-[#9CA3AF] transition-colors hover:text-[#111827]"
                 aria-label="Close"
               >

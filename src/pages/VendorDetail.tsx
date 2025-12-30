@@ -118,12 +118,20 @@ export default function VendorDetail() {
           (apiVendor as any).profileImageUrl ||
           companyDocs.profileImageUrl ||
           ''
+        
+        // Extract owner name (personal name) from companyDocs or user.name
+        const businessDetails = companyDocs.businessDetails || {}
+        const ownerName = (apiVendor as any).ownerName || 
+                         businessDetails.ownerName || 
+                         apiVendor.user?.name || 
+                         apiVendor.user?.email?.split('@')[0] || 
+                         'Unknown'
 
         // Transform API response to VendorDetailData format
         const transformedVendor: VendorDetailData = {
           id: parseInt(apiVendor.id.replace(/-/g, "").substring(0, 10), 16) % 1000000,
-          ownerName: apiVendor.name || apiVendor.user?.email?.split('@')[0] || 'Unknown',
-          businessName: apiVendor.name || 'Unknown Business',
+          ownerName: ownerName, // Owner's personal name
+          businessName: apiVendor.name || 'Unknown Business', // Business name
           email: apiVendor.email || apiVendor.user?.email || '',
           phone: apiVendor.phone || apiVendor.user?.phone || '',
           role: 'vendor',
