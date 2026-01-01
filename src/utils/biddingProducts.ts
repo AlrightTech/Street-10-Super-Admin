@@ -116,9 +116,10 @@ export const getProductDetailRoute = (product: BiddingProduct): string => {
     'payment-requested': 'payment-requested',
     'fully-paid-sold': 'fully-paid-sold',
     'scheduled': 'scheduled',
+    'live': 'live',
   }
   
-  const statusRoute = statusRoutes[product.status] || 'ended-unsold'
+  const statusRoute = statusRoutes[product.status] || 'scheduled'
   return `/building-products/${product.id}/${statusRoute}`
 }
 

@@ -76,7 +76,7 @@ export default function Users() {
             parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
           return {
             id: numericId,
-            name: user.email.split('@')[0],
+            name: (user.name && user.name.trim()) ? user.name : user.email.split('@')[0],
             email: user.email,
             role: user.role,
             totalPurchase: user.stats?.totalSpent
@@ -90,6 +90,7 @@ export default function Users() {
                 : 'pending',
             joinDate: new Date(user.createdAt).toLocaleDateString(),
             biddingWins: 0, // Default value
+            avatar: user.profileImageUrl || '', // Map profileImageUrl to avatar
           }
         })
 
@@ -222,7 +223,7 @@ export default function Users() {
             parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
           return {
             id: numericId,
-            name: user.email.split('@')[0],
+            name: (user.name && user.name.trim()) ? user.name : user.email.split('@')[0],
             email: user.email,
             role: user.role,
             totalPurchase: user.stats?.totalSpent
@@ -236,6 +237,7 @@ export default function Users() {
                 : 'pending',
             joinDate: new Date(user.createdAt).toLocaleDateString(),
             biddingWins: 0,
+            avatar: user.profileImageUrl || '', // Map profileImageUrl to avatar
           }
         })
         const newMap = new Map<number, string>()
@@ -328,7 +330,7 @@ export default function Users() {
           parseInt(user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000
         return {
           id: numericId,
-          name: user.email.split('@')[0],
+          name: user.name || user.email.split('@')[0],
           email: user.email,
           role: user.role,
           totalPurchase: user.stats?.totalSpent
@@ -341,6 +343,7 @@ export default function Users() {
               ? 'blocked'
               : 'pending',
           joinDate: new Date(user.createdAt).toLocaleDateString(),
+          avatar: user.profileImageUrl || '', // Map profileImageUrl to avatar
           biddingWins: 0,
         }
       })
@@ -375,7 +378,7 @@ export default function Users() {
             parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) % 1000000;
           return {
             id: numericId,
-            name: user.email.split("@")[0],
+            name: user.name || user.email.split("@")[0],
             email: user.email,
             role: user.role,
             totalPurchase: user.stats?.totalSpent
@@ -387,6 +390,7 @@ export default function Users() {
                 : user.status === "blocked"
                 ? "blocked"
                 : "pending",
+            avatar: user.profileImageUrl || '', // Map profileImageUrl to avatar
             joinDate: new Date(user.createdAt).toLocaleDateString(),
             biddingWins: 0,
           };

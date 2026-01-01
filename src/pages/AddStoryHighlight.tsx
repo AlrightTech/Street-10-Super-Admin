@@ -305,7 +305,7 @@ export default function AddStoryHighlight() {
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Marketing</h1>
-        <p className="text-sm text-gray-600 mt-1">Dashboard - Finance</p>
+        <p className="text-sm text-gray-600 mt-1">Dashboard - Story Highlights</p>
       </div>
 
       {/* Section Title */}

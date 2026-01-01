@@ -131,7 +131,8 @@ export default function BiddingProducts() {
         if (statusFilter !== 'All Status') {
           const statusMap: Record<string, string> = {
             'Ended - Unsold': 'ended',
-            'Payment Requested': 'live',
+            'Payment Requested': 'ended', // Payment requested = ended auctions
+            'Live': 'live', // Live auctions
             'Fully Paid - Sold': 'settled',
             'Scheduled': 'scheduled',
           }
@@ -364,7 +365,7 @@ export default function BiddingProducts() {
             {/* All Status Dropdown */}
             <FilterDropdown
               label={statusFilter}
-              options={['All Status', 'Ended - Unsold', 'Payment Requested', 'Fully Paid - Sold', 'Scheduled']}
+              options={['All Status', 'Ended - Unsold', 'Payment Requested', 'Live', 'Fully Paid - Sold', 'Scheduled']}
               onSelect={handleStatusChange}
             />
 

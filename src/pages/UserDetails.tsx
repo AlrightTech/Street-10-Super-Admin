@@ -155,10 +155,10 @@ export default function UserDetails() {
               parseInt(apiUser.user.id.replace(/-/g, "").substring(0, 10), 16) %
               1000000,
             name:
-              (apiUser.user as any).name || apiUser.user.email.split("@")[0],
+              (apiUser.user.name && apiUser.user.name.trim()) ? apiUser.user.name : apiUser.user.email.split("@")[0],
             email: apiUser.user.email,
             phone: apiUser.user.phone || "",
-            avatar: (apiUser.user as any).profileImageUrl || "",
+            avatar: apiUser.user.profileImageUrl || "",
             role: apiUser.user.role,
             accountStatus:
               apiUser.user.status === "active"

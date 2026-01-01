@@ -30,6 +30,7 @@ export interface Vendor {
 export interface VendorFilters {
   status?: string;
   account_manager_id?: string;
+  search?: string;
   page?: number;
   limit?: number;
 }

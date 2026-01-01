@@ -65,6 +65,7 @@ const EndedUnsoldDetailRoute = lazy(() => import('./pages/bidding/EndedUnsoldDet
 const PaymentRequestedDetailRoute = lazy(() => import('./pages/bidding/PaymentRequestedDetailRoute'))
 const FullyPaidSoldDetailRoute = lazy(() => import('./pages/bidding/FullyPaidSoldDetailRoute'))
 const ScheduledDetailRoute = lazy(() => import('./pages/bidding/ScheduledDetailRoute'))
+const LiveDetailRoute = lazy(() => import('./pages/bidding/LiveDetailRoute'))
 const EditBiddingProduct = lazy(() => import('./pages/EditBiddingProduct'))
 const BiddingHistory = lazy(() => import('./pages/bidding/BiddingHistory'))
 const Wallet = lazy(() => import('./pages/Wallet'))
@@ -170,6 +171,7 @@ function App() {
             <Route path="building-products/:id/payment-requested" element={<PaymentRequestedDetailRoute />} />
             <Route path="building-products/:id/fully-paid-sold" element={<FullyPaidSoldDetailRoute />} />
             <Route path="building-products/:id/scheduled" element={<ScheduledDetailRoute />} />
+            <Route path="building-products/:id/live" element={<LiveDetailRoute />} />
             <Route path="ecommerce-products/orders/:orderId" element={<EcommerceOrderView />} />
             <Route path="ecommerce-products/add" element={<AddEcommerceProduct />} />
             <Route path="ecommerce-products/:productId/edit" element={<EditEcommerceProduct />} />

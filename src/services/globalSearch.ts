@@ -1,27 +1,6 @@
 import type { SearchResult, SearchResultType, GroupedSearchResults } from '../types/search'
-
-/**
- * Mock data for global search
- * In production, this would come from API calls
- */
-
-// Mock Users Data
-const mockUsers = [
-  { id: '1', name: 'John Doe', email: 'john.doe@example.com', phone: '+1234567890' },
-  { id: '2', name: 'Jane Smith', email: 'jane.smith@example.com', phone: '+1234567891' },
-  { id: '3', name: 'Michael Johnson', email: 'michael.j@example.com', phone: '+1234567892' },
-  { id: '4', name: 'Sarah Williams', email: 'sarah.w@example.com', phone: '+1234567893' },
-  { id: '5', name: 'David Brown', email: 'david.brown@example.com', phone: '+1234567894' },
-]
-
-// Mock Vendors Data
-const mockVendors = [
-  { id: '1', name: 'Tech Solutions Inc', email: 'contact@techsolutions.com', phone: '+1987654321' },
-  { id: '2', name: 'Global Trading Co', email: 'info@globaltrading.com', phone: '+1987654322' },
-  { id: '3', name: 'Premium Goods Ltd', email: 'sales@premiumgoods.com', phone: '+1987654323' },
-  { id: '4', name: 'Quality Products LLC', email: 'hello@qualityproducts.com', phone: '+1987654324' },
-  { id: '5', name: 'Best Deals Corp', email: 'support@bestdeals.com', phone: '+1987654325' },
-]
+import { usersApi } from './users.api'
+import { vendorsApi } from './vendors.api'
 
 // Mock Orders Data
 const mockOrders = [
@@ -103,37 +82,50 @@ class GlobalSearchService {
     
     const results: SearchResult[] = []
     
-    // Search Users
-    const userResults = searchInArray(
-      mockUsers,
-      query,
-      ['name', 'email', 'phone', 'id'],
-      (user) => ({
+    try {
+      // Search Users
+      const userResponse = await usersApi.getAll({
+        search: query,
+        limit: 10,
+        page: 1,
+      })
+      
+      const userResults: SearchResult[] = userResponse.data.map((user) => ({
         id: user.id,
         type: 'user' as SearchResultType,
-        title: user.name,
+        title: user.name || user.email.split('@')[0],
         subtitle: user.email,
         route: `/users/${user.id}`,
         metadata: { phone: user.phone },
-      })
-    )
-    results.push(...userResults)
+      }))
+      results.push(...userResults)
+    } catch (error) {
+      console.error('Error searching users:', error)
+    }
     
-    // Search Vendors
-    const vendorResults = searchInArray(
-      mockVendors,
-      query,
-      ['name', 'email', 'phone', 'id'],
-      (vendor) => ({
-        id: vendor.id,
-        type: 'vendor' as SearchResultType,
-        title: vendor.name,
-        subtitle: vendor.email,
-        route: `/vendors/${vendor.id}/detail`,
-        metadata: { phone: vendor.phone },
+    try {
+      // Search Vendors
+      const vendorResponse = await vendorsApi.getAll({
+        search: query,
+        limit: 10,
+        page: 1,
       })
-    )
-    results.push(...vendorResults)
+      
+      const vendorResults: SearchResult[] = vendorResponse.data.map((vendor) => {
+        const ownerName = vendor.ownerName || vendor.user?.name || vendor.name
+        return {
+          id: vendor.id,
+          type: 'vendor' as SearchResultType,
+          title: ownerName || vendor.name,
+          subtitle: vendor.email,
+          route: `/vendors/${vendor.id}/detail`,
+          metadata: { phone: vendor.phone, businessName: vendor.name },
+        }
+      })
+      results.push(...vendorResults)
+    } catch (error) {
+      console.error('Error searching vendors:', error)
+    }
     
     // Search Orders
     const orderResults = searchInArray(

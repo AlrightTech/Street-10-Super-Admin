@@ -68,6 +68,8 @@ export default function Vendors() {
         // Use ownerName from backend (which comes from companyDocs.businessDetails.ownerName or user.name)
         // Fallback to user.name, then user.email prefix, then vendor.name
         const ownerName = vendor.ownerName || vendor.user?.name || vendor.user?.email?.split('@')[0] || 'Vendor'
+        // Get profile image from vendor profileImageUrl or user profileImageUrl
+        const profileImageUrl = vendor.profileImageUrl || vendor.user?.profileImageUrl || null
         return {
           id: numericId,
           ownerName: ownerName, // Owner's personal name
@@ -75,7 +77,7 @@ export default function Vendors() {
           status: (vendor.status === 'approved' ? 'approved' :
                   vendor.status === 'rejected' ? 'rejected' :
                   'pending') as VendorStatus,
-          avatar: '',
+          avatar: profileImageUrl || '', // Map profileImageUrl to avatar
           // Store full vendor data for reference
           _vendorData: vendor,
         }
@@ -263,7 +265,7 @@ export default function Vendors() {
         <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Vendors</h1>
         <p className="mt-1 text-sm font-semibold">
           <span className="text-gray-600">Dashboard • </span>
-          <span className="text-black">Orders</span>
+          <span className="text-black">vendors</span>
         </p>
       </div>
 

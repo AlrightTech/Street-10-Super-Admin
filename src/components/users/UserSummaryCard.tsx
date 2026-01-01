@@ -67,14 +67,15 @@ export default function UserSummaryCard({ user }: UserSummaryCardProps) {
             <div>
               <h3 className="text-base font-bold text-gray-900 mb-2">Wallet</h3>
               <p className="text-sm font-normal text-gray-600 mb-3">${(user.walletBalance || 0).toLocaleString()}</p>
-              <button
-                type="button"
-                onClick={handleRefundRequest}
-                className="w-full sm:w-auto rounded-lg bg-[#E74C3C] px-4 py-2 text-sm font-medium text-white hover:bg-[#C0392B] transition-colors mb-3"
-              >
-                Refund Request
-              </button>
-              <p className="text-sm font-normal text-gray-600">${(user.walletLimit || 0).toLocaleString()}</p>
+              {user.pendingRefunds > 0 && (
+                <button
+                  type="button"
+                  onClick={handleRefundRequest}
+                  className="w-full sm:w-auto rounded-lg bg-[#E74C3C] px-4 py-2 text-sm font-medium text-white hover:bg-[#C0392B] transition-colors mb-3"
+                >
+                  Refund Request ({user.pendingRefunds})
+                </button>
+              )}
             </div>
           </div>
 

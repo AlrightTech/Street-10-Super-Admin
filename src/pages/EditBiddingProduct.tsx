@@ -102,13 +102,13 @@ export default function EditBiddingProduct() {
   const mapAuctionStateToStatus = (state: string): BiddingProduct['status'] => {
     switch (state) {
       case 'ended':
-        return 'ended-unsold'
+        return 'payment-requested' // Ended auctions show as payment requested
       case 'settled':
         return 'fully-paid-sold'
       case 'scheduled':
         return 'scheduled'
       case 'live':
-        return 'payment-requested'
+        return 'live' // Live auctions show as "Live" (started)
       default:
         return 'scheduled'
     }
@@ -174,22 +174,44 @@ export default function EditBiddingProduct() {
         categoryIds: formData.categoryId ? [formData.categoryId] : undefined,
       })
 
-      // Update auction state if status changed
+      // Prepare auction update data
       const newState = formData.status === 'scheduled' ? 'scheduled' 
         : formData.status === 'ended-unsold' ? 'ended'
         : formData.status === 'fully-paid-sold' ? 'settled'
         : 'live'
 
-      if (newState !== auction.state) {
-        await auctionsApi.updateState(id, newState)
+      const auctionUpdateData: any = {
+        startAt: startDateTime.toISOString(),
+        endAt: endDateTime.toISOString(),
+        minIncrement: formData.minIncrement ? Math.round(parseFloat(formData.minIncrement) * 100) : undefined,
+        depositAmount: startingPriceMinor, // Use starting price as deposit
       }
 
-      // Note: Backend doesn't currently support updating auction dates/prices
-      // Only state can be updated. For full updates, a new endpoint would need to be added.
+      // Only include state if it has changed
+      if (newState !== auction.state) {
+        auctionUpdateData.state = newState
+      }
+
+      if (formData.reservePrice) {
+        auctionUpdateData.reservePrice = Math.round(parseFloat(formData.reservePrice) * 100)
+      } else if (formData.reservePrice === '') {
+        // Allow setting to null if explicitly cleared
+        auctionUpdateData.reservePrice = null
+      }
+
+      if (formData.buyNowPrice) {
+        auctionUpdateData.buyNowPrice = Math.round(parseFloat(formData.buyNowPrice) * 100)
+      } else if (formData.buyNowPrice === '') {
+        // Allow setting to null if explicitly cleared
+        auctionUpdateData.buyNowPrice = null
+      }
+
+      // Update auction
+      await auctionsApi.update(id, auctionUpdateData)
 
       alert('Product and auction updated successfully!')
       
-      // Navigate back to the product detail page
+      // Navigate back to the product detail page with refresh flag
       const route = getProductDetailRoute({
         id: id,
         productId: auction.productId,
@@ -201,7 +223,8 @@ export default function EditBiddingProduct() {
         timeLeft: '',
         status: formData.status,
       })
-      navigate(route)
+      // Add timestamp to force refetch - use state to trigger refetch
+      navigate(`${route}?refresh=${Date.now()}`, { state: { refresh: true } })
     } catch (err: any) {
       console.error('Error updating product:', err)
       const errorMessage = err.response?.data?.message || err.message || 'Failed to update product'

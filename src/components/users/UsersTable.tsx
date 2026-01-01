@@ -75,9 +75,26 @@ export default function UsersTable({
                       to={`/users/${user.id}`}
                       className="flex items-center gap-2 sm:gap-3 hover:text-[#FF8C00] transition-colors"
                     >
-                      <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center  
-                      justify-center rounded-full bg-gray-200 text-xs
-                       font-medium text-gray-600 flex-shrink-0">
+                      {user.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={user.name}
+                          className="h-7 w-7 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0 border border-gray-200"
+                          onError={(e) => {
+                            // Fallback to initials if image fails to load
+                            const target = e.target as HTMLImageElement;
+                            const parent = target.parentElement;
+                            if (parent) {
+                              target.style.display = 'none';
+                              const fallback = parent.querySelector('.avatar-fallback') as HTMLElement;
+                              if (fallback) fallback.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <div 
+                        className={`avatar-fallback flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600 flex-shrink-0 ${user.avatar ? 'hidden' : ''}`}
+                      >
                         {getAvatarInitials(user.name)}
                       </div>
                       <span className="truncate max-w-[100px] sm:max-w-none">{user.name}</span>

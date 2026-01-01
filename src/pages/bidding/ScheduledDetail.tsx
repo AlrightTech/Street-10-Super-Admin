@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { BiddingProduct } from '../../components/bidding/BiddingProductsTable'
-import { auctionsApi } from '../../services/auctions.api'
+import { auctionsApi, type Auction } from '../../services/auctions.api'
+import { productsApi } from '../../services/products.api'
 
 interface ScheduledDetailProps {
   product: BiddingProduct
+  auction: Auction | null // Full auction data for timeline calculations
   mediaUrls?: string[] // All product media URLs
   onClose: () => void
   onAuctionStarted?: () => void // Callback to refresh parent list
@@ -13,7 +15,7 @@ interface ScheduledDetailProps {
 /**
  * Scheduled Product Detail page
  */
-export default function ScheduledDetail({ product, mediaUrls, onClose: _onClose, onAuctionStarted }: ScheduledDetailProps) {
+export default function ScheduledDetail({ product, auction, mediaUrls, onClose: _onClose, onAuctionStarted }: ScheduledDetailProps) {
   const navigate = useNavigate()
   const [selectedImage, setSelectedImage] = useState(0)
   const [isStarting, setIsStarting] = useState(false)
@@ -29,8 +31,12 @@ export default function ScheduledDetail({ product, mediaUrls, onClose: _onClose,
     navigate(`/building-products/${product.id}/edit`)
   }
 
-  const handleStartAuction = async () => {
-    if (!window.confirm('Are you sure you want to start this auction now? This will change the status from Scheduled to Live.')) {
+  const handleStartAuction = async (updateStartTime: boolean = false) => {
+    const confirmMessage = updateStartTime 
+      ? 'Are you sure you want to start this auction now? This will change the status to Live and update the start time to the current time.'
+      : 'Are you sure you want to start this auction now? This will change the status from Scheduled to Live.'
+    
+    if (!window.confirm(confirmMessage)) {
       return
     }
 
@@ -39,8 +45,17 @@ export default function ScheduledDetail({ product, mediaUrls, onClose: _onClose,
       setStatusError(null)
       setStatusMessage(null)
 
-      // Call API to update auction state to "live"
-      await auctionsApi.updateState(product.id, 'live')
+      // If updating start time, set it to current time
+      const updateData: any = {
+        state: 'live'
+      }
+      
+      if (updateStartTime) {
+        updateData.startAt = new Date().toISOString()
+      }
+
+      // Call API to update auction state to "live" and optionally update start time
+      await auctionsApi.update(product.id, updateData)
       
       setStatusMessage('Auction started successfully! The auction is now live.')
       
@@ -64,24 +79,58 @@ export default function ScheduledDetail({ product, mediaUrls, onClose: _onClose,
   }
 
   const handleStartAuctionNow = () => {
-    handleStartAuction()
+    // When clicking "Start Auction Now", update start time to current time
+    handleStartAuction(true)
   }
 
-  const handleCancelAuction = () => {
-    if (window.confirm('Are you sure you want to cancel this auction? This action cannot be undone.')) {
-      // In a real app, this would make an API call to cancel the auction
-      console.log('Cancelling auction for product:', product.id)
-      alert('Auction cancelled successfully!')
-      navigate('/building-products')
+  const handleCancelAuction = async () => {
+    const reason = window.prompt('Are you sure you want to cancel this auction? Please provide a reason (optional):')
+    if (reason === null) {
+      return // User cancelled
+    }
+
+    try {
+      setStatusError(null)
+      setStatusMessage(null)
+
+      await auctionsApi.cancel(product.id, reason || undefined)
+      
+      setStatusMessage('Auction cancelled successfully!')
+      
+      // Navigate back to products list after a short delay
+      setTimeout(() => {
+        navigate('/building-products')
+      }, 1500)
+    } catch (error: any) {
+      console.error('Error cancelling auction:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to cancel auction'
+      setStatusError(errorMessage)
+      alert(`Error: ${errorMessage}`)
     }
   }
 
-  const handleDeleteProduct = () => {
-    if (window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-      // In a real app, this would make an API call to delete the product
-      console.log('Deleting product:', product.id)
-      alert('Product deleted successfully!')
-      navigate('/building-products')
+  const handleDeleteProduct = async () => {
+    if (!window.confirm(`Are you sure you want to delete "${product.name}"? This will delete the product and its auction. This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setStatusError(null)
+      setStatusMessage(null)
+
+      await productsApi.delete(product.productId)
+      
+      setStatusMessage('Product deleted successfully!')
+      
+      // Navigate back to products list after a short delay
+      setTimeout(() => {
+        navigate('/building-products')
+      }, 1500)
+    } catch (error: any) {
+      console.error('Error deleting product:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete product'
+      setStatusError(errorMessage)
+      alert(`Error: ${errorMessage}`)
     }
   }
 
@@ -190,7 +239,7 @@ export default function ScheduledDetail({ product, mediaUrls, onClose: _onClose,
 
                   <div>
                     <p className="text-sm text-gray-600 leading-relaxed">
-                      A 1960 vintage Rolex Submariner watch from 1975 in excellent condition. This timepiece features the iconic black dial with luminous markers, unidirectional rotating bezel, and automatic movement. The watch has been serviced and comes with original box and papers. A true collector's item with historical significance and timeless appeal.
+                      {product.description || 'No description available.'}
                     </p>
                   </div>
 
@@ -322,7 +371,7 @@ export default function ScheduledDetail({ product, mediaUrls, onClose: _onClose,
                   Edit Schedule
                 </button>
                 <button
-                  onClick={handleStartAuction}
+                  onClick={() => handleStartAuction(false)}
                   disabled={isStarting}
                   className="w-full inline-flex items-center justify-center rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -348,26 +397,74 @@ export default function ScheduledDetail({ product, mediaUrls, onClose: _onClose,
               <h3 className="text-lg font-bold text-gray-900 mb-4">Auction Timeline</h3>
               
               <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Scheduled Start:</span>
-                  <span className="text-sm font-medium text-gray-900">{product.timeLeft}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Scheduled End:</span>
-                  <span className="text-sm font-medium text-gray-900">TBD</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Duration:</span>
-                  <span className="text-sm font-medium text-gray-900">18 Days</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Starting Time:</span>
-                  <span className="text-sm font-medium text-gray-900">03:30:45</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">End Time:</span>
-                  <span className="text-sm font-medium text-gray-900">06:45:10</span>
-                </div>
+                {(() => {
+                  if (!auction) {
+                    return <div className="text-sm text-gray-500">Loading timeline...</div>
+                  }
+
+                  const startDate = new Date(auction.startAt)
+                  const endDate = new Date(auction.endAt)
+                  const now = new Date()
+
+                  // Calculate time until start
+                  const timeUntilStart = startDate.getTime() - now.getTime()
+                  const daysUntilStart = Math.floor(timeUntilStart / (1000 * 60 * 60 * 24))
+                  const hoursUntilStart = Math.floor((timeUntilStart % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+                  const minutesUntilStart = Math.floor((timeUntilStart % (1000 * 60 * 60)) / (1000 * 60))
+                  const scheduledStart = timeUntilStart > 0 
+                    ? `${daysUntilStart}d : ${hoursUntilStart}h : ${minutesUntilStart}m`
+                    : 'Started'
+
+                  // Calculate time until end
+                  const timeUntilEnd = endDate.getTime() - now.getTime()
+                  const daysUntilEnd = Math.floor(timeUntilEnd / (1000 * 60 * 60 * 24))
+                  const hoursUntilEnd = Math.floor((timeUntilEnd % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+                  const minutesUntilEnd = Math.floor((timeUntilEnd % (1000 * 60 * 60)) / (1000 * 60))
+                  const scheduledEnd = timeUntilEnd > 0
+                    ? `${daysUntilEnd}d : ${hoursUntilEnd}h : ${minutesUntilEnd}m`
+                    : 'Ended'
+
+                  // Calculate duration in days
+                  const durationMs = endDate.getTime() - startDate.getTime()
+                  const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24))
+                  const duration = `${durationDays} Day${durationDays !== 1 ? 's' : ''}`
+
+                  // Format times (HH:MM:SS)
+                  const formatTime = (date: Date) => {
+                    const hours = String(date.getHours()).padStart(2, '0')
+                    const minutes = String(date.getMinutes()).padStart(2, '0')
+                    const seconds = String(date.getSeconds()).padStart(2, '0')
+                    return `${hours}:${minutes}:${seconds}`
+                  }
+
+                  const startingTime = formatTime(startDate)
+                  const endTime = formatTime(endDate)
+
+                  return (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Scheduled Start:</span>
+                        <span className="text-sm font-medium text-gray-900">{scheduledStart}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Scheduled End:</span>
+                        <span className="text-sm font-medium text-gray-900">{scheduledEnd}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Duration:</span>
+                        <span className="text-sm font-medium text-gray-900">{duration}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Starting Time:</span>
+                        <span className="text-sm font-medium text-gray-900">{startingTime}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">End Time:</span>
+                        <span className="text-sm font-medium text-gray-900">{endTime}</span>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             </div>
           </div>

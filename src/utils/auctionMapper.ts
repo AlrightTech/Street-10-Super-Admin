@@ -39,13 +39,13 @@ const formatTimeLeft = (endAt: string): string => {
 const mapAuctionStateToStatus = (state: string): BiddingProduct['status'] => {
   switch (state) {
     case 'ended':
-      return 'ended-unsold' // Default to unsold, can be refined later
+      return 'payment-requested' // Ended auctions show as payment requested
     case 'settled':
       return 'fully-paid-sold'
     case 'scheduled':
       return 'scheduled'
     case 'live':
-      return 'payment-requested' // Active auctions show as payment requested
+      return 'live' // Live auctions show as "Live" (started)
     default:
       return 'scheduled'
   }
@@ -72,6 +72,7 @@ export const mapAuctionToBiddingProduct = (auction: Auction): BiddingProduct => 
     productId: auction.productId, // Product ID for deletion
     name: auction.product.title,
     category: category,
+    description: auction.product.description || null,
     startingPrice: startingPrice,
     currentBid: currentBid,
     bids: bidsCount,

@@ -159,10 +159,10 @@ export default function EditUser() {
           // Transform to frontend format
           userData = {
             id: parseInt(apiUser.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
-            name: apiUser.user.email.split('@')[0],
+            name: (apiUser.user.name && apiUser.user.name.trim()) ? apiUser.user.name : apiUser.user.email.split('@')[0],
             email: apiUser.user.email,
             phone: apiUser.user.phone || '',
-            avatar: '',
+            avatar: apiUser.user.profileImageUrl || '',
             role: apiUser.user.role,
             accountStatus: apiUser.user.status === 'active' ? 'verified' : 'unverified',
             status: apiUser.user.status === 'active' ? 'active' : 'blocked',

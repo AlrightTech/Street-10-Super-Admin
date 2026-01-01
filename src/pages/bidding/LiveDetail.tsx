@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { BiddingProduct } from '../../components/bidding/BiddingProductsTable'
 import { auctionsApi, type Auction } from '../../services/auctions.api'
+import { productsApi } from '../../services/products.api'
 
-interface PaymentRequestedDetailProps {
+interface LiveDetailProps {
   product: BiddingProduct
   auction: Auction | null // Full auction data for timeline and bidding history
   mediaUrls?: string[] // All product media URLs
@@ -22,13 +23,16 @@ interface BidHistoryItem {
 }
 
 /**
- * Payment Requested Product Detail page
+ * Live (Started) Auction Detail page
  */
-export default function PaymentRequestedDetail({ product, auction, mediaUrls, onClose: _onClose }: PaymentRequestedDetailProps) {
+export default function LiveDetail({ product, auction, mediaUrls, onClose: _onClose }: LiveDetailProps) {
   const navigate = useNavigate()
   const [selectedImage, setSelectedImage] = useState(0)
   const [bids, setBids] = useState<any[]>([])
   const [loadingBids, setLoadingBids] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   // Fetch bids if auction is available
   useEffect(() => {
@@ -105,7 +109,7 @@ export default function PaymentRequestedDetail({ product, auction, mediaUrls, on
       id: bid.id,
       bidderName: bid.user?.name || bid.user?.email?.split('@')[0] || 'Unknown',
       bidderEmail: bid.user?.email || 'N/A',
-      status: bid.isWinning ? 'Winning - Down Payment undone' : 'Bidding',
+      status: bid.isWinning ? 'Winning' : 'Bidding',
       date: formatDate(bid.placedAt),
       time: formatTime(bid.placedAt),
       amount: formatPrice(bid.amountMinor, auction?.product?.currency || 'QAR'),
@@ -116,6 +120,123 @@ export default function PaymentRequestedDetail({ product, auction, mediaUrls, on
   const handleEditProduct = () => {
     navigate(`/building-products/${product.id}/edit`)
   }
+
+  const handlePauseAuction = async () => {
+    if (!window.confirm('Are you sure you want to pause this auction? The auction will be paused and removed from the website.')) {
+      return
+    }
+
+    try {
+      setIsProcessing(true)
+      setStatusError(null)
+      setStatusMessage(null)
+
+      await auctionsApi.pause(product.id)
+      
+      setStatusMessage('Auction paused successfully!')
+      
+      // Navigate back to products list after a short delay
+      setTimeout(() => {
+        navigate('/building-products')
+      }, 1500)
+    } catch (error: any) {
+      console.error('Error pausing auction:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to pause auction'
+      setStatusError(errorMessage)
+      alert(`Error: ${errorMessage}`)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleEndAuction = async () => {
+    if (!window.confirm('Are you sure you want to end this auction now? This will change the status to Payment Requested.')) {
+      return
+    }
+
+    try {
+      setIsProcessing(true)
+      setStatusError(null)
+      setStatusMessage(null)
+
+      // Update auction to ENDED state and set endAt to current time
+      await auctionsApi.update(product.id, {
+        state: 'ended',
+        endAt: new Date().toISOString(),
+      })
+      
+      setStatusMessage('Auction ended successfully!')
+      
+      // Navigate back to products list after a short delay
+      setTimeout(() => {
+        navigate('/building-products')
+      }, 1500)
+    } catch (error: any) {
+      console.error('Error ending auction:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to end auction'
+      setStatusError(errorMessage)
+      alert(`Error: ${errorMessage}`)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleCancelAuction = async () => {
+    const reason = window.prompt('Are you sure you want to cancel this auction? Please provide a reason (optional):')
+    if (reason === null) {
+      return // User cancelled
+    }
+
+    try {
+      setIsProcessing(true)
+      setStatusError(null)
+      setStatusMessage(null)
+
+      await auctionsApi.cancel(product.id, reason || undefined)
+      
+      setStatusMessage('Auction cancelled successfully!')
+      
+      // Navigate back to products list after a short delay
+      setTimeout(() => {
+        navigate('/building-products')
+      }, 1500)
+    } catch (error: any) {
+      console.error('Error cancelling auction:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to cancel auction'
+      setStatusError(errorMessage)
+      alert(`Error: ${errorMessage}`)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleDeleteProduct = async () => {
+    if (!window.confirm(`Are you sure you want to delete "${product.name}"? This will delete the product and its auction. This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setIsProcessing(true)
+      setStatusError(null)
+      setStatusMessage(null)
+
+      await productsApi.delete(product.productId)
+      
+      setStatusMessage('Product deleted successfully!')
+      
+      // Navigate back to products list after a short delay
+      setTimeout(() => {
+        navigate('/building-products')
+      }, 1500)
+    } catch (error: any) {
+      console.error('Error deleting product:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete product'
+      setStatusError(errorMessage)
+      alert(`Error: ${errorMessage}`)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
   
   // Use provided mediaUrls or fallback to single imageUrl, or placeholder
   const productImages = mediaUrls && mediaUrls.length > 0 
@@ -124,8 +245,36 @@ export default function PaymentRequestedDetail({ product, auction, mediaUrls, on
       ? [product.imageUrl]
       : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop']
 
+  // Calculate time remaining until end
+  const getTimeRemaining = () => {
+    if (!auction?.endAt) return 'N/A'
+    const endDate = new Date(auction.endAt)
+    const now = new Date()
+    const diff = endDate.getTime() - now.getTime()
+    
+    if (diff <= 0) return 'Ended'
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    
+    return `${days}d : ${hours}h : ${minutes}m`
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Status Messages */}
+      {statusMessage && (
+        <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+          <p className="text-sm font-medium text-green-800">{statusMessage}</p>
+        </div>
+      )}
+      {statusError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+          <p className="text-sm font-medium text-red-800">{statusError}</p>
+        </div>
+      )}
+
       {/* Top Header Section - Outside white card */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
         <div>
@@ -340,11 +489,9 @@ export default function PaymentRequestedDetail({ product, auction, mediaUrls, on
                   <p className="text-sm text-gray-500">Current Highest Bid</p>
                 </div>
 
-                <div className="bg-[#F7931E] text-white rounded-lg p-4">
-                  <p className="text-sm font-medium mb-1">Auction Ended - Payment Requested</p>
-                  <p className="text-xs text-gray-200">
-                    {auction?.endAt ? `Ended: ${formatDate(auction.endAt)}` : 'Payment Required'}
-                  </p>
+                <div className="bg-blue-600 text-white rounded-lg p-4">
+                  <p className="text-sm font-medium mb-1">Auction Live</p>
+                  <p className="text-xs text-gray-200">Time Remaining: {getTimeRemaining()}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -365,10 +512,6 @@ export default function PaymentRequestedDetail({ product, auction, mediaUrls, on
                     <p className="text-xs font-medium text-gray-700">Saved</p>
                   </div>
                 </div>
-
-                <button className="w-full inline-flex items-center justify-center rounded-lg bg-[#F7931E] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer">
-                  Mark As Fully Paid
-                </button>
               </div>
             </div>
 
@@ -380,14 +523,33 @@ export default function PaymentRequestedDetail({ product, auction, mediaUrls, on
                 <button className="w-full inline-flex items-center justify-center rounded-lg bg-[#118D57] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#0F7A4A] cursor-pointer">
                   Approve All Bids
                 </button>
-                <button className="w-full inline-flex items-center justify-center rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer">
-                  Pause Auction
+                <button 
+                  onClick={handlePauseAuction}
+                  disabled={isProcessing}
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Processing...' : 'Pause Auction'}
                 </button>
-                <button className="w-full inline-flex items-center justify-center rounded-lg bg-[#B71D18] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#9A1814] cursor-pointer">
-                  End Auction Now
+                <button 
+                  onClick={handleEndAuction}
+                  disabled={isProcessing}
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#B71D18] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#9A1814] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Processing...' : 'End Auction Now'}
                 </button>
-                <button className="w-full inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 cursor-pointer">
-                  Delete Product
+                <button 
+                  onClick={handleCancelAuction}
+                  disabled={isProcessing}
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Processing...' : 'Cancel Auction'}
+                </button>
+                <button 
+                  onClick={handleDeleteProduct}
+                  disabled={isProcessing}
+                  className="w-full inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Processing...' : 'Delete Product'}
                 </button>
               </div>
             </div>
@@ -431,3 +593,4 @@ export default function PaymentRequestedDetail({ product, auction, mediaUrls, on
     </div>
   )
 }
+

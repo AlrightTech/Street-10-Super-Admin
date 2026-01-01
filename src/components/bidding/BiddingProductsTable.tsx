@@ -1,13 +1,14 @@
 import { Fragment } from 'react'
 import BiddingProductsActionMenu from './BiddingProductsActionMenu'
 
-export type BiddingProductStatus = 'ended-unsold' | 'payment-requested' | 'fully-paid-sold' | 'scheduled'
+export type BiddingProductStatus = 'ended-unsold' | 'payment-requested' | 'fully-paid-sold' | 'scheduled' | 'live'
 
 export interface BiddingProduct {
   id: string // Auction ID
   productId: string // Product ID (for deletion)
   name: string
   category: string
+  description?: string | null // Product description
   startingPrice: string
   currentBid: string
   bids: number
@@ -120,6 +121,7 @@ function BiddingProductStatusBadge({ status }: { status: BiddingProductStatus })
     'payment-requested': 'bg-[#F7931E] text-white',
     'fully-paid-sold': 'bg-[#FF6B6B] text-white',
     'scheduled': 'bg-[#118D57] text-white',
+    'live': 'bg-blue-600 text-white',
   }
 
   const statusLabels: Record<BiddingProductStatus, string> = {
@@ -127,6 +129,7 @@ function BiddingProductStatusBadge({ status }: { status: BiddingProductStatus })
     'payment-requested': 'Payment Requested',
     'fully-paid-sold': 'Fully Paid - Sold',
     'scheduled': 'Scheduled',
+    'live': 'Live',
   }
 
   // Reduce padding for longer status text to prevent overflow

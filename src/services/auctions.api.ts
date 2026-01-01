@@ -124,8 +124,11 @@ export const auctionsApi = {
     return response.data.data.auction;
   },
 
-  // Note: Backend doesn't currently support full auction updates
-  // Only state can be updated via updateState
+  // Update auction (full update)
+  update: async (id: string, data: UpdateAuctionData): Promise<Auction> => {
+    const response = await api.patch<ApiResponse<{ auction: Auction }>>(`/auctions/${id}`, data);
+    return response.data.data.auction;
+  },
 
   // Get bids for an auction
   getBids: async (auctionId: string, page = 1, limit = 50) => {
@@ -133,6 +136,24 @@ export const auctionsApi = {
       params: { page, limit },
     });
     return response.data.data;
+  },
+
+  // Pause a live auction
+  pause: async (id: string): Promise<Auction> => {
+    const response = await api.post<ApiResponse<{ auction: Auction }>>(`/auctions/${id}/pause`);
+    return response.data.data.auction;
+  },
+
+  // Resume a paused auction
+  resume: async (id: string): Promise<Auction> => {
+    const response = await api.post<ApiResponse<{ auction: Auction }>>(`/auctions/${id}/resume`);
+    return response.data.data.auction;
+  },
+
+  // Cancel an auction
+  cancel: async (id: string, reason?: string): Promise<Auction> => {
+    const response = await api.post<ApiResponse<{ auction: Auction }>>(`/auctions/${id}/cancel`, { reason });
+    return response.data.data.auction;
   },
 };
 

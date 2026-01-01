@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react'
 import { auctionsApi, type Auction } from '../../services/auctions.api'
 import { mapAuctionToBiddingProduct } from '../../utils/auctionMapper'
 import type { BiddingProduct } from '../../components/bidding/BiddingProductsTable'
-import ScheduledDetail from './ScheduledDetail'
+import LiveDetail from './LiveDetail'
 
-export default function ScheduledDetailRoute() {
+export default function LiveDetailRoute() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
@@ -53,13 +53,6 @@ export default function ScheduledDetailRoute() {
       window.history.replaceState({}, '', location.pathname)
     }
   }, [location.search])
-
-  const handleAuctionStarted = async () => {
-    // Refresh the auction data after starting
-    if (id) {
-      await fetchAuction()
-    }
-  }
   
   if (loading) {
     return (
@@ -88,6 +81,6 @@ export default function ScheduledDetailRoute() {
     )
   }
   
-  return <ScheduledDetail product={product} auction={auction} mediaUrls={mediaUrls} onClose={() => navigate('/building-products')} onAuctionStarted={handleAuctionStarted} />
+  return <LiveDetail product={product} auction={auction} mediaUrls={mediaUrls} onClose={() => navigate('/building-products')} />
 }
 

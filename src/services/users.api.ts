@@ -2,8 +2,10 @@ import api, { type ApiResponse, type PaginatedResponse } from "../utils/api";
 
 export interface User {
   id: string;
+  name: string | null;
   email: string;
   phone: string | null;
+  profileImageUrl: string | null;
   status: string;
   role: string;
   lang: string;

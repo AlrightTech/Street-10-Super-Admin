@@ -152,7 +152,7 @@ export default function EndedUnsoldDetail({ product, mediaUrls, onClose: _onClos
 
                 <div>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    A 1960 vintage Rolex Submariner watch from 1975 in excellent condition. This timepiece features the iconic black dial with luminous markers, unidirectional rotating bezel, and automatic movement. The watch has been serviced and comes with original box and papers. A true collector's item with historical significance and timeless appeal.
+                    {product.description || 'No description available.'}
                   </p>
                 </div>
 
