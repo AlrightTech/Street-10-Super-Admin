@@ -23,7 +23,6 @@ export default function Footer() {
   const logoUrl = settings?.logos?.websiteLogo || '/Images/Street10-logo.png'
   const phoneNumber = settings?.contact?.phoneNumbers?.[0]?.value || ''
   const email = settings?.contact?.email?.value || ''
-  const address = settings?.contact?.address?.value || ''
   const socialMediaLinks = settings?.contact?.socialMediaLinks || []
 
   return (

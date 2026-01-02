@@ -108,7 +108,6 @@ export default function MainControl() {
       content: 'If you have any questions about these Terms, please contact us at info@Street10.com.',
     },
   ])
-  const [isEditingTerms, setIsEditingTerms] = useState(false)
 
   // Privacy Policy state
   const [privacyPolicy, setPrivacyPolicy] = useState<TermsCondition[]>([
@@ -128,7 +127,6 @@ export default function MainControl() {
       content: 'If you have any questions regarding this Privacy Policy, please contact us at [info@Street10.com].',
     },
   ])
-  const [isEditingPrivacy, setIsEditingPrivacy] = useState(false)
 
   // Help Center state
   const [helpCenter, setHelpCenter] = useState<TermsCondition[]>([
@@ -168,7 +166,6 @@ export default function MainControl() {
       content: 'If you have any questions about this Help Center or our practices, please contact us at info@Street10.com.',
     },
   ])
-  const [isEditingHelp, setIsEditingHelp] = useState(false)
 
   // About Us state
   const [aboutUs, setAboutUs] = useState<TermsCondition[]>([
@@ -208,7 +205,6 @@ export default function MainControl() {
       content: 'If you have any questions about this About Us or our practices, please contact us at info@Street10.com.',
     },
   ])
-  const [isEditingAbout, setIsEditingAbout] = useState(false)
 
   // Load all settings on mount
   useEffect(() => {
@@ -345,7 +341,6 @@ export default function MainControl() {
       const updated = await mainControlApi.updateTerms(termsConditions)
       setTermsConditions(updated.sections || [])
       setSuccessMessage('Terms & Conditions updated successfully')
-      setIsEditingTerms(false)
     } catch (err: any) {
       console.error('Failed to save terms:', err)
       setError(err.response?.data?.message || 'Failed to save terms & conditions')
@@ -362,7 +357,6 @@ export default function MainControl() {
       const updated = await mainControlApi.updatePrivacy(privacyPolicy)
       setPrivacyPolicy(updated.sections || [])
       setSuccessMessage('Privacy Policy updated successfully')
-      setIsEditingPrivacy(false)
     } catch (err: any) {
       console.error('Failed to save privacy:', err)
       setError(err.response?.data?.message || 'Failed to save privacy policy')
@@ -379,7 +373,6 @@ export default function MainControl() {
       const updated = await mainControlApi.updateHelp(helpCenter)
       setHelpCenter(updated.sections || [])
       setSuccessMessage('Help Center updated successfully')
-      setIsEditingHelp(false)
     } catch (err: any) {
       console.error('Failed to save help:', err)
       setError(err.response?.data?.message || 'Failed to save help center')
@@ -396,7 +389,6 @@ export default function MainControl() {
       const updated = await mainControlApi.updateAbout(aboutUs)
       setAboutUs(updated.sections || [])
       setSuccessMessage('About Us updated successfully')
-      setIsEditingAbout(false)
     } catch (err: any) {
       console.error('Failed to save about:', err)
       setError(err.response?.data?.message || 'Failed to save about us')
@@ -1089,7 +1081,6 @@ export default function MainControl() {
           setEditingId(id)
           setEditingValue(content)
           setEditingType('terms')
-          setIsEditingTerms(true)
         }
 
         const handleSaveSingleTerm = () => {
@@ -1107,7 +1098,6 @@ export default function MainControl() {
           setEditingId(null)
           setEditingValue('')
           setEditingType(null)
-          setIsEditingTerms(false)
         }
 
         const handleAddTerm = () => {
@@ -1227,7 +1217,6 @@ export default function MainControl() {
           setEditingId(id)
           setEditingValue(content)
           setEditingType('privacy')
-          setIsEditingPrivacy(true)
         }
 
         const handleSaveSinglePrivacy = () => {
@@ -1245,7 +1234,6 @@ export default function MainControl() {
           setEditingId(null)
           setEditingValue('')
           setEditingType(null)
-          setIsEditingPrivacy(false)
         }
 
         const handleAddPrivacy = () => {
@@ -1365,7 +1353,6 @@ export default function MainControl() {
           setEditingId(id)
           setEditingValue(content)
           setEditingType('help')
-          setIsEditingHelp(true)
         }
 
         const handleSaveSingleHelp = () => {
@@ -1383,7 +1370,6 @@ export default function MainControl() {
           setEditingId(null)
           setEditingValue('')
           setEditingType(null)
-          setIsEditingHelp(false)
         }
 
         const handleAddHelp = () => {
@@ -1503,7 +1489,6 @@ export default function MainControl() {
           setEditingId(id)
           setEditingValue(content)
           setEditingType('about')
-          setIsEditingAbout(true)
         }
 
         const handleSaveSingleAbout = () => {
@@ -1521,7 +1506,6 @@ export default function MainControl() {
           setEditingId(null)
           setEditingValue('')
           setEditingType(null)
-          setIsEditingAbout(false)
         }
 
         const handleAddAbout = () => {
