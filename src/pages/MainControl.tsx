@@ -14,12 +14,6 @@ interface ContactDetail {
   value: string
 }
 
-interface FooterFeature {
-  id: string
-  label: string
-  value: string
-}
-
 interface SocialMediaLink {
   id: string
   name: string
@@ -36,6 +30,7 @@ interface TermsCondition {
 export default function MainControl() {
   const [activeFilter, setActiveFilter] = useState('logs-control')
   const [isLoading, setIsLoading] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState<'website' | 'app' | 'favicon' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -53,14 +48,17 @@ export default function MainControl() {
     label: 'Email Address',
     value: '',
   })
-  const [footerOneFeatures, setFooterOneFeatures] = useState<FooterFeature[]>([])
-  const [footerTwoFeatures, setFooterTwoFeatures] = useState<FooterFeature[]>([])
+  const [address, setAddress] = useState<ContactDetail>({
+    id: 'address',
+    label: 'Address',
+    value: '',
+  })
   const [socialMediaLinks, setSocialMediaLinks] = useState<SocialMediaLink[]>([])
 
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
-  const [editingType, setEditingType] = useState<'phone' | 'email' | 'footer1' | 'footer2' | 'social' | 'terms' | 'privacy' | 'help' | 'about' | null>(null)
+  const [editingType, setEditingType] = useState<'phone' | 'email' | 'address' | 'social' | 'socialIcon' | 'socialName' | 'terms' | 'privacy' | 'help' | 'about' | null>(null)
 
   // Terms & Conditions state
   const [termsConditions, setTermsConditions] = useState<TermsCondition[]>([
@@ -229,8 +227,7 @@ export default function MainControl() {
         if (allSettings.contact) {
           setPhoneNumbers(allSettings.contact.phoneNumbers || [])
           setEmailAddress(allSettings.contact.email || { id: 'email', label: 'Email Address', value: '' })
-          setFooterOneFeatures(allSettings.contact.footerOneFeatures || [])
-          setFooterTwoFeatures(allSettings.contact.footerTwoFeatures || [])
+          setAddress(allSettings.contact.address || { id: 'address', label: 'Address', value: '' })
           setSocialMediaLinks(allSettings.contact.socialMediaLinks || [])
         }
 
@@ -282,7 +279,7 @@ export default function MainControl() {
   // File upload handler for logos
   const handleLogoUpload = async (type: 'website' | 'app' | 'favicon', file: File) => {
     try {
-      setIsLoading(true)
+      setUploadingLogo(type)
       setError(null)
       
       // Convert file to base64 or data URL
@@ -299,36 +296,21 @@ export default function MainControl() {
           console.error('Failed to upload logo:', err)
           setError(err.response?.data?.message || 'Failed to upload logo')
         } finally {
-          setIsLoading(false)
+          setUploadingLogo(null)
         }
       }
       reader.onerror = () => {
         setError('Failed to read file')
-        setIsLoading(false)
+        setUploadingLogo(null)
       }
       reader.readAsDataURL(file)
     } catch (err: any) {
       console.error('Failed to upload logo:', err)
       setError(err.response?.data?.message || 'Failed to upload logo')
-      setIsLoading(false)
+      setUploadingLogo(null)
     }
   }
 
-  // Save logos handler
-  const handleSaveLogos = async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-      const updated = await mainControlApi.updateLogos(logos)
-      setLogos(updated)
-      setSuccessMessage('Logos updated successfully')
-    } catch (err: any) {
-      console.error('Failed to save logos:', err)
-      setError(err.response?.data?.message || 'Failed to save logos')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   // Save contact information handler
   const handleSaveContact = async () => {
@@ -338,15 +320,13 @@ export default function MainControl() {
       const contact: ContactData = {
         phoneNumbers,
         email: emailAddress,
-        footerOneFeatures,
-        footerTwoFeatures,
+        address,
         socialMediaLinks,
       }
       const updated = await mainControlApi.updateContact(contact)
       setPhoneNumbers(updated.phoneNumbers || [])
       setEmailAddress(updated.email || { id: 'email', label: 'Email Address', value: '' })
-      setFooterOneFeatures(updated.footerOneFeatures || [])
-      setFooterTwoFeatures(updated.footerTwoFeatures || [])
+      setAddress(updated.address || { id: 'address', label: 'Address', value: '' })
       setSocialMediaLinks(updated.socialMediaLinks || [])
       setSuccessMessage('Contact information updated successfully')
     } catch (err: any) {
@@ -482,6 +462,7 @@ export default function MainControl() {
                   id="website-logo-upload"
                   accept="image/*"
                   className="hidden"
+                  disabled={uploadingLogo === 'website'}
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) {
@@ -491,25 +472,27 @@ export default function MainControl() {
                 />
                 <label
                   htmlFor="website-logo-upload"
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
+                  className={`border-2 border-dashed rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center transition-colors ${
+                    uploadingLogo === 'website' 
+                      ? 'border-gray-400 cursor-wait opacity-50' 
+                      : 'border-gray-300 cursor-pointer hover:border-gray-400'
+                  }`}
                   style={{ minHeight: '120px' }}
                 >
-                  <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
+                  {uploadingLogo === 'website' ? (
+                    <>
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[#F7931E] mb-2"></div>
+                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Uploading...</p>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
+                    </>
+                  )}
                 </label>
-              </div>
-
-              {/* Save Button */}
-              <div className="flex justify-center sm:justify-end">
-                <button
-                  onClick={handleSaveLogos}
-                  disabled={isLoading}
-                  className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F7931E] text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? 'Saving...' : 'Save Changes'}
-                </button>
               </div>
             </div>
 
@@ -555,6 +538,7 @@ export default function MainControl() {
                   id="app-logo-upload"
                   accept="image/*"
                   className="hidden"
+                  disabled={uploadingLogo === 'app'}
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) {
@@ -564,25 +548,27 @@ export default function MainControl() {
                 />
                 <label
                   htmlFor="app-logo-upload"
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
+                  className={`border-2 border-dashed rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center transition-colors ${
+                    uploadingLogo === 'app' 
+                      ? 'border-gray-400 cursor-wait opacity-50' 
+                      : 'border-gray-300 cursor-pointer hover:border-gray-400'
+                  }`}
                   style={{ minHeight: '120px' }}
                 >
-                  <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
+                  {uploadingLogo === 'app' ? (
+                    <>
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[#F7931E] mb-2"></div>
+                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Uploading...</p>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
+                    </>
+                  )}
                 </label>
-              </div>
-
-              {/* Save Button */}
-              <div className="flex justify-center sm:justify-end">
-                <button
-                  onClick={handleSaveLogos}
-                  disabled={isLoading}
-                  className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F7931E] text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? 'Saving...' : 'Save Changes'}
-                </button>
               </div>
             </div>
 
@@ -628,6 +614,7 @@ export default function MainControl() {
                   id="favicon-upload"
                   accept="image/*"
                   className="hidden"
+                  disabled={uploadingLogo === 'favicon'}
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) {
@@ -637,31 +624,33 @@ export default function MainControl() {
                 />
                 <label
                   htmlFor="favicon-upload"
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
+                  className={`border-2 border-dashed rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center transition-colors ${
+                    uploadingLogo === 'favicon' 
+                      ? 'border-gray-400 cursor-wait opacity-50' 
+                      : 'border-gray-300 cursor-pointer hover:border-gray-400'
+                  }`}
                   style={{ minHeight: '120px' }}
                 >
-                  <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
+                  {uploadingLogo === 'favicon' ? (
+                    <>
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[#F7931E] mb-2"></div>
+                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Uploading...</p>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
+                    </>
+                  )}
                 </label>
-              </div>
-
-              {/* Save Button */}
-              <div className="flex justify-center sm:justify-end">
-                <button
-                  onClick={handleSaveLogos}
-                  disabled={isLoading}
-                  className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F7931E] text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? 'Saving...' : 'Save Changes'}
-                </button>
               </div>
             </div>
           </div>
         )
       case 'contact-information':
-        const handleEdit = (id: string, value: string, type: 'phone' | 'email' | 'footer1' | 'footer2' | 'social') => {
+        const handleEdit = (id: string, value: string, type: 'phone' | 'email' | 'address' | 'social' | 'socialName' | 'socialIcon') => {
           setEditingId(id)
           setEditingValue(value)
           setEditingType(type)
@@ -679,19 +668,22 @@ export default function MainControl() {
             case 'email':
               setEmailAddress({ ...emailAddress, value: editingValue })
               break
-            case 'footer1':
-              setFooterOneFeatures((prev) =>
-                prev.map((item) => (item.id === editingId ? { ...item, value: editingValue } : item))
-              )
-              break
-            case 'footer2':
-              setFooterTwoFeatures((prev) =>
-                prev.map((item) => (item.id === editingId ? { ...item, value: editingValue } : item))
-              )
+            case 'address':
+              setAddress({ ...address, value: editingValue })
               break
             case 'social':
               setSocialMediaLinks((prev) =>
                 prev.map((item) => (item.id === editingId ? { ...item, url: editingValue } : item))
+              )
+              break
+            case 'socialName':
+              setSocialMediaLinks((prev) =>
+                prev.map((item) => (item.id === editingId ? { ...item, name: editingValue } : item))
+              )
+              break
+            case 'socialIcon':
+              setSocialMediaLinks((prev) =>
+                prev.map((item) => (item.id === editingId ? { ...item, icon: editingValue } : item))
               )
               break
           }
@@ -711,45 +703,36 @@ export default function MainControl() {
           setPhoneNumbers([...phoneNumbers, { id: newId, label: `${phoneNumbers.length + 1} Phone Number`, value: '' }])
         }
 
-        const handleAddFooterOne = () => {
-          const newId = String(footerOneFeatures.length + 1)
-          setFooterOneFeatures([...footerOneFeatures, { id: newId, label: 'New Link', value: 'New Link' }])
-        }
-
-        const handleAddFooterTwo = () => {
-          const newId = String(footerTwoFeatures.length + 1)
-          setFooterTwoFeatures([...footerTwoFeatures, { id: newId, label: 'New Link', value: 'New Link' }])
-        }
-
         const handleAddSocial = () => {
           const newId = String(socialMediaLinks.length + 1)
-          setSocialMediaLinks([...socialMediaLinks, { id: newId, name: 'New Social', icon: 'link', url: '' }])
+          setSocialMediaLinks([...socialMediaLinks, { id: newId, name: 'New Social', icon: '', url: '' }])
         }
 
         const handleDeleteSocial = (id: string) => {
           setSocialMediaLinks((prev) => prev.filter((item) => item.id !== id))
         }
 
-        const getSocialIcon = (iconName: string) => {
-          switch (iconName.toLowerCase()) {
-            case 'facebook':
-              return (
-                <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-600 flex-shrink-0">
-                  <span className="text-xs font-bold text-white">f</span>
-                </div>
+        const handleSocialIconUpload = async (id: string, file: File) => {
+          try {
+            setIsLoading(true)
+            setError(null)
+            const reader = new FileReader()
+            reader.onloadend = () => {
+              const dataUrl = reader.result as string
+              setSocialMediaLinks((prev) =>
+                prev.map((item) => (item.id === id ? { ...item, icon: dataUrl } : item))
               )
-            case 'linkedin':
-              return (
-                <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-600 flex-shrink-0">
-                  <span className="text-xs font-bold text-white">in</span>
-                </div>
-              )
-            default:
-              return (
-                <div className="flex h-8 w-8 items-center justify-center rounded bg-gray-400 flex-shrink-0">
-                  <span className="text-xs font-bold text-white">?</span>
-                </div>
-              )
+              setIsLoading(false)
+            }
+            reader.onerror = () => {
+              setError('Failed to read file')
+              setIsLoading(false)
+            }
+            reader.readAsDataURL(file)
+          } catch (err: any) {
+            console.error('Failed to upload icon:', err)
+            setError(err.response?.data?.message || 'Failed to upload icon')
+            setIsLoading(false)
           }
         }
 
@@ -866,200 +849,214 @@ export default function MainControl() {
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
 
-            {/* Footer One Features */}
-            <div>
-              <h4 className="text-base font-semibold text-gray-900 mb-4">Footer One Features</h4>
-              <div className="space-y-4">
-                {footerOneFeatures.map((feature) => (
-                  <div key={feature.id}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">{feature.label}</label>
-                    {editingId === feature.id && editingType === 'footer1' ? (
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={editingValue}
-                          onChange={(e) => setEditingValue(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
-                          autoFocus
-                        />
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                          <button
-                            onClick={handleSave}
-                            className="text-green-600 hover:text-green-700 cursor-pointer"
-                          >
-                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={handleCancel}
-                            className="text-red-600 hover:text-red-700 cursor-pointer"
-                          >
-                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={feature.value}
-                          readOnly
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
-                        />
+                {/* Address */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{address.label}</label>
+                  {editingId === address.id && editingType === 'address' ? (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={editingValue}
+                        onChange={(e) => setEditingValue(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                        autoFocus
+                      />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                         <button
-                          onClick={() => handleEdit(feature.id, feature.value, 'footer1')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                          onClick={handleSave}
+                          className="text-green-600 hover:text-green-700 cursor-pointer"
                         >
-                          <PencilIcon className="h-5 w-5" />
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={handleCancel}
+                          className="text-red-600 hover:text-red-700 cursor-pointer"
+                        >
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
                         </button>
                       </div>
-                    )}
-                  </div>
-                ))}
-                <button
-                  onClick={handleAddFooterOne}
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium cursor-pointer"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span>Add Another Link</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Footer Two Features */}
-            <div>
-              <h4 className="text-base font-semibold text-gray-900 mb-4">Footer Two Features</h4>
-              <div className="space-y-4">
-                {footerTwoFeatures.map((feature) => (
-                  <div key={feature.id}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">{feature.label}</label>
-                    {editingId === feature.id && editingType === 'footer2' ? (
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={editingValue}
-                          onChange={(e) => setEditingValue(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
-                          autoFocus
-                        />
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                          <button
-                            onClick={handleSave}
-                            className="text-green-600 hover:text-green-700 cursor-pointer"
-                          >
-                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={handleCancel}
-                            className="text-red-600 hover:text-red-700 cursor-pointer"
-                          >
-                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={feature.value}
-                          readOnly
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
-                        />
-                        <button
-                          onClick={() => handleEdit(feature.id, feature.value, 'footer2')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <button
-                  onClick={handleAddFooterTwo}
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium cursor-pointer"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span>Add Another Link</span>
-                </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={address.value}
+                        readOnly
+                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                      />
+                      <button
+                        onClick={() => handleEdit(address.id, address.value, 'address')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Footer Social Media Links */}
             <div>
-              <h4 className="text-base font-semibold text-gray-900 mb-4">Footer Social Media Links</h4>
+              <h4 className="text-base font-semibold text-gray-900 mb-4">Social Media Links</h4>
               <div className="space-y-4">
                 {socialMediaLinks.map((link) => (
-                  <div key={link.id} className="flex items-start gap-3">
-                    <div className="mt-2">{getSocialIcon(link.icon)}</div>
-                    <div className="flex-1 flex items-center gap-2">
-                      {editingId === link.id && editingType === 'social' ? (
-                        <div className="relative flex-1">
-                          <input
-                            type="url"
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
-                            placeholder="https://"
-                            autoFocus
-                          />
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                            <button
-                              onClick={handleSave}
-                              className="text-green-600 hover:text-green-700 cursor-pointer"
-                            >
-                              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={handleCancel}
-                              className="text-red-600 hover:text-red-700 cursor-pointer"
-                            >
-                              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="relative flex-1">
-                            <input
-                              type="url"
-                              value={link.url}
-                              readOnly
-                              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                  <div key={link.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      {/* Icon Preview/Upload */}
+                      <div className="flex-shrink-0">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Icon</label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 bg-gray-50 flex items-center justify-center" style={{ minHeight: '60px', minWidth: '60px' }}>
+                          {link.icon ? (
+                            <img 
+                              src={link.icon} 
+                              alt="Social Icon" 
+                              className="max-h-12 max-w-12 object-contain"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                              }}
                             />
-                            <button
-                              onClick={() => handleEdit(link.id, link.url, 'social')}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-                            >
-                              <PencilIcon className="h-5 w-5" />
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteSocial(link.id)}
-                            className="flex h-10 w-10 items-center justify-center rounded-md bg-red-500 hover:bg-red-600 transition-colors cursor-pointer flex-shrink-0"
-                          >
-                            <TrashIcon className="h-5 w-5 text-white" />
-                          </button>
-                        </>
-                      )}
+                          ) : (
+                            <p className="text-xs text-gray-400">No icon</p>
+                          )}
+                        </div>
+                        <input
+                          type="file"
+                          id={`social-icon-${link.id}`}
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) {
+                              handleSocialIconUpload(link.id, file)
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={`social-icon-${link.id}`}
+                          className="mt-1 block text-xs text-blue-600 hover:text-blue-700 cursor-pointer text-center"
+                        >
+                          Upload Icon
+                        </label>
+                      </div>
+
+                      {/* Name and URL */}
+                      <div className="flex-1 space-y-3">
+                        {/* Name */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                          {editingId === link.id && editingType === 'socialName' ? (
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                autoFocus
+                              />
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                <button
+                                  onClick={handleSave}
+                                  className="text-green-600 hover:text-green-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={handleCancel}
+                                  className="text-red-600 hover:text-red-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={link.name}
+                                readOnly
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                              />
+                              <button
+                                onClick={() => handleEdit(link.id, link.name, 'socialName')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* URL */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">URL</label>
+                          {editingId === link.id && editingType === 'social' ? (
+                            <div className="relative">
+                              <input
+                                type="url"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                placeholder="https://"
+                                autoFocus
+                              />
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                <button
+                                  onClick={handleSave}
+                                  className="text-green-600 hover:text-green-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={handleCancel}
+                                  className="text-red-600 hover:text-red-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <input
+                                type="url"
+                                value={link.url}
+                                readOnly
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                              />
+                              <button
+                                onClick={() => handleEdit(link.id, link.url, 'social')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Delete Button */}
+                      <div className="flex-shrink-0 pt-6">
+                        <button
+                          onClick={() => handleDeleteSocial(link.id)}
+                          className="flex h-10 w-10 items-center justify-center rounded-md bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
+                        >
+                          <TrashIcon className="h-5 w-5 text-white" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1070,7 +1067,7 @@ export default function MainControl() {
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  <span>Add Another Social Media Link</span>
+                  <span>Add Social Media Link</span>
                 </button>
               </div>
             </div>
@@ -1113,6 +1110,15 @@ export default function MainControl() {
           setIsEditingTerms(false)
         }
 
+        const handleAddTerm = () => {
+          const newId = String(Date.now())
+          setTermsConditions([...termsConditions, { id: newId, title: 'New Section', content: '' }])
+        }
+
+        const handleDeleteTerm = (id: string) => {
+          setTermsConditions((prev) => prev.filter((item) => item.id !== id))
+        }
+
         return (
           <div className="space-y-6">
             <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900">Terms & Conditions</h3>
@@ -1122,7 +1128,23 @@ export default function MainControl() {
                   <div className="flex items-start gap-3 mb-2">
                     <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">{index + 1}.</span>
                     <div className="flex-1">
-                      <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{term.title}</h4>
+                      {editingId === term.id && editingType === 'terms' ? (
+                        <div className="mb-2">
+                          <input
+                            type="text"
+                            value={term.title}
+                            onChange={(e) => {
+                              setTermsConditions((prev) =>
+                                prev.map((item) => (item.id === term.id ? { ...item, title: e.target.value } : item))
+                              )
+                            }}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2"
+                            placeholder="Section Title"
+                          />
+                        </div>
+                      ) : (
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{term.title}</h4>
+                      )}
                       {editingId === term.id && editingType === 'terms' ? (
                         <div className="relative">
                           <textarea
@@ -1153,12 +1175,20 @@ export default function MainControl() {
                       ) : (
                         <div className="relative pr-8">
                           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{term.content}</p>
-                          <button
-                            onClick={() => handleEditTerms(term.id, term.content)}
-                            className="absolute right-0 top-0 text-gray-400 hover:text-gray-600 cursor-pointer"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
+                          <div className="absolute right-0 top-0 flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditTerms(term.id, term.content)}
+                              className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                            >
+                              <PencilIcon className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTerm(term.id)}
+                              className="text-red-400 hover:text-red-600 cursor-pointer"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1167,14 +1197,27 @@ export default function MainControl() {
               ))}
             </div>
 
-            {/* Edit And Update Button */}
+            {/* Add Button */}
+            <div className="flex justify-start pt-2">
+              <button
+                onClick={handleAddTerm}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium cursor-pointer"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add Section</span>
+              </button>
+            </div>
+
+            {/* Save Button */}
             <div className="flex justify-center sm:justify-end pt-4">
               <button
-                onClick={isEditingTerms ? handleSaveTerms : () => setIsEditingTerms(true)}
+                onClick={handleSaveTerms}
                 disabled={isLoading}
                 className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Saving...' : isEditingTerms ? 'Save And Update' : 'Edit And Update'}
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
@@ -1205,6 +1248,15 @@ export default function MainControl() {
           setIsEditingPrivacy(false)
         }
 
+        const handleAddPrivacy = () => {
+          const newId = String(Date.now())
+          setPrivacyPolicy([...privacyPolicy, { id: newId, title: 'New Section', content: '' }])
+        }
+
+        const handleDeletePrivacy = (id: string) => {
+          setPrivacyPolicy((prev) => prev.filter((item) => item.id !== id))
+        }
+
         return (
           <div className="space-y-6">
             <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900">Privacy Policy</h3>
@@ -1214,7 +1266,23 @@ export default function MainControl() {
                   <div className="flex items-start gap-3 mb-2">
                     <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">{index + 1}.</span>
                     <div className="flex-1">
-                      <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{policy.title}</h4>
+                      {editingId === policy.id && editingType === 'privacy' ? (
+                        <div className="mb-2">
+                          <input
+                            type="text"
+                            value={policy.title}
+                            onChange={(e) => {
+                              setPrivacyPolicy((prev) =>
+                                prev.map((item) => (item.id === policy.id ? { ...item, title: e.target.value } : item))
+                              )
+                            }}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2"
+                            placeholder="Section Title"
+                          />
+                        </div>
+                      ) : (
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{policy.title}</h4>
+                      )}
                       {editingId === policy.id && editingType === 'privacy' ? (
                         <div className="relative">
                           <textarea
@@ -1245,12 +1313,20 @@ export default function MainControl() {
                       ) : (
                         <div className="relative pr-8">
                           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{policy.content}</p>
-                          <button
-                            onClick={() => handleEditPrivacy(policy.id, policy.content)}
-                            className="absolute right-0 top-0 text-gray-400 hover:text-gray-600 cursor-pointer"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
+                          <div className="absolute right-0 top-0 flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditPrivacy(policy.id, policy.content)}
+                              className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                            >
+                              <PencilIcon className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePrivacy(policy.id)}
+                              className="text-red-400 hover:text-red-600 cursor-pointer"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1259,14 +1335,27 @@ export default function MainControl() {
               ))}
             </div>
 
-            {/* Edit And Update Button */}
+            {/* Add Button */}
+            <div className="flex justify-start pt-2">
+              <button
+                onClick={handleAddPrivacy}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium cursor-pointer"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add Section</span>
+              </button>
+            </div>
+
+            {/* Save Button */}
             <div className="flex justify-center sm:justify-end pt-4">
               <button
-                onClick={isEditingPrivacy ? handleSavePrivacy : () => setIsEditingPrivacy(true)}
+                onClick={handleSavePrivacy}
                 disabled={isLoading}
                 className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Saving...' : isEditingPrivacy ? 'Save And Update' : 'Edit And Update'}
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
@@ -1297,6 +1386,15 @@ export default function MainControl() {
           setIsEditingHelp(false)
         }
 
+        const handleAddHelp = () => {
+          const newId = String(Date.now())
+          setHelpCenter([...helpCenter, { id: newId, title: 'New Section', content: '' }])
+        }
+
+        const handleDeleteHelp = (id: string) => {
+          setHelpCenter((prev) => prev.filter((item) => item.id !== id))
+        }
+
         return (
           <div className="space-y-6">
             <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900">Help Center</h3>
@@ -1306,7 +1404,23 @@ export default function MainControl() {
                   <div className="flex items-start gap-3 mb-2">
                     <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">{index + 1}.</span>
                     <div className="flex-1">
-                      <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{help.title}</h4>
+                      {editingId === help.id && editingType === 'help' ? (
+                        <div className="mb-2">
+                          <input
+                            type="text"
+                            value={help.title}
+                            onChange={(e) => {
+                              setHelpCenter((prev) =>
+                                prev.map((item) => (item.id === help.id ? { ...item, title: e.target.value } : item))
+                              )
+                            }}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2"
+                            placeholder="Section Title"
+                          />
+                        </div>
+                      ) : (
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{help.title}</h4>
+                      )}
                       {editingId === help.id && editingType === 'help' ? (
                         <div className="relative">
                           <textarea
@@ -1337,12 +1451,20 @@ export default function MainControl() {
                       ) : (
                         <div className="relative pr-8">
                           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{help.content}</p>
-                          <button
-                            onClick={() => handleEditHelp(help.id, help.content)}
-                            className="absolute right-0 top-0 text-gray-400 hover:text-gray-600 cursor-pointer"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
+                          <div className="absolute right-0 top-0 flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditHelp(help.id, help.content)}
+                              className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                            >
+                              <PencilIcon className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteHelp(help.id)}
+                              className="text-red-400 hover:text-red-600 cursor-pointer"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1351,14 +1473,27 @@ export default function MainControl() {
               ))}
             </div>
 
-            {/* Edit And Update Button */}
+            {/* Add Button */}
+            <div className="flex justify-start pt-2">
+              <button
+                onClick={handleAddHelp}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium cursor-pointer"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add Section</span>
+              </button>
+            </div>
+
+            {/* Save Button */}
             <div className="flex justify-center sm:justify-end pt-4">
               <button
-                onClick={isEditingHelp ? handleSaveHelp : () => setIsEditingHelp(true)}
+                onClick={handleSaveHelp}
                 disabled={isLoading}
                 className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Saving...' : isEditingHelp ? 'Save And Update' : 'Edit And Update'}
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
@@ -1389,6 +1524,15 @@ export default function MainControl() {
           setIsEditingAbout(false)
         }
 
+        const handleAddAbout = () => {
+          const newId = String(Date.now())
+          setAboutUs([...aboutUs, { id: newId, title: 'New Section', content: '' }])
+        }
+
+        const handleDeleteAbout = (id: string) => {
+          setAboutUs((prev) => prev.filter((item) => item.id !== id))
+        }
+
         return (
           <div className="space-y-6">
             <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900">About Us</h3>
@@ -1398,7 +1542,23 @@ export default function MainControl() {
                   <div className="flex items-start gap-3 mb-2">
                     <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">{index + 1}.</span>
                     <div className="flex-1">
-                      <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{about.title}</h4>
+                      {editingId === about.id && editingType === 'about' ? (
+                        <div className="mb-2">
+                          <input
+                            type="text"
+                            value={about.title}
+                            onChange={(e) => {
+                              setAboutUs((prev) =>
+                                prev.map((item) => (item.id === about.id ? { ...item, title: e.target.value } : item))
+                              )
+                            }}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2"
+                            placeholder="Section Title"
+                          />
+                        </div>
+                      ) : (
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{about.title}</h4>
+                      )}
                       {editingId === about.id && editingType === 'about' ? (
                         <div className="relative">
                           <textarea
@@ -1429,12 +1589,20 @@ export default function MainControl() {
                       ) : (
                         <div className="relative pr-8">
                           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{about.content}</p>
-                          <button
-                            onClick={() => handleEditAbout(about.id, about.content)}
-                            className="absolute right-0 top-0 text-gray-400 hover:text-gray-600 cursor-pointer"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
+                          <div className="absolute right-0 top-0 flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditAbout(about.id, about.content)}
+                              className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                            >
+                              <PencilIcon className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAbout(about.id)}
+                              className="text-red-400 hover:text-red-600 cursor-pointer"
+                            >
+                              <TrashIcon className="h-5 w-5" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1443,14 +1611,27 @@ export default function MainControl() {
               ))}
             </div>
 
-            {/* Edit And Update Button */}
+            {/* Add Button */}
+            <div className="flex justify-start pt-2">
+              <button
+                onClick={handleAddAbout}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium cursor-pointer"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Add Section</span>
+              </button>
+            </div>
+
+            {/* Save Button */}
             <div className="flex justify-center sm:justify-end pt-4">
               <button
-                onClick={isEditingAbout ? handleSaveAbout : () => setIsEditingAbout(true)}
+                onClick={handleSaveAbout}
                 disabled={isLoading}
                 className="w-full sm:w-auto px-6 py-2.5 bg-[#F7931E] text-white rounded-lg text-sm font-medium hover:bg-[#e8851a] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Saving...' : isEditingAbout ? 'Save And Update' : 'Edit And Update'}
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

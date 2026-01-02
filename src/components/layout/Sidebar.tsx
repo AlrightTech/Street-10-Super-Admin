@@ -21,6 +21,7 @@ import NotificationBadge from '../ui/NotificationBadge'
 import type { NavigationItem } from '../../types/navigation'
 import { useTranslation } from '../../hooks/useTranslation'
 import type { NotificationModule } from '../../types/notifications'
+import { settingsApi } from '../../services/settings.api'
 
 /**
  * Sidebar navigation items
@@ -70,6 +71,7 @@ export default function Sidebar() {
   const { isMobileOpen, setIsMobileOpen } = useSidebar()
   const { counts, markAsRead } = useNotifications()
   const [isProductsOpen, setIsProductsOpen] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string>('/Images/Street10-logo.png')
 
   // Check if any product sub-route is active
   const isBuildingProductsActive = location.pathname === '/building-products'
@@ -82,6 +84,22 @@ export default function Sidebar() {
       setIsProductsOpen(true)
     }
   }, [isAnyProductSubRouteActive])
+
+  // Fetch logo from API
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const settings = await settingsApi.getPublicSettings()
+        if (settings?.logos?.websiteLogo) {
+          setLogoUrl(settings.logos.websiteLogo)
+        }
+      } catch (error) {
+        console.error('Failed to fetch logo:', error)
+      }
+    }
+
+    fetchLogo()
+  }, [])
 
   /**
    * Handle navigation click
@@ -162,9 +180,13 @@ export default function Sidebar() {
             {/* Logo */}
             <div className="flex items-center justify-center">
               <img 
-                src="/Images/Street10-logo.png" 
+                src={logoUrl} 
                 alt="Street10 logo"
                 className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 object-contain mb-6 sm:mb-8 md:mb-10"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.src = '/Images/Street10-logo.png'
+                }}
               />
             </div>
             {navigationItems.map((item) => {

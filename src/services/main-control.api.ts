@@ -28,8 +28,7 @@ export interface SocialMediaLink {
 export interface ContactData {
   phoneNumbers: ContactDetail[];
   email: ContactDetail;
-  footerOneFeatures: FooterFeature[];
-  footerTwoFeatures: FooterFeature[];
+  address: ContactDetail;
   socialMediaLinks: SocialMediaLink[];
 }
 

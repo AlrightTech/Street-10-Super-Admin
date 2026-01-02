@@ -4,6 +4,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher'
 import HeroSection from '../components/HeroSection'
 import LoginForm from '../components/LoginForm'
 import Footer from '../components/Footer'
+import Favicon from '../components/Favicon'
 import Button from '../components/ui/Button'
 import { useTranslation } from '../hooks/useTranslation'
 import { authApiService } from '../services/auth.api'
@@ -21,6 +22,7 @@ export default function LoginPage() {
   
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
+      <Favicon />
       {/* Header */}
       <header>
         <div className="flex items-center justify-between bg-white px-3 sm:px-4 md:px-6 py-2 sm:py-3">
