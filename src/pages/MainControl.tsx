@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { PencilIcon, TrashIcon } from '../components/icons/Icons'
-import { mainControlApi, type LogosData, type ContactData } from '../services/main-control.api'
+import { mainControlApi, type LogosData, type ContactData, type FooterFeature } from '../services/main-control.api'
 
 /**
  * Main Control page component
@@ -53,12 +53,14 @@ export default function MainControl() {
     label: 'Address',
     value: '',
   })
+  const [footerOneFeatures, setFooterOneFeatures] = useState<FooterFeature[]>([])
+  const [footerTwoFeatures, setFooterTwoFeatures] = useState<FooterFeature[]>([])
   const [socialMediaLinks, setSocialMediaLinks] = useState<SocialMediaLink[]>([])
 
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
-  const [editingType, setEditingType] = useState<'phone' | 'email' | 'address' | 'social' | 'socialIcon' | 'socialName' | 'terms' | 'privacy' | 'help' | 'about' | null>(null)
+  const [editingType, setEditingType] = useState<'phone' | 'email' | 'address' | 'footerOneTitle' | 'footerOneLink' | 'footerTwoTitle' | 'footerTwoLink' | 'social' | 'socialIcon' | 'socialName' | 'terms' | 'privacy' | 'help' | 'about' | null>(null)
 
   // Terms & Conditions state
   const [termsConditions, setTermsConditions] = useState<TermsCondition[]>([
@@ -224,6 +226,8 @@ export default function MainControl() {
           setPhoneNumbers(allSettings.contact.phoneNumbers || [])
           setEmailAddress(allSettings.contact.email || { id: 'email', label: 'Email Address', value: '' })
           setAddress(allSettings.contact.address || { id: 'address', label: 'Address', value: '' })
+          setFooterOneFeatures(allSettings.contact.footerOneFeatures || [])
+          setFooterTwoFeatures(allSettings.contact.footerTwoFeatures || [])
           setSocialMediaLinks(allSettings.contact.socialMediaLinks || [])
         }
 
@@ -317,12 +321,16 @@ export default function MainControl() {
         phoneNumbers,
         email: emailAddress,
         address,
+        footerOneFeatures,
+        footerTwoFeatures,
         socialMediaLinks,
       }
       const updated = await mainControlApi.updateContact(contact)
       setPhoneNumbers(updated.phoneNumbers || [])
       setEmailAddress(updated.email || { id: 'email', label: 'Email Address', value: '' })
       setAddress(updated.address || { id: 'address', label: 'Address', value: '' })
+      setFooterOneFeatures(updated.footerOneFeatures || [])
+      setFooterTwoFeatures(updated.footerTwoFeatures || [])
       setSocialMediaLinks(updated.socialMediaLinks || [])
       setSuccessMessage('Contact information updated successfully')
     } catch (err: any) {
@@ -642,7 +650,7 @@ export default function MainControl() {
           </div>
         )
       case 'contact-information':
-        const handleEdit = (id: string, value: string, type: 'phone' | 'email' | 'address' | 'social' | 'socialName' | 'socialIcon') => {
+        const handleEdit = (id: string, value: string, type: 'phone' | 'email' | 'address' | 'footerOneTitle' | 'footerOneLink' | 'footerTwoTitle' | 'footerTwoLink' | 'social' | 'socialName' | 'socialIcon') => {
           setEditingId(id)
           setEditingValue(value)
           setEditingType(type)
@@ -662,6 +670,26 @@ export default function MainControl() {
               break
             case 'address':
               setAddress({ ...address, value: editingValue })
+              break
+            case 'footerOneTitle':
+              setFooterOneFeatures((prev) =>
+                prev.map((item) => (item.id === editingId ? { ...item, title: editingValue } : item))
+              )
+              break
+            case 'footerOneLink':
+              setFooterOneFeatures((prev) =>
+                prev.map((item) => (item.id === editingId ? { ...item, link: editingValue } : item))
+              )
+              break
+            case 'footerTwoTitle':
+              setFooterTwoFeatures((prev) =>
+                prev.map((item) => (item.id === editingId ? { ...item, title: editingValue } : item))
+              )
+              break
+            case 'footerTwoLink':
+              setFooterTwoFeatures((prev) =>
+                prev.map((item) => (item.id === editingId ? { ...item, link: editingValue } : item))
+              )
               break
             case 'social':
               setSocialMediaLinks((prev) =>
@@ -693,6 +721,24 @@ export default function MainControl() {
         const handleAddPhone = () => {
           const newId = String(phoneNumbers.length + 1)
           setPhoneNumbers([...phoneNumbers, { id: newId, label: `${phoneNumbers.length + 1} Phone Number`, value: '' }])
+        }
+
+        const handleAddFooterOne = () => {
+          const newId = String(Date.now())
+          setFooterOneFeatures([...footerOneFeatures, { id: newId, title: '', link: '' }])
+        }
+
+        const handleAddFooterTwo = () => {
+          const newId = String(Date.now())
+          setFooterTwoFeatures([...footerTwoFeatures, { id: newId, title: '', link: '' }])
+        }
+
+        const handleDeleteFooterOne = (id: string) => {
+          setFooterOneFeatures((prev) => prev.filter((item) => item.id !== id))
+        }
+
+        const handleDeleteFooterTwo = (id: string) => {
+          setFooterTwoFeatures((prev) => prev.filter((item) => item.id !== id))
         }
 
         const handleAddSocial = () => {
@@ -890,6 +936,270 @@ export default function MainControl() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* Footer One Features */}
+            <div>
+              <h4 className="text-base font-semibold text-gray-900 mb-4">Footer One Features</h4>
+              <div className="space-y-4">
+                {footerOneFeatures.map((feature) => (
+                  <div key={feature.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 space-y-3">
+                        {/* Title */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Title</label>
+                          {editingId === feature.id && editingType === 'footerOneTitle' ? (
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                autoFocus
+                              />
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                <button
+                                  onClick={handleSave}
+                                  className="text-green-600 hover:text-green-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={handleCancel}
+                                  className="text-red-600 hover:text-red-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={feature.title}
+                                readOnly
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                              />
+                              <button
+                                onClick={() => handleEdit(feature.id, feature.title, 'footerOneTitle')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Link */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Link</label>
+                          {editingId === feature.id && editingType === 'footerOneLink' ? (
+                            <div className="relative">
+                              <input
+                                type="url"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                placeholder="https://"
+                                autoFocus
+                              />
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                <button
+                                  onClick={handleSave}
+                                  className="text-green-600 hover:text-green-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={handleCancel}
+                                  className="text-red-600 hover:text-red-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <input
+                                type="url"
+                                value={feature.link}
+                                readOnly
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                              />
+                              <button
+                                onClick={() => handleEdit(feature.id, feature.link, 'footerOneLink')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Delete Button */}
+                      <div className="flex-shrink-0 pt-6">
+                        <button
+                          onClick={() => handleDeleteFooterOne(feature.id)}
+                          className="flex h-10 w-10 items-center justify-center rounded-md bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
+                        >
+                          <TrashIcon className="h-5 w-5 text-white" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={handleAddFooterOne}
+                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium cursor-pointer"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Add Another Link</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Footer Two Features */}
+            <div>
+              <h4 className="text-base font-semibold text-gray-900 mb-4">Footer Two Features</h4>
+              <div className="space-y-4">
+                {footerTwoFeatures.map((feature) => (
+                  <div key={feature.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 space-y-3">
+                        {/* Title */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Title</label>
+                          {editingId === feature.id && editingType === 'footerTwoTitle' ? (
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                autoFocus
+                              />
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                <button
+                                  onClick={handleSave}
+                                  className="text-green-600 hover:text-green-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={handleCancel}
+                                  className="text-red-600 hover:text-red-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={feature.title}
+                                readOnly
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                              />
+                              <button
+                                onClick={() => handleEdit(feature.id, feature.title, 'footerTwoTitle')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Link */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Link</label>
+                          {editingId === feature.id && editingType === 'footerTwoLink' ? (
+                            <div className="relative">
+                              <input
+                                type="url"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                placeholder="https://"
+                                autoFocus
+                              />
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                <button
+                                  onClick={handleSave}
+                                  className="text-green-600 hover:text-green-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={handleCancel}
+                                  className="text-red-600 hover:text-red-700 cursor-pointer"
+                                >
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <input
+                                type="url"
+                                value={feature.link}
+                                readOnly
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                              />
+                              <button
+                                onClick={() => handleEdit(feature.id, feature.link, 'footerTwoLink')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Delete Button */}
+                      <div className="flex-shrink-0 pt-6">
+                        <button
+                          onClick={() => handleDeleteFooterTwo(feature.id)}
+                          className="flex h-10 w-10 items-center justify-center rounded-md bg-red-500 hover:bg-red-600 transition-colors cursor-pointer"
+                        >
+                          <TrashIcon className="h-5 w-5 text-white" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={handleAddFooterTwo}
+                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium cursor-pointer"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>Add Another Link</span>
+                </button>
               </div>
             </div>
 

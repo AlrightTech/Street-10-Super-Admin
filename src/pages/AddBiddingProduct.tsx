@@ -21,6 +21,7 @@ export default function AddBiddingProduct() {
     auctionStartTime: '',
     auctionEndTime: '',
     paymentAmount: 'By Percentage of the total winning bid',
+    paymentValue: '', // The actual percentage or fixed amount value
     daysForPaymentSettlement: '',
     biddingMinimumAmount: '',
     dimensions: '',
@@ -148,6 +149,27 @@ export default function AddBiddingProduct() {
         return
       }
 
+      // Validate payment value
+      if (!formData.paymentValue || parseFloat(formData.paymentValue) <= 0) {
+        setError(
+          formData.paymentAmount === 'By Percentage of the total winning bid'
+            ? 'Payment percentage is required and must be greater than 0'
+            : 'Payment fixed amount is required and must be greater than 0'
+        )
+        setIsSubmitting(false)
+        return
+      }
+
+      // Validate percentage range (0-100)
+      if (formData.paymentAmount === 'By Percentage of the total winning bid') {
+        const percentage = parseFloat(formData.paymentValue)
+        if (percentage < 0 || percentage > 100) {
+          setError('Percentage must be between 0 and 100')
+          setIsSubmitting(false)
+          return
+        }
+      }
+
       if (!formData.auctionStartDate || !formData.auctionEndDate) {
         setError('Auction start and end dates are required')
         setIsSubmitting(false)
@@ -191,7 +213,19 @@ export default function AddBiddingProduct() {
       const reservePriceMinor = formData.reservePrice ? Math.round(parseFloat(formData.reservePrice) * 100) : undefined
       const buyNowPriceMinor = formData.buyNowPrice ? Math.round(parseFloat(formData.buyNowPrice) * 100) : undefined
       const minIncrement = Math.round(parseFloat(formData.biddingMinimumAmount) * 100)
-      const depositAmount = reservePriceMinor ? Math.round(reservePriceMinor * 0.1) : Math.round(startingPriceMinor * 0.1) // 10% of reserve or starting price
+      
+      // Calculate deposit amount based on selected method
+      let depositAmount: number
+      if (formData.paymentAmount === 'By Percentage of the total winning bid') {
+        // Percentage method - use the entered percentage
+        const percentage = parseFloat(formData.paymentValue) || 10 // Default to 10% if not provided
+        const basePrice = reservePriceMinor || startingPriceMinor
+        depositAmount = Math.round(basePrice * (percentage / 100))
+      } else {
+        // Fixed Amount method - use the entered fixed amount
+        const fixedAmount = parseFloat(formData.paymentValue) || 0
+        depositAmount = Math.round(fixedAmount * 100) // Convert to minor units
+      }
 
       // Create product attributes from form data
       // Mark this as a bidding product so we can exclude it from the e-commerce list
@@ -201,6 +235,7 @@ export default function AddBiddingProduct() {
         dimensions: formData.dimensions,
         weight: formData.weight,
         paymentAmount: formData.paymentAmount,
+        paymentValue: formData.paymentValue, // Store the actual percentage or fixed amount value
         daysForPaymentSettlement: formData.daysForPaymentSettlement,
         allowFullPayment: formData.allowFullPayment,
       }
@@ -730,6 +765,32 @@ export default function AddBiddingProduct() {
                 </div>
               </div>
             </div>
+
+            {/* Payment Value (Percentage or Fixed Amount) */}
+            {formData.paymentAmount && (
+              <div>
+                <label htmlFor="paymentValue" className="block text-sm font-medium text-[#888888] mb-2">
+                  {formData.paymentAmount === 'By Percentage of the total winning bid' 
+                    ? 'Percentage (%)' 
+                    : 'Fixed Amount (QAR)'}
+                </label>
+                <input
+                  id="paymentValue"
+                  name="paymentValue"
+                  type="number"
+                  step={formData.paymentAmount === 'By Percentage of the total winning bid' ? '0.01' : '0.01'}
+                  min="0"
+                  placeholder={
+                    formData.paymentAmount === 'By Percentage of the total winning bid'
+                      ? 'Enter percentage (e.g., 10 for 10%)'
+                      : 'Enter fixed amount (e.g., 1000)'
+                  }
+                  value={formData.paymentValue}
+                  onChange={handleChange}
+                  className="w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm outline-none placeholder:text-gray-400 focus:ring-1 focus:ring-[#F7931E]"
+                />
+              </div>
+            )}
 
             {/* Days For Payment Settlement */}
             <div>

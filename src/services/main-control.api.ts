@@ -14,8 +14,8 @@ export interface ContactDetail {
 
 export interface FooterFeature {
   id: string;
-  label: string;
-  value: string;
+  title: string;
+  link: string;
 }
 
 export interface SocialMediaLink {
@@ -29,6 +29,8 @@ export interface ContactData {
   phoneNumbers: ContactDetail[];
   email: ContactDetail;
   address: ContactDetail;
+  footerOneFeatures: FooterFeature[];
+  footerTwoFeatures: FooterFeature[];
   socialMediaLinks: SocialMediaLink[];
 }
 
