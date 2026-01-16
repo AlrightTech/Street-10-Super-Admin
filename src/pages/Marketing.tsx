@@ -299,7 +299,7 @@ export default function Marketing() {
   const [deleteProductName, setDeleteProductName] = useState<string>('')
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
   const [productsError, setProductsError] = useState<string | null>(null)
-  const [totalProducts, setTotalProducts] = useState(0)
+  const [_totalProducts, setTotalProducts] = useState(0)
   const [totalProductsPages, setTotalProductsPages] = useState(1)
 
   // Story highlights state
@@ -314,9 +314,9 @@ export default function Marketing() {
   const [banners, setBanners] = useState<Banner[]>([])
   const [isLoadingBanners, setIsLoadingBanners] = useState(false)
   const [bannersError, setBannersError] = useState<string | null>(null)
-  const [bannersPage, setBannersPage] = useState(1)
-  const [totalBanners, setTotalBanners] = useState(0)
-  const [totalBannersPages, setTotalBannersPages] = useState(1)
+  const [bannersPage, _setBannersPage] = useState(1)
+  const [_totalBanners, setTotalBanners] = useState(0)
+  const [_totalBannersPages, setTotalBannersPages] = useState(1)
 
   // Popups state
   const [popups, setPopups] = useState<Popup[]>([])
