@@ -43,7 +43,7 @@ export default function Analytics() {
     <div className="max-w-screen w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Analytics</h1>
       </div>
 
       {/* Analytics Summary Cards Section */}

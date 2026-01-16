@@ -1,11 +1,29 @@
 @import "tailwindcss";
 
+/* Configure dark mode variant for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Base styles for RTL/LTR support */
 html {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* overflow-x: hidden; */
+}
+
+/* Ensure dark mode is applied on initial load */
+html.dark {
+  color-scheme: dark;
+}
+
+/* Dark mode background for body */
+body {
+  background-color: #F5F5F5;
+  transition: background-color 150ms;
+}
+
+html.dark body {
+  background-color: #111827;
 }
 
 body {

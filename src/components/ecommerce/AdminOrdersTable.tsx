@@ -58,10 +58,10 @@ export default function AdminOrdersTable({ orders, emptyState }: AdminOrdersTabl
   }
 
   return (
-    <div className="w-full bg-white">
+    <div className="w-full bg-white dark:bg-gray-800 transition-colors">
       <div className="overflow-x-auto">
         <table className="min-w-full w-full border-collapse">
-          <thead className="bg-white">
+          <thead className="bg-white dark:bg-gray-800 transition-colors">
             <tr>
               <TableHeader>Order ID</TableHeader>
               <TableHeader>Placed on</TableHeader>
@@ -73,19 +73,19 @@ export default function AdminOrdersTable({ orders, emptyState }: AdminOrdersTabl
               <TableHeader align="center">Action</TableHeader>
             </tr>
           </thead>
-          <tbody className="bg-white">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {orders.map((order) => (
                 <tr 
                   key={order.id} 
-                  className="hover:bg-gray-50 border-b border-gray-200 cursor-pointer"
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700 cursor-pointer transition-colors"
                   onClick={() => handleRowClick(order)}
                 >
-                  <TableCell className="text-xs sm:text-sm font-medium text-gray-900">{order.id}</TableCell>
-                  <TableCell className="text-xs sm:text-sm text-gray-700">{order.placedOn}</TableCell>
-                  <TableCell className="text-xs sm:text-sm text-gray-700">{order.type}</TableCell>
-                  <TableCell className="text-xs sm:text-sm text-gray-700">{order.items}</TableCell>
-                  <TableCell className="text-xs sm:text-sm font-medium text-gray-900">{order.amount}</TableCell>
-                  <TableCell className="text-xs sm:text-sm text-gray-700">{order.paymentMethod}</TableCell>
+                  <TableCell className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">{order.id}</TableCell>
+                  <TableCell className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{order.placedOn}</TableCell>
+                  <TableCell className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{order.type}</TableCell>
+                  <TableCell className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{order.items}</TableCell>
+                  <TableCell className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">{order.amount}</TableCell>
+                  <TableCell className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{order.paymentMethod}</TableCell>
                   <TableCell>
                     <AdminOrderStatusBadge status={order.status} />
                   </TableCell>
@@ -143,7 +143,7 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
     <th
       scope="col"
       className={`whitespace-nowrap 
-        px-2 sm:px-4 py-1 text-left text-xs sm:text-sm font-semibold text-gray-700 tracking-wider border-b border-gray-200 ${textAlign}`}
+        px-2 sm:px-4 py-1 text-left text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 tracking-wider border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${textAlign} transition-colors`}
     >
       {children}
     </th>

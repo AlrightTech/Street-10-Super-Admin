@@ -262,10 +262,10 @@ export default function Vendors() {
     <>
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Vendors</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100">Vendors</h1>
         <p className="mt-1 text-sm font-semibold">
-          <span className="text-gray-600">Dashboard • </span>
-          <span className="text-black">vendors</span>
+          <span className="text-gray-600 dark:text-gray-400">Dashboard • </span>
+          <span className="text-black dark:text-gray-100">vendors</span>
         </p>
       </div>
 
@@ -283,13 +283,13 @@ export default function Vendors() {
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center min-h-[400px]">
-          <p className="text-gray-600">Loading vendors...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading vendors...</p>
         </div>
       )}
 
       {/* Table Container with Filter Tabs, Search, and Table */}
       {!loading && (
-      <div className="bg-white rounded-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden transition-colors">
         {/* Filter Tabs and Search Controls */}
         <div className="border-b border-gray-200">
           <div className="flex flex-col sm:flex-row 
@@ -372,7 +372,7 @@ export default function Vendors() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="border-t border-gray-200 p-4 flex justify-end">
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 flex justify-end transition-colors">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

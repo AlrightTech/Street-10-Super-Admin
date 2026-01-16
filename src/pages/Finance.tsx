@@ -470,12 +470,12 @@ export default function Finance() {
     <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Finance</h1>
-        <p className="text-xs sm:text-sm text-gray-600 mt-1">Dashboard - Finance</p>
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">Finance</h1>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Dashboard - Finance</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-md">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-md transition-colors">
         {summaryCards.map((card, index) => (
           <div key={index} className={index > 0 ? 'lg:border-l lg:border-gray-200 lg:pl-4' : ''}>
             <FinanceSummaryCard
@@ -491,7 +491,7 @@ export default function Finance() {
 
       {/* Vendor/Users Toggle */}
       <div className="mt-4 sm:mt-6">
-        <div className="bg-white rounded-lg pt-1 px-1 pb-0">
+        <div className="bg-white dark:bg-gray-800 rounded-lg pt-1 px-1 pb-0 transition-colors">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
             <VendorUsersToggle 
               activeTab={activeTab} 
@@ -545,11 +545,11 @@ export default function Finance() {
             <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">All Transactions</h2>
           </div>
 
-          <section className="rounded-xl bg-white shadow-sm">
+          <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
             {/* Filters and Controls */}
             <header className="flex flex-col gap-3
              md:flex-row md:items-center md:justify-between 
-             border-b border-gray-100 px-3 sm:px-4">
+             border-b border-gray-100 dark:border-gray-700 px-3 sm:px-4">
               <div className="flex items-center flex-shrink-0 overflow-x-auto overflow-y-hidden">
                 <FinanceFilterTabs 
                   tabs={filterTabsWithCounts} 
@@ -664,10 +664,10 @@ export default function Finance() {
             <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">All Transactions</h2>
           </div>
 
-          <section className="rounded-xl bg-white shadow-sm">
+          <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
             {/* Filters and Controls */}
             <header className="flex flex-col gap-3 md:flex-row
-             md:items-center md:justify-between border-b border-gray-100 
+             md:items-center md:justify-between border-b border-gray-100 dark:border-gray-700 
              px-3 sm:px-4">
               <div className="flex items-center flex-shrink-0 overflow-x-auto overflow-y-hidden">
                 <FinanceFilterTabs tabs={filterTabsWithCounts} activeTab={activeFilter} onTabChange={handleFilterChange} />

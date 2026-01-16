@@ -30,7 +30,7 @@ export default function UserTransactionsTable({ transactions, onActionSelect, em
       <div className="w-full rounded-xl" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
         <div className="overflow-x-auto md:overflow-x-visible">
           <table className="min-w-[900px] md:min-w-full w-full border-collapse text-sm">
-            <thead className="bg-transparent">
+            <thead className="bg-white dark:bg-gray-800 transition-colors">
               <tr>
                 <TableHeader>Transaction ID</TableHeader>
                 <TableHeader>User/Vendor</TableHeader>
@@ -42,24 +42,24 @@ export default function UserTransactionsTable({ transactions, onActionSelect, em
                 <TableHeader align="center">Action</TableHeader>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {transactions.map((transaction) => (
-                <tr key={transaction.id} className="border-b border-gray-200 last:border-b-0">
-                  <TableCell>{transaction.transactionId}</TableCell>
+                <tr key={transaction.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                  <TableCell className="text-gray-700 dark:text-gray-300">{transaction.transactionId}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="text-gray-900 font-medium">{transaction.userName}</span>
-                      <span className="text-xs text-gray-500">{transaction.userEmail}</span>
+                      <span className="text-gray-900 dark:text-gray-100 font-medium">{transaction.userName}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{transaction.userEmail}</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className={`text-sm font-medium ${transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`text-sm font-medium ${transaction.type === 'credit' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {transaction.type === 'credit' ? 'Credit' : 'Debit'}
                     </span>
                   </TableCell>
-                  <TableCell align="right" className="font-medium">{transaction.amount}</TableCell>
-                  <TableCell>{transaction.paymentMethod}</TableCell>
-                  <TableCell className="text-xs">{transaction.date}</TableCell>
+                  <TableCell align="right" className="font-medium text-gray-700 dark:text-gray-300">{transaction.amount}</TableCell>
+                  <TableCell className="text-gray-700 dark:text-gray-300">{transaction.paymentMethod}</TableCell>
+                  <TableCell className="text-xs text-gray-700 dark:text-gray-300">{transaction.date}</TableCell>
                   <TableCell>
                     <UserTransactionStatusBadge status={transaction.status} />
                   </TableCell>
@@ -107,7 +107,7 @@ function TableCell({ children, className = '', align = 'left' }: TableCellProps)
   
   return (
     <td
-      className={`py-2 text-gray-700 ${textAlign} ${textSizeClass} first:pl-4 sm:first:pl-6 last:pr-4 sm:last:pr-6 ${className}`}
+      className={`py-2 text-gray-700 dark:text-gray-300 ${textAlign} ${textSizeClass} first:pl-4 sm:first:pl-6 last:pr-4 sm:last:pr-6 ${className}`}
     >
       {children}
     </td>

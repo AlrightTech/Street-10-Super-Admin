@@ -211,16 +211,16 @@ export default function Orders() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">Orders</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 sm:text-2xl">Orders</h1>
           <p className="mt-1 text-sm font-semibold">
-            <span className="text-gray-600">Dashboard • </span>
-            <span className="text-black">Orders</span>
+            <span className="text-gray-600 dark:text-gray-400">Dashboard • </span>
+            <span className="text-black dark:text-gray-100">Orders</span>
           </p>
         </div>
       </div>
 
-      <section className="rounded-xl bg-white shadow-sm">
-        <header className="flex flex-col gap-4 border-b border-gray-100 px-4 pt-4 pb-0 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
+        <header className="flex flex-col gap-4 border-b border-gray-100 dark:border-gray-700 px-4 pt-4 pb-0 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <OrdersFilterTabs tabs={tabOptionsWithCounts} activeTab={activeTab} onTabChange={handleTabChange} />
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
@@ -264,7 +264,7 @@ export default function Orders() {
           )}
         </div>
 
-        <footer className="flex justify-end items-center gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
+        <footer className="flex justify-end items-center gap-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-4 sm:px-6 transition-colors">
           <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
         </footer>
       </section>

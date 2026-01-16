@@ -11,7 +11,7 @@ export default function Layout() {
   return (
     <NotificationProvider>
       <SidebarProvider>
-        <div className="flex min-h-screen bg-[#F5F5F5]">
+        <div className="flex min-h-screen bg-[#F5F5F5] dark:bg-gray-900 transition-colors">
           {/* Sidebar */}
           <Sidebar />
 
@@ -21,7 +21,7 @@ export default function Layout() {
             <TopBar />
 
             {/* Page Content */}
-            <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F5F5F5] p-2 sm:p-3 md:p-4 lg:p-6 min-w-0">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F5F5F5] dark:bg-gray-900 p-2 sm:p-3 md:p-4 lg:p-6 min-w-0 transition-colors">
               <div className="w-full max-w-full mx-auto">
                 <Outlet />
               </div>

@@ -334,8 +334,8 @@ export default function Dashboard() {
     <div className="max-w-screen">
       {/* Welcome Section */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Welcome</h1>
-        <p className="text-base sm:text-lg text-gray-600">{userName}</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Welcome</h1>
+        <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">{userName}</p>
       </div>
 
       {/* Stat Cards Grid */}

@@ -75,7 +75,7 @@ export default function TopBar() {
         </button>
       )}
 
-      <header className="flex flex-col md:flex-row w-full items-center justify-between gap-3 px-3 sm:px-4 md:px-6 py-3 md:py-4">
+      <header className="flex flex-col md:flex-row w-full items-center justify-between gap-3 px-3 sm:px-4 md:px-6 py-3 md:py-4 bg-white dark:bg-gray-800 transition-colors">
         {/* Desktop: Global Search Bar (first) */}
         <div className="hidden md:block w-full md:w-auto md:max-w-md order-1">
           <GlobalSearchBar placeholder={t('search') || 'Search across Users, Vendors, Orders, Products...'} />
@@ -87,7 +87,7 @@ export default function TopBar() {
           <LanguageSwitcher />
 
           {/* Notifications Bell */}
-          <div className="relative bg-white rounded-full w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0">
+          <div className="relative bg-white dark:bg-gray-700 rounded-full w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0 transition-colors">
             <NotificationBell onClick={handleNotificationClick} />
             {/* Notification Dropdown */}
             <NotificationDropdown isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
@@ -98,17 +98,17 @@ export default function TopBar() {
             <button
               type="button"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-2 rounded-lg px-2 sm:px-3 py-2 text-gray-600 hover:bg-gray-100"
+              className="flex items-center gap-2 rounded-lg px-2 sm:px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               aria-label="Profile menu"
               aria-expanded={isProfileOpen}
             >
-              <div className="flex h-9 w-9 cursor-pointer sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white">
-                <UserIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+              <div className="flex h-9 w-9 cursor-pointer sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white dark:bg-gray-700 transition-colors">
+                <UserIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-300" />
               </div>
             </button>
 
             {isProfileOpen && (
-              <div className="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-lg border border-gray-200 bg-white shadow-lg">
+              <div className="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg transition-colors">
                 <div className="py-1" role="menu">
                   <button
                     type="button"
@@ -116,7 +116,7 @@ export default function TopBar() {
                       setIsProfileOpen(false)
                       navigate('/settings')
                     }}
-                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                     role="menuitem"
                   >
                     {t('profile')}
@@ -127,7 +127,7 @@ export default function TopBar() {
                       setIsProfileOpen(false)
                       navigate('/settings')
                     }}
-                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                     role="menuitem"
                   >
                     {t('settings')}
@@ -135,7 +135,7 @@ export default function TopBar() {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                    className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                     role="menuitem"
                   >
                     {t('logout')}

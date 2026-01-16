@@ -130,19 +130,19 @@ export default function UserVendorGrowthChart({ data }: UserVendorGrowthChartPro
   }))
 
   return (
-    <div className="w-full min-w-0 flex flex-col rounded-lg border border-gray-200 bg-white p-4 sm:p-5 md:p-6 shadow-sm">
+    <div className="w-full min-w-0 flex flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 md:p-6 shadow-sm transition-colors">
       <div className="mb-3 sm:mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div>
-          <h3 className="text-base font-semibold text-gray-900 sm:text-lg">User And Vendor Growth</h3>
-          <p className="text-xs sm:text-sm text-gray-600">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 sm:text-lg">User And Vendor Growth</h3>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
             Last 30 Days <span className="text-[#FF8C00]">+66%</span>
           </p>
-          <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mt-1">50%</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">50%</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto items-start sm:items-center">
           <button 
             onClick={handleSortByDate}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 sm:px-4 sm:py-2 sm:text-sm transition-colors"
+            className="flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 sm:px-4 sm:py-2 sm:text-sm transition-colors"
           >
             <CalendarIcon className="h-3 w-3 sm:h-4 sm:w-4" />
             <span>Sort By Date {sortOrder === 'asc' ? '↑' : '↓'}</span>
@@ -150,11 +150,11 @@ export default function UserVendorGrowthChart({ data }: UserVendorGrowthChartPro
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
               <div className="h-3 w-3 rounded-full bg-[#3B82F6]"></div>
-              <span className="text-xs text-gray-600">Users</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">Users</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="h-3 w-3 rounded-full bg-[#FF8C00]"></div>
-              <span className="text-xs text-gray-600">Vendors</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">Vendors</span>
             </div>
           </div>
           <div className="w-full sm:w-auto">

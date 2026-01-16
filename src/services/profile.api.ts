@@ -10,6 +10,7 @@ export interface MeUser {
   role: string;
   customerType?: string | null;
   lang: string;
+  twoFactorEnabled?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -20,6 +21,7 @@ export interface UpdateProfileData {
   phone?: string;
   lang?: string;
   profileImageUrl?: string | null;
+  twoFactorEnabled?: boolean;
 }
 
 export const profileApi = {
@@ -36,9 +38,11 @@ export const profileApi = {
     return response.data.data.user;
   },
 
-  changePassword: async (newPassword: string): Promise<void> => {
+  changePassword: async (currentPassword: string, newPassword: string, confirmPassword: string): Promise<void> => {
     await api.post<ApiResponse<{ message: string }>>("/auth/change-password", {
+      currentPassword,
       newPassword,
+      confirmPassword,
     });
   },
 };

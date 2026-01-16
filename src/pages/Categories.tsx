@@ -256,8 +256,8 @@ export default function Categories() {
     <div className="space-y-6">
       {/* Header Section */}
       <div>
-        <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">Categories</h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 sm:text-2xl">Categories</h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           <span>Dashboard</span>
           <span className="mx-1">•</span>
           <span>Categories</span>
@@ -265,7 +265,7 @@ export default function Categories() {
       </div>
 
       {/* Tabs Section - Separate White Card */}
-      <section className="rounded-xl bg-white shadow-sm">
+      <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
         <div className="px-4 sm:px-6">
           <CategoriesFilterTabs tabs={TAB_OPTIONS} activeTab={activeTab} onTabChange={handleTabChange} />
         </div>
@@ -288,7 +288,7 @@ export default function Categories() {
       )}
 
       {/* Main Card Section */}
-      <section className="rounded-xl bg-white shadow-sm">
+      <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
         {/* Content Section */}
         {activeTab === 'sub-category' ? (
           <>
@@ -297,12 +297,12 @@ export default function Categories() {
               {/* Sub Categories Grid */}
               <div>
                 {subCategoriesError && (
-                  <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  <div className="mb-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
                     {subCategoriesError}
                   </div>
                 )}
                 {isLoadingSubCategories ? (
-                  <div className="flex min-h-[200px] items-center justify-center text-sm text-gray-600">
+                  <div className="flex min-h-[200px] items-center justify-center text-sm text-gray-600 dark:text-gray-400">
                     Loading subcategories...
                   </div>
                 ) : (
@@ -316,13 +316,13 @@ export default function Categories() {
             </div>
 
             {/* Pagination Section */}
-            <div className="flex flex-col sm:flex-row justify-end items-center gap-3 px-4 sm:px-6 py-4 border-t border-gray-100">
+            <div className="flex flex-col sm:flex-row justify-end items-center gap-3 px-4 sm:px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors">
               <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => handleSubCategoryPageChange(subCategoryCurrentPage - 1)}
                   disabled={subCategoryCurrentPage === 1}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                 >
                   &lt; Back
                 </button>
@@ -363,7 +363,7 @@ export default function Categories() {
                     return pages.map((page, idx) => {
                       if (page === '...') {
                         return (
-                          <span key={`ellipsis-${idx}`} className="px-1 text-gray-600">
+                          <span key={`ellipsis-${idx}`} className="px-1 text-gray-600 dark:text-gray-400">
                             ...
                           </span>
                         )
@@ -376,7 +376,7 @@ export default function Categories() {
                           className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition cursor-pointer ${
                             subCategoryCurrentPage === page
                               ? 'bg-blue-600 text-white'
-                              : 'text-gray-600 hover:bg-gray-100'
+                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                         >
                           {page}
@@ -389,7 +389,7 @@ export default function Categories() {
                   type="button"
                   onClick={() => handleSubCategoryPageChange(subCategoryCurrentPage + 1)}
                   disabled={subCategoryCurrentPage === subCategoryTotalPages}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                 >
                   Next &gt;
                 </button>
@@ -401,9 +401,9 @@ export default function Categories() {
             {/* Categories Table View */}
             <div className=" ">
               {/* Top Row: Categories heading, Search, and Add Buttons */}
-              <div className="mb-4 sm:mb-6 px-2  flex flex-col bg-gray-200 rounded-t-xl p-2 gap-4 sm:flex-row 
-              sm:items-center sm:justify-between">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Categories</h2>
+              <div className="mb-4 sm:mb-6 px-2  flex flex-col bg-gray-200 dark:bg-gray-700 rounded-t-xl p-2 gap-4 sm:flex-row 
+              sm:items-center sm:justify-between transition-colors">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">Categories</h2>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto">
                   <SearchBar
                     placeholder="Search by Title"
@@ -450,7 +450,7 @@ export default function Categories() {
                     className="w-full sm:w-auto sm:min-w-[140px] md:min-w-[160px]"
                   />
                 </div>
-                <p className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap text-left sm:text-right">
+                <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap text-left sm:text-right">
                   Total Categories: {totalCategories}
                 </p>
               </div>
@@ -458,12 +458,12 @@ export default function Categories() {
               {/* Table Section */}
               <div className="overflow-x-auto p-3">
                 {categoriesError && (
-                  <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  <div className="mb-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
                     {categoriesError}
                   </div>
                 )}
                 {isLoadingCategories ? (
-                  <div className="flex min-h-[200px] items-center justify-center text-sm text-gray-600">
+                  <div className="flex min-h-[200px] items-center justify-center text-sm text-gray-600 dark:text-gray-400">
                     Loading categories...
                   </div>
                 ) : (
@@ -480,13 +480,13 @@ export default function Categories() {
 
             {/* Pagination Section */}
             <div className="flex flex-col sm:flex-row justify-end items-center gap-3
-             px-4 sm:px-4 py-4">
+             px-4 sm:px-4 py-4 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors">
               <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                 >
                   &lt; Back
                 </button>
@@ -532,7 +532,7 @@ export default function Categories() {
                     return pages.map((page, idx) => {
                       if (page === '...') {
                         return (
-                          <span key={`ellipsis-${idx}`} className="px-1 text-gray-600">
+                          <span key={`ellipsis-${idx}`} className="px-1 text-gray-600 dark:text-gray-400">
                             ...
                           </span>
                         )
@@ -545,7 +545,7 @@ export default function Categories() {
                           className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition cursor-pointer ${
                             currentPage === page
                               ? 'bg-blue-600 text-white'
-                              : 'text-gray-600 hover:bg-gray-100'
+                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                         >
                           {page}
@@ -558,7 +558,7 @@ export default function Categories() {
                   type="button"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                 >
                   Next &gt;
                 </button>

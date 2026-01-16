@@ -35,11 +35,11 @@ export default function RevenueChart({ data, centerText = '+42%', totalAmount }:
   }, [])
 
   return (
-    <div className="flex h-full min-h-[280px] w-full min-w-0 sm:min-h-[350px] md:min-h-[400px] flex-col rounded-lg border border-gray-200 bg-white p-4 sm:p-5 md:p-6 shadow-sm">
+    <div className="flex h-full min-h-[280px] w-full min-w-0 sm:min-h-[350px] md:min-h-[400px] flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 md:p-6 shadow-sm transition-colors">
       <div className="mb-3 sm:mb-4 flex w-full flex-col gap-1">
-        <h3 className="text-base font-semibold text-gray-900 sm:text-lg">Revenue Breakdown</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 sm:text-lg">Revenue Breakdown</h3>
         {totalAmount && (
-          <p className="text-sm text-gray-700">{totalAmount}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{totalAmount}</p>
         )}
       </div>
       <div className="relative flex-1 min-h-[180px] w-full min-w-0 sm:min-h-[250px] md:min-h-[300px]">
@@ -69,15 +69,15 @@ export default function RevenueChart({ data, centerText = '+42%', totalAmount }:
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-          <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{centerText}</p>
-          <p className="text-[10px] sm:text-xs text-gray-600">than last year</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">{centerText}</p>
+          <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">than last year</p>
         </div>
       </div>
       <div className="mt-3 sm:mt-4 flex flex-shrink-0 flex-wrap justify-center gap-2 sm:gap-3">
         {data.map((segment, index) => (
           <div key={index} className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full" style={{ backgroundColor: segment.color }} />
-            <span className="text-xs text-gray-600">{segment.name}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{segment.name}</span>
           </div>
         ))}
       </div>

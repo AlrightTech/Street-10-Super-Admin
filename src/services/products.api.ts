@@ -27,6 +27,27 @@ export interface Product {
       slug: string;
     };
   }>;
+  documents?: Array<{
+    id: string;
+    url: string;
+    title: string;
+    displayOrder: number;
+  }>;
+  filterValues?: Array<{
+    id: string;
+    filterId: string;
+    value: string;
+    filter: {
+      id: string;
+      key: string;
+      type: string;
+      iconUrl?: string;
+      i18n?: {
+        en?: { label: string };
+        ar?: { label: string };
+      };
+    };
+  }>;
 }
 
 export interface CreateProductData {
@@ -41,6 +62,8 @@ export interface CreateProductData {
   attributes?: any;
   langData?: any;
   mediaUrls?: string[];
+  documents?: Array<{ url: string; title: string }>;
+  filterValues?: Array<{ filterId: string; value: string }>;
 }
 
 export interface UpdateProductData {
@@ -53,6 +76,8 @@ export interface UpdateProductData {
   attributes?: any;
   langData?: any;
   mediaUrls?: string[];
+  documents?: Array<{ url: string; title: string }>;
+  filterValues?: Array<{ filterId: string; value: string }>;
 }
 
 export interface ProductFilters {

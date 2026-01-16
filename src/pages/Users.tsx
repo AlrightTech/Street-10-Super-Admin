@@ -420,17 +420,17 @@ export default function Users() {
     <>
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="mb-2 text-xl sm:text-2xl font-bold text-gray-900">
+        <h1 className="mb-2 text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
           Users
         </h1>
-        <p className="text-xs sm:text-sm text-gray-600">Dashboard - Users</p>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Dashboard - Users</p>
       </div>
 
       {/* Filter Section */}
       <div className="mb-4 flex flex-col sm:flex-row justify-start sm:justify-end items-stretch sm:items-center gap-3">
         <button
           type="button"
-          className="flex items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap sm:order-last"
+          className="flex items-center justify-center gap-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap sm:order-last"
           aria-label="Filter"
         >
           <FilterIcon className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -461,7 +461,7 @@ export default function Users() {
       <div className="mt-5">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <p className="text-gray-600">Loading users...</p>
+            <p className="text-gray-600 dark:text-gray-400">Loading users...</p>
           </div>
         ) : (
           <UsersTable

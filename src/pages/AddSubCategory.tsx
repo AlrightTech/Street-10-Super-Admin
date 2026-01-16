@@ -154,13 +154,14 @@ export default function AddSubCategory() {
 
         // Handle children differently in edit vs create mode
         if (isEditMode && id) {
-          // In edit mode: ONLY update existing children and create new ones.
-          // We do NOT delete any child categories automatically to avoid
-          // conflicts when a child already has products.
+          // In edit mode: update existing, create new, and delete removed children
           const existingIds = new Set(existingChildCategories.map((c) => c.id))
 
           const toUpdate = items.filter((i) => !i.isNew && existingIds.has(i.id))
           const toCreate = items.filter((i) => i.isNew)
+          const toDelete = existingChildCategories
+            .filter((c) => !items.some((i) => i.id === c.id))
+            .map((c) => c.id)
 
           await Promise.all([
             // Update existing children
@@ -176,6 +177,8 @@ export default function AddSubCategory() {
                 parentId,
               } as any),
             ),
+            // Delete removed children
+            ...toDelete.map((childId) => categoriesApi.delete(childId)),
           ])
         } else {
           // In create mode: NEVER delete or update existing child categories.

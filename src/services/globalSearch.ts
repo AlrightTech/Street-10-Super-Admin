@@ -206,6 +206,8 @@ class GlobalSearchService {
     )
     results.push(...biddingProductResults)
     
+    // Note: Finance and Bidding Products search removed - use dedicated pages for these
+    
     // Limit results
     return results.slice(0, limit)
   }

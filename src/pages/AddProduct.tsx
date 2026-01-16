@@ -1,97 +1,46 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CalendarIcon, ChevronDownIcon } from '../components/icons/Icons'
-import { type Product } from '../components/marketing/ProductsTable'
-import { type MarketingStatus } from '../components/marketing/MarketingStatusBadge'
+import { CalendarIcon, ChevronDownIcon, ClockIcon } from '../components/icons/Icons'
+import { featuredProductsApi, productsApi } from '../services/featured-products.api'
 
 interface ProductFormData {
-  product: string
-  vendor: string
-  category: string
+  productId: string
   startDate: string
   endDate: string
+  startTime: string
+  endTime: string
   priority: 'High' | 'Medium' | 'Low'
-  status: MarketingStatus
 }
 
-// Mock data - in a real app, this would come from an API
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: '1',
-    product: 'Flash Sale',
-    vendor: 'Vendor',
-    category: 'Promo',
-    startDate: 'Immediate',
-    endDate: 'Immediate',
-    priority: 'High',
-    status: 'active',
-  },
-  {
-    id: '2',
-    product: 'Payment Reminder',
-    vendor: 'User',
-    category: 'Reminder',
-    startDate: 'Dec 22, 2024',
-    endDate: 'Dec 22, 2024',
-    priority: 'Medium',
-    status: 'expired',
-  },
-  {
-    id: '3',
-    product: 'System Maintenance',
-    vendor: 'User',
-    category: '$100',
-    startDate: 'Immediate',
-    endDate: 'Immediate',
-    priority: 'Low',
-    status: 'active',
-  },
-  {
-    id: '4',
-    product: 'Flash Sale',
-    vendor: 'Vendor',
-    category: 'Info',
-    startDate: 'Dec 22, 2024',
-    endDate: 'Dec 22, 2024',
-    priority: 'High',
-    status: 'scheduled',
-  },
-]
-
-// Helper function to convert date from "Dec 22, 2024" to "2024-12-22"
-const convertDateToInputFormat = (dateStr: string): string => {
-  if (dateStr === 'Immediate') return ''
-  const months: { [key: string]: string } = {
-    'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
-    'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
-    'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
-  }
-  const parts = dateStr.split(' ')
-  if (parts.length === 3) {
-    const day = parts[1].replace(',', '').padStart(2, '0')
-    const month = months[parts[0]] || '01'
-    const year = parts[2]
-    return `${year}-${month}-${day}`
-  }
-  return dateStr
+// Helper function to combine date and time into ISO string
+const combineDateAndTime = (date: string, time: string): string => {
+  if (!date || !time) return ''
+  
+  // Parse time (format: "10:00AM" or "10:00 AM")
+  const timeMatch = time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+  if (!timeMatch) return date
+  
+  let hours = parseInt(timeMatch[1], 10)
+  const minutes = parseInt(timeMatch[2], 10)
+  const ampm = timeMatch[3].toUpperCase()
+  
+  if (ampm === 'PM' && hours !== 12) hours += 12
+  if (ampm === 'AM' && hours === 12) hours = 0
+  
+  // Combine date and time
+  const dateTime = new Date(`${date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`)
+  return dateTime.toISOString()
 }
 
-// Helper function to convert date from "2024-12-22" to "Dec 22, 2024"
-const convertDateFromInputFormat = (dateStr: string): string => {
-  if (!dateStr) return 'Immediate'
-  const months: { [key: string]: string } = {
-    '01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',
-    '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug',
-    '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'
-  }
-  const parts = dateStr.split('-')
-  if (parts.length === 3) {
-    const year = parts[0]
-    const month = months[parts[1]] || 'Jan'
-    const day = parts[2]
-    return `${month} ${day}, ${year}`
-  }
-  return dateStr
+// Helper function to extract time from ISO string
+const extractTime = (dateString: string): string => {
+  const date = new Date(dateString)
+  let hours = date.getHours()
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12
+  hours = hours ? hours : 12
+  return `${String(hours).padStart(2, '0')}:${minutes}${ampm}`
 }
 
 export default function AddProduct() {
@@ -100,70 +49,88 @@ export default function AddProduct() {
   const isEditMode = !!id
   const startDateInputRef = useRef<HTMLInputElement>(null)
   const endDateInputRef = useRef<HTMLInputElement>(null)
+  const startTimeInputRef = useRef<HTMLInputElement>(null)
+  const endTimeInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState<ProductFormData>({
-    product: '',
-    vendor: 'Vendor',
-    category: '',
+    productId: '',
     startDate: '',
     endDate: '',
+    startTime: '10:00AM',
+    endTime: '10:00AM',
     priority: 'High',
-    status: 'active',
   })
 
-  const [isImmediateStart, setIsImmediateStart] = useState(false)
-  const [isImmediateEnd, setIsImmediateEnd] = useState(false)
-
+  const [availableProducts, setAvailableProducts] = useState<any[]>([])
+  const [productSearch, setProductSearch] = useState('')
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  
   // Custom dropdown states
-  const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false)
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false)
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false)
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false)
-
+  
   // Refs for click-outside detection
-  const vendorDropdownRef = useRef<HTMLDivElement>(null)
-  const categoryDropdownRef = useRef<HTMLDivElement>(null)
+  const productDropdownRef = useRef<HTMLDivElement>(null)
   const priorityDropdownRef = useRef<HTMLDivElement>(null)
-  const statusDropdownRef = useRef<HTMLDivElement>(null)
 
-  // Load product data in edit mode
+  // Fetch available products
   useEffect(() => {
-    if (isEditMode && id) {
-      const product = MOCK_PRODUCTS.find((p) => p.id === id)
-      if (product) {
-        const startIsImmediate = product.startDate === 'Immediate'
-        const endIsImmediate = product.endDate === 'Immediate'
-        
-        setIsImmediateStart(startIsImmediate)
-        setIsImmediateEnd(endIsImmediate)
-
-        setFormData({
-          product: product.product || '',
-          vendor: product.vendor || 'Vendor',
-          category: product.category || '',
-          startDate: startIsImmediate ? '' : convertDateToInputFormat(product.startDate),
-          endDate: endIsImmediate ? '' : convertDateToInputFormat(product.endDate),
-          priority: product.priority || 'High',
-          status: product.status || 'active',
+    const fetchProducts = async () => {
+      try {
+        const response = await productsApi.search({
+          search: productSearch || undefined,
+          limit: 50,
         })
+        setAvailableProducts(response.data || [])
+      } catch (err) {
+        console.error('Error fetching products:', err)
       }
     }
+    fetchProducts()
+  }, [productSearch])
+
+  // Load featured product data in edit mode
+  useEffect(() => {
+    const fetchFeaturedProduct = async () => {
+      if (isEditMode && id) {
+        setIsLoadingData(true)
+        setError(null)
+        try {
+          const featuredProduct = await featuredProductsApi.getById(id)
+          
+          setSelectedProduct(featuredProduct.product)
+          setFormData({
+            productId: featuredProduct.productId,
+            startDate: featuredProduct.startDate.split('T')[0],
+            endDate: featuredProduct.endDate.split('T')[0],
+            startTime: extractTime(featuredProduct.startDate),
+            endTime: extractTime(featuredProduct.endDate),
+            priority: featuredProduct.priority === 'high' ? 'High' : featuredProduct.priority === 'medium' ? 'Medium' : 'Low',
+          })
+        } catch (err: any) {
+          console.error('Error fetching featured product:', err)
+          setError(err.response?.data?.message || 'Failed to load featured product')
+        } finally {
+          setIsLoadingData(false)
+        }
+      }
+    }
+
+    fetchFeaturedProduct()
   }, [id, isEditMode])
 
   // Click-outside detection for dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (vendorDropdownRef.current && !vendorDropdownRef.current.contains(event.target as Node)) {
-        setIsVendorDropdownOpen(false)
-      }
-      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
-        setIsCategoryDropdownOpen(false)
+      if (productDropdownRef.current && !productDropdownRef.current.contains(event.target as Node)) {
+        setIsProductDropdownOpen(false)
       }
       if (priorityDropdownRef.current && !priorityDropdownRef.current.contains(event.target as Node)) {
         setIsPriorityDropdownOpen(false)
-      }
-      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
-        setIsStatusDropdownOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -172,294 +139,323 @@ export default function AddProduct() {
     }
   }, [])
 
-  const handleInputChange = (field: keyof ProductFormData, value: string | 'High' | 'Medium' | 'Low' | MarketingStatus) => {
+  const handleInputChange = (field: keyof ProductFormData, value: string | 'High' | 'Medium' | 'Low') => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleImmediateStartChange = (checked: boolean) => {
-    setIsImmediateStart(checked)
-    if (checked) {
-      setFormData((prev) => ({ ...prev, startDate: '' }))
-    }
+  const handleProductSelect = (product: any) => {
+    setSelectedProduct(product)
+    setFormData((prev) => ({ ...prev, productId: product.id }))
+    setIsProductDropdownOpen(false)
+    setProductSearch('')
   }
 
-  const handleImmediateEndChange = (checked: boolean) => {
-    setIsImmediateEnd(checked)
-    if (checked) {
-      setFormData((prev) => ({ ...prev, endDate: '' }))
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    // eslint-disable-next-line no-console
-    console.log('Form submitted:', {
-      ...formData,
-      startDate: isImmediateStart ? 'Immediate' : convertDateFromInputFormat(formData.startDate),
-      endDate: isImmediateEnd ? 'Immediate' : convertDateFromInputFormat(formData.endDate),
-    })
-    // Add your save logic here
-    // After saving, navigate back to marketing page
-    navigate('/marketing')
+    setIsLoading(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    try {
+      const startDateTime = combineDateAndTime(formData.startDate, formData.startTime)
+      const endDateTime = combineDateAndTime(formData.endDate, formData.endTime)
+
+      if (!startDateTime || !endDateTime) {
+        throw new Error('Please provide both start and end dates')
+      }
+
+      const data = {
+        productId: formData.productId,
+        priority: formData.priority.toLowerCase() as 'high' | 'medium' | 'low',
+        startDate: startDateTime,
+        endDate: endDateTime,
+      }
+
+      if (isEditMode && id) {
+        await featuredProductsApi.update(id, data)
+        setSuccessMessage('Featured product updated successfully')
+      } else {
+        await featuredProductsApi.create(data)
+        setSuccessMessage('Featured product created successfully')
+      }
+
+      setTimeout(() => {
+        navigate('/marketing?tab=product')
+      }, 1000)
+    } catch (err: any) {
+      console.error('Error saving featured product:', err)
+      setError(err.response?.data?.message || 'Failed to save featured product')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleCancel = () => {
-    navigate('/marketing')
+    navigate('/marketing?tab=product')
   }
 
-  const vendorOptions = ['Vendor', 'User']
-  const categoryOptions = ['Promo', 'Reminder', 'Info', '$100', 'Category A', 'Category B']
   const priorityOptions: ('High' | 'Medium' | 'Low')[] = ['High', 'Medium', 'Low']
-  const statusOptions: MarketingStatus[] = ['active', 'scheduled', 'expired']
+
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Marketing</h1>
-        <p className="text-sm text-gray-600 mt-1">Dashboard - Finance</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Marketing</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Dashboard - Products</p>
       </div>
 
       {/* Main Navigation Bar */}
-      <nav className="flex flex-wrap items-center gap-1 sm:gap-2 md:gap-4 border-b border-gray-200 overflow-x-auto pt-3 pb-1">
+      <nav className="flex flex-wrap items-center gap-1 sm:gap-2 md:gap-4 border-b border-gray-200 dark:border-gray-700 overflow-x-auto pt-3 pb-1">
         <button
           type="button"
-          onClick={() => navigate('/marketing')}
-          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+          onClick={() => navigate('/marketing?tab=story-highlight')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
         >
           Story Highlight
         </button>
         <button
           type="button"
-          onClick={() => navigate('/marketing')}
-          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+          onClick={() => navigate('/marketing?tab=banners')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
         >
           Banners
         </button>
         <button
           type="button"
-          onClick={() => navigate('/marketing')}
-          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+          onClick={() => navigate('/marketing?tab=pop-up')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
         >
           Pop-Up
         </button>
         <button
           type="button"
-          onClick={() => navigate('/marketing')}
-          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+          onClick={() => navigate('/marketing?tab=push-notifications')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
         >
           Push Notifications
         </button>
         <button
           type="button"
-          onClick={() => navigate('/marketing')}
-          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-[#F7931E] border-b-2 border-[#F7931E]"
+          onClick={() => navigate('/marketing?tab=product')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-[#F7931E] border-b-2 border-[#F7931E] cursor-pointer"
         >
           Product
         </button>
       </nav>
 
       {/* Section Title */}
-      <h2 className="text-lg sm:text-xl font-bold text-gray-900">{isEditMode ? 'Edit Product' : 'Add New Product'}</h2>
+      <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">{isEditMode ? 'Edit Featured Product' : 'Add New Featured Product'}</h2>
+
+      {/* Error/Success Messages */}
+      {error && (
+        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-800 dark:text-red-200">
+          {error}
+        </div>
+      )}
+      {successMessage && (
+        <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-4 py-3 text-sm text-green-800 dark:text-green-200">
+          {successMessage}
+        </div>
+      )}
 
       {/* Form Container */}
-      <div className="rounded-xl bg-white shadow-sm p-4 sm:p-6">
+      <div className="rounded-xl bg-white dark:bg-gray-800 shadow-sm p-4 sm:p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Product Name */}
+          {/* Product Selection */}
           <div>
-            <label htmlFor="product" className="mb-2 block text-sm font-normal text-gray-500">
-              Product Name
+            <label htmlFor="product" className="mb-2 block text-sm font-normal text-gray-500 dark:text-gray-400">
+              Product *
             </label>
-            <input
-              type="text"
-              id="product"
-              value={formData.product}
-              onChange={(e) => handleInputChange('product', e.target.value)}
-              placeholder="Enter Product Name"
-              className="w-full rounded-lg bg-gray-100 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F7931E]"
-              required
-            />
-          </div>
-
-          {/* Vendor Dropdown */}
-          <div>
-            <label htmlFor="vendor" className="mb-2 block text-sm font-normal text-gray-500">
-              Vendor
-            </label>
-            <div className="relative" ref={vendorDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setIsVendorDropdownOpen(!isVendorDropdownOpen)}
-                className="w-full px-4 py-2.5 rounded-lg bg-gray-100 text-left text-sm focus:outline-none focus:ring-1 focus:ring-[#F7931E] cursor-pointer flex items-center justify-between hover:bg-gray-200 transition-colors"
-              >
-                <span className="text-gray-900">{formData.vendor}</span>
-                <ChevronDownIcon
-                  className={`h-5 w-5 text-gray-400 transition-transform ${isVendorDropdownOpen ? 'transform rotate-180' : ''}`}
-                />
-              </button>
-              {isVendorDropdownOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-                  {vendorOptions.map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        handleInputChange('vendor', option)
-                        setIsVendorDropdownOpen(false)
-                      }}
-                      className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 transition-colors cursor-pointer ${
-                        formData.vendor === option ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
+            <div className="relative" ref={productDropdownRef}>
+              <input
+                type="text"
+                id="product"
+                value={productSearch || selectedProduct?.title || ''}
+                onChange={(e) => {
+                  setProductSearch(e.target.value)
+                  setIsProductDropdownOpen(true)
+                }}
+                onFocus={() => setIsProductDropdownOpen(true)}
+                placeholder="Search and select a product"
+                className="w-full rounded-lg bg-gray-100 dark:bg-gray-700 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#F7931E]"
+                required={!isEditMode}
+                disabled={isEditMode}
+              />
+              {isProductDropdownOpen && !isEditMode && (
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
+                  {availableProducts.length > 0 ? (
+                    availableProducts.map((product) => {
+                      const price = product.priceMinor ? (parseFloat(product.priceMinor) / 100).toLocaleString() : '0'
+                      const categoryName = product.categories && product.categories.length > 0 
+                        ? (product.categories[0]?.category?.name || 'No category')
+                        : 'No category'
+                      
+                      return (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={() => handleProductSelect(product)}
+                          className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                        >
+                          <div className="font-medium">{product.title}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{categoryName}</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">•</span>
+                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{price} {product.currency || 'QAR'}</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">•</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">ID: {product.id.slice(0, 8)}...</span>
+                          </div>
+                        </button>
+                      )
+                    })
+                  ) : (
+                    <div className="px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400">No products found</div>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Category Dropdown */}
-          <div>
-            <label htmlFor="category" className="mb-2 block text-sm font-normal text-gray-500">
-              Category
-            </label>
-            <div className="relative" ref={categoryDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                className="w-full px-4 py-2.5 rounded-lg bg-gray-100 text-left text-sm focus:outline-none focus:ring-1 focus:ring-[#F7931E] cursor-pointer flex items-center justify-between hover:bg-gray-200 transition-colors"
-              >
-                <span className="text-gray-900">{formData.category || 'Select Category'}</span>
-                <ChevronDownIcon
-                  className={`h-5 w-5 text-gray-400 transition-transform ${isCategoryDropdownOpen ? 'transform rotate-180' : ''}`}
-                />
-              </button>
-              {isCategoryDropdownOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-                  {categoryOptions.map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        handleInputChange('category', option)
-                        setIsCategoryDropdownOpen(false)
-                      }}
-                      className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 transition-colors cursor-pointer ${
-                        formData.category === option ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Date Fields */}
+          {/* Date Fields - Parallel */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="start-date" className="mb-2 block text-sm font-normal text-gray-500">
-                Start Date
+              <label htmlFor="start-date" className="mb-2 block text-sm font-normal text-gray-500 dark:text-gray-400">
+                Start Date *
               </label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isImmediateStart}
-                    onChange={(e) => handleImmediateStartChange(e.target.checked)}
-                    className="rounded border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-700">Immediate</span>
-                </label>
-                {!isImmediateStart && (
-                  <div className="relative">
-                    <input
-                      ref={startDateInputRef}
-                      type="date"
-                      id="start-date"
-                      value={formData.startDate}
-                      onChange={(e) => handleInputChange('startDate', e.target.value)}
-                      className="w-full rounded-lg bg-gray-100 px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F7931E] [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                      style={{ WebkitAppearance: 'none' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => startDateInputRef.current?.showPicker?.()}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      aria-label="Open calendar"
-                    >
-                      <CalendarIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                )}
+              <div className="relative">
+                <input
+                  ref={startDateInputRef}
+                  type="date"
+                  id="start-date"
+                  value={formData.startDate}
+                  onChange={(e) => handleInputChange('startDate', e.target.value)}
+                  className="w-full rounded-lg bg-gray-100 dark:bg-gray-700 px-4 py-2.5 pr-10 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#F7931E] [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                  style={{ WebkitAppearance: 'none' }}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => startDateInputRef.current?.showPicker?.()}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
+                  aria-label="Open calendar"
+                >
+                  <CalendarIcon className="h-5 w-5" />
+                </button>
               </div>
             </div>
             <div>
-              <label htmlFor="end-date" className="mb-2 block text-sm font-normal text-gray-500">
-                End Date
+              <label htmlFor="end-date" className="mb-2 block text-sm font-normal text-gray-500 dark:text-gray-400">
+                End Date *
               </label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isImmediateEnd}
-                    onChange={(e) => handleImmediateEndChange(e.target.checked)}
-                    className="rounded border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
-                  />
-                  <span className="text-sm text-gray-700">Immediate</span>
-                </label>
-                {!isImmediateEnd && (
-                  <div className="relative">
-                    <input
-                      ref={endDateInputRef}
-                      type="date"
-                      id="end-date"
-                      value={formData.endDate}
-                      onChange={(e) => handleInputChange('endDate', e.target.value)}
-                      className="w-full rounded-lg bg-gray-100 px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F7931E] [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                      style={{ WebkitAppearance: 'none' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => endDateInputRef.current?.showPicker?.()}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      aria-label="Open calendar"
-                    >
-                      <CalendarIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                )}
+              <div className="relative">
+                <input
+                  ref={endDateInputRef}
+                  type="date"
+                  id="end-date"
+                  value={formData.endDate}
+                  onChange={(e) => handleInputChange('endDate', e.target.value)}
+                  className="w-full rounded-lg bg-gray-100 dark:bg-gray-700 px-4 py-2.5 pr-10 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#F7931E] [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                  style={{ WebkitAppearance: 'none' }}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => endDateInputRef.current?.showPicker?.()}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
+                  aria-label="Open calendar"
+                >
+                  <CalendarIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Time Fields - Parallel */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="start-time" className="mb-2 block text-sm font-normal text-gray-500 dark:text-gray-400">
+                Start Time *
+              </label>
+              <div className="relative">
+                <input
+                  ref={startTimeInputRef}
+                  type="text"
+                  id="start-time"
+                  value={formData.startTime}
+                  onChange={(e) => handleInputChange('startTime', e.target.value)}
+                  placeholder="10:00AM"
+                  className="w-full rounded-lg bg-gray-100 dark:bg-gray-700 px-4 py-2.5 pr-10 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#F7931E]"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => startTimeInputRef.current?.focus()}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
+                  aria-label="Set time"
+                >
+                  <ClockIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="end-time" className="mb-2 block text-sm font-normal text-gray-500 dark:text-gray-400">
+                End Time *
+              </label>
+              <div className="relative">
+                <input
+                  ref={endTimeInputRef}
+                  type="text"
+                  id="end-time"
+                  value={formData.endTime}
+                  onChange={(e) => handleInputChange('endTime', e.target.value)}
+                  placeholder="10:00AM"
+                  className="w-full rounded-lg bg-gray-100 dark:bg-gray-700 px-4 py-2.5 pr-10 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#F7931E]"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => endTimeInputRef.current?.focus()}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
+                  aria-label="Set time"
+                >
+                  <ClockIcon className="h-5 w-5" />
+                </button>
               </div>
             </div>
           </div>
 
           {/* Priority Dropdown */}
           <div>
-            <label htmlFor="priority" className="mb-2 block text-sm font-normal text-gray-500">
-              Priority
+            <label htmlFor="priority" className="mb-2 block text-sm font-normal text-gray-500 dark:text-gray-400">
+              Priority *
             </label>
             <div className="relative" ref={priorityDropdownRef}>
               <button
                 type="button"
                 onClick={() => setIsPriorityDropdownOpen(!isPriorityDropdownOpen)}
-                className="w-full px-4 py-2.5 rounded-lg bg-gray-100 text-left text-sm focus:outline-none focus:ring-1 focus:ring-[#F7931E] cursor-pointer flex items-center justify-between hover:bg-gray-200 transition-colors"
+                className="w-full px-4 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-left text-sm focus:outline-none focus:ring-1 focus:ring-[#F7931E] cursor-pointer flex items-center justify-between hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 <span className={`text-sm font-medium ${
-                  formData.priority === 'High' ? 'text-red-600' : 
-                  formData.priority === 'Medium' ? 'text-yellow-600' : 
-                  'text-gray-600'
+                  formData.priority === 'High' ? 'text-red-600 dark:text-red-400' : 
+                  formData.priority === 'Medium' ? 'text-yellow-600 dark:text-yellow-400' : 
+                  'text-gray-600 dark:text-gray-300'
                 }`}>
                   {formData.priority}
                 </span>
                 <ChevronDownIcon
-                  className={`h-5 w-5 text-gray-400 transition-transform ${isPriorityDropdownOpen ? 'transform rotate-180' : ''}`}
+                  className={`h-5 w-5 text-gray-400 dark:text-gray-500 transition-transform ${isPriorityDropdownOpen ? 'transform rotate-180' : ''}`}
                 />
               </button>
               {isPriorityDropdownOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-auto">
                   {priorityOptions.map((option) => (
                     <button
                       key={option}
@@ -468,70 +464,16 @@ export default function AddProduct() {
                         handleInputChange('priority', option)
                         setIsPriorityDropdownOpen(false)
                       }}
-                      className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 transition-colors cursor-pointer ${
-                        formData.priority === option ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                      className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
+                        formData.priority === option ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                       }`}
                     >
                       <span className={`font-medium ${
-                        option === 'High' ? 'text-red-600' : 
-                        option === 'Medium' ? 'text-yellow-600' : 
-                        'text-gray-600'
+                        option === 'High' ? 'text-red-600 dark:text-red-400' : 
+                        option === 'Medium' ? 'text-yellow-600 dark:text-yellow-400' : 
+                        'text-gray-600 dark:text-gray-300'
                       }`}>
                         {option}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Status Dropdown */}
-          <div>
-            <label htmlFor="status" className="mb-2 block text-sm font-normal text-gray-500">
-              Status
-            </label>
-            <div className="relative" ref={statusDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                className="w-full px-4 py-2.5 rounded-lg bg-gray-100 text-left text-sm focus:outline-none focus:ring-1 focus:ring-[#F7931E] cursor-pointer flex items-center justify-between hover:bg-gray-200 transition-colors"
-              >
-                <span
-                  className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
-                  style={{
-                    backgroundColor: formData.status === 'active' ? '#DCF6E5' : formData.status === 'scheduled' ? '#FFF2D6' : '#FFE4DE',
-                    color: formData.status === 'active' ? '#118D57' : formData.status === 'scheduled' ? '#B76E00' : '#B71D18',
-                  }}
-                >
-                  {formData.status.charAt(0).toUpperCase() + formData.status.slice(1)}
-                </span>
-                <ChevronDownIcon
-                  className={`h-5 w-5 text-gray-400 transition-transform ${isStatusDropdownOpen ? 'transform rotate-180' : ''}`}
-                />
-              </button>
-              {isStatusDropdownOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-                  {statusOptions.map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        handleInputChange('status', option)
-                        setIsStatusDropdownOpen(false)
-                      }}
-                      className={`w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 transition-colors cursor-pointer ${
-                        formData.status === option ? 'bg-blue-50' : ''
-                      }`}
-                    >
-                      <span
-                        className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium"
-                        style={{
-                          backgroundColor: option === 'active' ? '#DCF6E5' : option === 'scheduled' ? '#FFF2D6' : '#FFE4DE',
-                          color: option === 'active' ? '#118D57' : option === 'scheduled' ? '#B76E00' : '#B71D18',
-                        }}
-                      >
-                        {option.charAt(0).toUpperCase() + option.slice(1)}
                       </span>
                     </button>
                   ))}
@@ -545,15 +487,16 @@ export default function AddProduct() {
             <button
               type="button"
               onClick={handleCancel}
-              className="w-full sm:w-auto rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 cursor-pointer"
+              className="w-full sm:w-auto rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="w-full sm:w-auto rounded-lg bg-[#F7931E] px-6 py-2.5 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer"
+              disabled={isLoading}
+              className="w-full sm:w-auto rounded-lg bg-[#F7931E] px-6 py-2.5 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isEditMode ? 'Update' : 'Add Product'}
+              {isLoading ? 'Saving...' : isEditMode ? 'Update Featured Product' : 'Add Featured Product'}
             </button>
           </div>
         </form>
@@ -561,4 +504,3 @@ export default function AddProduct() {
     </div>
   )
 }
-

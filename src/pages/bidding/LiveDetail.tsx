@@ -278,11 +278,11 @@ export default function LiveDetail({ product, auction, mediaUrls, onClose: _onCl
       {/* Top Header Section - Outside white card */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Bidding Products</h1>
-          <p className="mt-1 text-sm text-gray-700">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Bidding Products</h1>
+          <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
             <span>Dashboard</span>
             <span className="mx-1">:</span>
-            <span className="text-gray-900">View Product</span>
+            <span className="text-gray-900 dark:text-gray-100">View Product</span>
           </p>
         </div>
         <button
@@ -294,11 +294,11 @@ export default function LiveDetail({ product, auction, mediaUrls, onClose: _onCl
       </div>
 
       {/* Main Content with Single White Background */}
-      <div className="rounded-xl bg-white shadow-sm p-4 sm:p-6">
+      <div className="rounded-xl bg-white dark:bg-gray-800 shadow-sm p-4 sm:p-6 transition-colors">
         {/* Header inside card */}
         <div className="mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Bidding Product Detail</h2>
-          <p className="mt-1 text-sm text-gray-600">Manage auction item and bidding activity</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Bidding Product Detail</h2>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Manage auction item and bidding activity</p>
         </div>
         {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

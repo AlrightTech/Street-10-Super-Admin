@@ -58,23 +58,23 @@ export default function FilterDropdown({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center justify-between
-         gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap cursor-pointer w-full sm:w-auto"
+         gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors whitespace-nowrap cursor-pointer w-full sm:w-auto"
         aria-label={`Filter by ${label}`}
         aria-expanded={isOpen}
       >
         <span>{selectedValue}</span>
-        <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+        <ChevronDownIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
       </button>
 
       {isOpen && options.length > 0 && (
-        <div className="absolute left-0 z-50 mt-2 w-48 origin-top-left rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute left-0 z-50 mt-2 w-48 origin-top-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
           <div className="py-1" role="menu">
             {options.map((option) => (
               <button
                 key={option}
                 type="button"
                 onClick={() => handleSelect(option)}
-                className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                className="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                 role="menuitem"
               >
                 {option}

@@ -44,21 +44,21 @@ function CustomDropdown({ value, options, onChange, placeholder, icon, className
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm outline-none hover:bg-gray-50 focus:border-[#FF8C00] focus:ring-1 focus:ring-[#FF8C00]"
+        className="w-full appearance-none rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-8 text-sm outline-none hover:bg-gray-50 dark:hover:bg-gray-600 focus:border-[#FF8C00] focus:ring-1 focus:ring-[#FF8C00] transition-colors"
       >
         <div className="flex items-center gap-2">
-          {icon && <span className="flex-shrink-0 text-gray-400">{icon}</span>}
-          <span className="block truncate text-left text-gray-400">
+          {icon && <span className="flex-shrink-0 text-gray-400 dark:text-gray-500">{icon}</span>}
+          <span className="block truncate text-left text-gray-400 dark:text-gray-500">
             {placeholder}
           </span>
         </div>
-        <svg className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 z-50 mt-1 w-full min-w-[160px] origin-top-left rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute left-0 z-50 mt-1 w-full min-w-[160px] origin-top-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg transition-colors">
           <div className="py-1 max-h-60 overflow-auto" role="menu">
             {options.map((option) => (
               <button
@@ -68,8 +68,8 @@ function CustomDropdown({ value, options, onChange, placeholder, icon, className
                   onChange(option.value)
                   setIsOpen(false)
                 }}
-                className={`block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors ${
-                  value === option.value ? 'bg-gray-50 font-medium' : ''
+                className={`block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                  value === option.value ? 'bg-gray-50 dark:bg-gray-700 font-medium' : ''
                 }`}
                 role="menuitem"
               >
@@ -298,18 +298,18 @@ export default function Wallet() {
     <div className="max-w-screen w-full overflow-x-hidden">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Wallet</h1>
-        <p className="text-sm text-gray-600 mt-1">Dashboard • Wallet</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Wallet</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Dashboard • Wallet</p>
       </div>
 
       {/* Top Metrics Section */}
       <div className="mb-4 sm:mb-6 grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Balance */}
-        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5 shadow-sm transition-colors hover:bg-gray-100">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 shadow-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-1">Total Balance</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockWalletMetrics.totalBalance}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Balance</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{mockWalletMetrics.totalBalance}</p>
             </div>
             <div className="rounded-full bg-[#FF8C00] p-1.5 sm:p-2">
               <DollarSignIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
@@ -318,42 +318,42 @@ export default function Wallet() {
         </div>
 
         {/* Total Transactions */}
-        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5 shadow-sm transition-colors hover:bg-gray-100">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 shadow-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-1">Total Transactions</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockWalletMetrics.totalTransactions.toLocaleString()}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Transactions</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{mockWalletMetrics.totalTransactions.toLocaleString()}</p>
             </div>
-            <div className="rounded-full bg-blue-100 p-1.5 sm:p-2">
-              <ArrowUpDownIcon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+            <div className="rounded-full bg-blue-100 dark:bg-blue-900/30 p-1.5 sm:p-2">
+              <ArrowUpDownIcon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </div>
 
         {/* Pending Withdrawals */}
-        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5 shadow-sm transition-colors hover:bg-gray-100">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 shadow-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-1">Pending Withdrawals</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockWalletMetrics.pendingWithdrawals}</p>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">{mockWalletMetrics.pendingWithdrawalsCount} requests pending</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Pending Withdrawals</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{mockWalletMetrics.pendingWithdrawals}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{mockWalletMetrics.pendingWithdrawalsCount} requests pending</p>
             </div>
-            <div className="rounded-full bg-purple-100 p-1.5 sm:p-2">
-              <HandIcon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            <div className="rounded-full bg-purple-100 dark:bg-purple-900/30 p-1.5 sm:p-2">
+              <HandIcon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
         </div>
 
         {/* Success Rate */}
-        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5 shadow-sm transition-colors hover:bg-gray-100">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 shadow-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-1">Success Rate</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockWalletMetrics.successRate}</p>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">{mockWalletMetrics.successRatePendingCount} requests pending</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Success Rate</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{mockWalletMetrics.successRate}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{mockWalletMetrics.successRatePendingCount} requests pending</p>
             </div>
-            <div className="rounded-full bg-yellow-100 p-1.5 sm:p-2">
-              <BellIcon className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
+            <div className="rounded-full bg-yellow-100 dark:bg-yellow-900/30 p-1.5 sm:p-2">
+              <BellIcon className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
         </div>
@@ -365,13 +365,13 @@ export default function Wallet() {
         <button
           type="button"
           onClick={() => navigate('/wallet/all-transactions')}
-          className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5 shadow-sm hover:bg-gray-50 transition-colors text-left cursor-pointer"
+          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left cursor-pointer"
         >
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-blue-50 p-2">
-              <ArrowUpDownIcon className="h-5 w-5 text-blue-600" />
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-900/30 p-2">
+              <ArrowUpDownIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <span className="text-sm font-medium text-gray-900">All Transactions</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">All Transactions</span>
           </div>
         </button>
 
@@ -379,13 +379,13 @@ export default function Wallet() {
         <button
           type="button"
           onClick={() => navigate('/wallet/user-wallets')}
-          className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5 shadow-sm hover:bg-gray-50 transition-colors text-left cursor-pointer"
+          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left cursor-pointer"
         >
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-green-50 p-2">
-              <UserIcon className="h-5 w-5 text-green-600" />
+            <div className="rounded-lg bg-green-50 dark:bg-green-900/30 p-2">
+              <UserIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
-            <span className="text-sm font-medium text-gray-900">User Wallets</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">User Wallets</span>
           </div>
         </button>
 
@@ -393,13 +393,13 @@ export default function Wallet() {
         <button
           type="button"
           onClick={() => navigate('/wallet/withdrawals')}
-          className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5 shadow-sm hover:bg-gray-50 transition-colors text-left cursor-pointer"
+          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left cursor-pointer"
         >
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-purple-50 p-2">
-              <HandIcon className="h-5 w-5 text-purple-600" />
+            <div className="rounded-lg bg-purple-50 dark:bg-purple-900/30 p-2">
+              <HandIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             </div>
-            <span className="text-sm font-medium text-gray-900">Withdrawals</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Withdrawals</span>
           </div>
         </button>
 
@@ -407,13 +407,13 @@ export default function Wallet() {
         <button
           type="button"
           onClick={() => navigate('/wallet/settings')}
-          className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5 shadow-sm hover:bg-gray-50 transition-colors text-left cursor-pointer"
+          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left cursor-pointer"
         >
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-gray-50 p-2">
-              <SettingsIcon className="h-5 w-5 text-gray-600" />
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-700 p-2">
+              <SettingsIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             </div>
-            <span className="text-sm font-medium text-gray-900">Settings</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Settings</span>
           </div>
         </button>
       </div>
@@ -467,23 +467,22 @@ export default function Wallet() {
       </div>
 
       {/* Transactions Table Container */}
-      <div className="mb-4 sm:mb-6 rounded-lg border 
-      border-gray-200 bg-white shadow-sm">
+      <div className="mb-4 sm:mb-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm transition-colors">
         {/* Filter Tabs - Inside table container */}
-        <div className="px-4.5 mt-2 border-b border-gray-200">
+        <div className="px-4.5 mt-2 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6">
             <button
               type="button"
               onClick={() => handleFilterChange('all')}
               className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity"
             >
-              <span className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 ${activeFilter === 'all' ? 'border-b-2 border-gray-900' : ''}`}>
+              <span className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 dark:text-gray-100 ${activeFilter === 'all' ? 'border-b-2 border-gray-900 dark:border-gray-100' : ''}`}>
                 All
               </span>
               <span className={`inline-flex items-center justify-center rounded-md px-1.5 sm:px-2 py-0.5 text-xs font-medium ${
                 activeFilter === 'all'
                   ? 'bg-[#6B46C1] text-white'
-                  : 'bg-gray-100 text-gray-900'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
               }`}>
                 {counts.all}
               </span>
@@ -493,13 +492,13 @@ export default function Wallet() {
               onClick={() => handleFilterChange('completed')}
               className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity"
             >
-              <span className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 ${activeFilter === 'completed' ? 'border-b-2 border-gray-900' : ''}`}>
+              <span className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 dark:text-gray-100 ${activeFilter === 'completed' ? 'border-b-2 border-gray-900 dark:border-gray-100' : ''}`}>
                 Completed
               </span>
               <span className={`inline-flex items-center justify-center rounded-md px-1.5 sm:px-2 py-0.5 text-xs font-medium ${
                 activeFilter === 'completed'
                   ? 'bg-[#6B46C1] text-white'
-                  : 'bg-green-100 text-gray-900'
+                  : 'bg-green-100 dark:bg-green-900/30 text-gray-900 dark:text-gray-100'
               }`}>
                 {counts.completed}
               </span>
@@ -509,13 +508,13 @@ export default function Wallet() {
               onClick={() => handleFilterChange('pending')}
               className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity"
             >
-              <span className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 ${activeFilter === 'pending' ? 'border-b-2 border-gray-900' : ''}`}>
+              <span className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 dark:text-gray-100 ${activeFilter === 'pending' ? 'border-b-2 border-gray-900 dark:border-gray-100' : ''}`}>
                 Pending
               </span>
               <span className={`inline-flex items-center justify-center rounded-md px-1.5 sm:px-2 py-0.5 text-xs font-medium ${
                 activeFilter === 'pending'
                   ? 'bg-[#6B46C1] text-white'
-                  : 'bg-orange-100 text-gray-900'
+                  : 'bg-orange-100 dark:bg-orange-900/30 text-gray-900 dark:text-gray-100'
               }`}>
                 {counts.pending}
               </span>
@@ -525,13 +524,13 @@ export default function Wallet() {
               onClick={() => handleFilterChange('failed')}
               className="flex items-center gap-1.5 sm:gap-2 hover:opacity-80 transition-opacity"
             >
-              <span className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 ${activeFilter === 'failed' ? 'border-b-2 border-gray-900' : ''}`}>
+              <span className={`text-xs sm:text-sm font-medium py-1 sm:py-2 px-1 sm:px-2 text-gray-900 dark:text-gray-100 ${activeFilter === 'failed' ? 'border-b-2 border-gray-900 dark:border-gray-100' : ''}`}>
                 Failed
               </span>
               <span className={`inline-flex items-center justify-center rounded-md px-1.5 sm:px-2 py-0.5 text-xs font-medium ${
                 activeFilter === 'failed'
                   ? 'bg-[#6B46C1] text-white'
-                  : 'bg-red-100 text-gray-900'
+                  : 'bg-red-100 dark:bg-red-900/30 text-gray-900 dark:text-gray-100'
               }`}>
                 {counts.failed}
               </span>
@@ -542,11 +541,11 @@ export default function Wallet() {
         <div className="w-full overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Transaction ID</th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">User</th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Type</th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Amount</th>
+              <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Transaction ID</th>
+                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">User</th>
+                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Type</th>
+                <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Amount</th>
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Date</th>
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Status</th>
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-600">Action</th>
@@ -636,7 +635,7 @@ export default function Wallet() {
 
         {/* Pagination */}
         {totalPages > 0 && (
-          <div className="p-2 sm:p-6 border-t border-gray-200 flex justify-center sm:justify-end overflow-x-auto">
+          <div className="p-2 sm:p-6 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-center sm:justify-end overflow-x-auto transition-colors">
             <div className="min-w-0">
               <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
             </div>
@@ -654,35 +653,35 @@ export default function Wallet() {
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
-              className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-xl"
+              className="w-full max-w-md rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-xl transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">Edit Transaction</h3>
+              <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Transaction</h3>
               <div className="mb-4 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Transaction ID</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Transaction ID</label>
                   <input
                     type="text"
                     value={transactionToEdit.transactionId}
                     onChange={(e) =>
                       setTransactionToEdit({ ...transactionToEdit, transactionId: e.target.value })
                     }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#FF8C00] focus:outline-none focus:ring-1 focus:ring-[#FF8C00]"
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-[#FF8C00] focus:outline-none focus:ring-1 focus:ring-[#FF8C00]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount</label>
                   <input
                     type="text"
                     value={transactionToEdit.amount}
                     onChange={(e) =>
                       setTransactionToEdit({ ...transactionToEdit, amount: e.target.value })
                     }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#FF8C00] focus:outline-none focus:ring-1 focus:ring-[#FF8C00]"
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-[#FF8C00] focus:outline-none focus:ring-1 focus:ring-[#FF8C00]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
                   <select
                     value={transactionToEdit.status}
                     onChange={(e) =>
@@ -691,7 +690,7 @@ export default function Wallet() {
                         status: e.target.value as TransactionStatus,
                       })
                     }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#FF8C00] focus:outline-none focus:ring-1 focus:ring-[#FF8C00]"
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:border-[#FF8C00] focus:outline-none focus:ring-1 focus:ring-[#FF8C00]"
                   >
                     <option value="pending">Pending</option>
                     <option value="completed">Completed</option>
@@ -703,7 +702,7 @@ export default function Wallet() {
                 <button
                   type="button"
                   onClick={cancelEdit}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                  className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
                 >
                   Cancel
                 </button>

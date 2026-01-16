@@ -153,7 +153,7 @@ export default function Sidebar() {
     <>
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-40 h-screen w-64 bg-[#5C54A4] transition-all duration-300 md:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 h-screen w-64 bg-[#5C54A4] dark:bg-gray-900 transition-all duration-300 md:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

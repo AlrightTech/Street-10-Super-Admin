@@ -1,6 +1,8 @@
 import { Suspense, lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { LanguageProvider } from './contexts/LanguageContext'
+import { ThemeProvider } from './contexts/ThemeContext'
+import { TimezoneProvider } from './contexts/TimezoneContext'
 import Layout from './components/layout/Layout'
 import LoginPage from './pages/LoginPage'
 import ResetPassword from './pages/ResetPassword'
@@ -36,6 +38,8 @@ const Marketing = lazy(() => import('./pages/Marketing'))
 const AddStoryHighlight = lazy(() => import('./pages/AddStoryHighlight'))
 const AddBanner = lazy(() => import('./pages/AddBanner'))
 const BannerDetail = lazy(() => import('./pages/BannerDetail'))
+const AddPopup = lazy(() => import('./pages/AddPopup'))
+const PopupDetail = lazy(() => import('./pages/PopupDetail'))
 const PushNotificationSendDetail = lazy(() => import('./pages/PushNotificationSendDetail'))
 const PushNotificationPendingDetail = lazy(() => import('./pages/PushNotificationPendingDetail'))
 const PushNotificationScheduledDetail = lazy(() => import('./pages/PushNotificationScheduledDetail'))
@@ -93,8 +97,10 @@ const PageLoader = () => (
  */
 function App() {
   return (
-    <LanguageProvider>
-      <Suspense fallback={<PageLoader />}>
+    <ThemeProvider>
+      <TimezoneProvider>
+        <LanguageProvider>
+          <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -137,6 +143,9 @@ function App() {
             <Route path="marketing/add-banner" element={<AddBanner />} />
             <Route path="marketing/edit-banner/:id" element={<AddBanner />} />
             <Route path="marketing/banner/:id" element={<BannerDetail />} />
+            <Route path="marketing/add-popup" element={<AddPopup />} />
+            <Route path="marketing/edit-popup/:id" element={<AddPopup />} />
+            <Route path="marketing/popup/:id" element={<PopupDetail />} />
             <Route path="marketing/push-notification/send/:id" element={<PushNotificationSendDetail />} />
             <Route path="marketing/push-notification/pending/:id" element={<PushNotificationPendingDetail />} />
             <Route path="marketing/push-notification/scheduled/:id" element={<PushNotificationScheduledDetail />} />
@@ -187,8 +196,10 @@ function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Suspense>
-    </LanguageProvider>
+          </Suspense>
+        </LanguageProvider>
+      </TimezoneProvider>
+    </ThemeProvider>
   )
 }
 

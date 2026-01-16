@@ -103,11 +103,11 @@ export default function BookingTrendChart({ data }: BookingTrendChartProps) {
   }))
 
   return (
-    <div className="flex h-full min-h-[280px] w-full min-w-0 sm:min-h-[350px] md:min-h-[400px] flex-col rounded-lg border border-gray-200 bg-white p-4 sm:p-5 md:p-6 shadow-sm">
+    <div className="flex h-full min-h-[280px] w-full min-w-0 sm:min-h-[350px] md:min-h-[400px] flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5 md:p-6 shadow-sm transition-colors">
       <div className="mb-3 sm:mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
         <div>
-          <h3 className="text-base font-semibold text-gray-900 sm:text-lg">Booking Trends</h3>
-          <p className="text-xs sm:text-sm text-gray-600">Last 30 Days +5%</p>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 sm:text-lg">Booking Trends</h3>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Last 30 Days +5%</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
           <div className="w-full sm:w-auto">

@@ -18,6 +18,8 @@ export default function AddCategoryFilter() {
   const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [subCategories, setSubCategories] = useState<Category[]>([])
+  const [iconFile, setIconFile] = useState<File | null>(null)
+  const [iconPreview, setIconPreview] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,6 +72,9 @@ export default function AddCategoryFilter() {
           setInputType(mappedType)
           setOriginalInputType(mappedType)
           setOptions(Array.isArray(filter.options) ? filter.options : [])
+          if (filter.iconUrl) {
+            setIconPreview(filter.iconUrl)
+          }
           
           // Load all categories and check which ones have this filter assigned
           const { data: allCategories } = await categoriesApi.getAll({
@@ -155,6 +160,7 @@ export default function AddCategoryFilter() {
               label: filterName.trim(),
             },
           },
+          iconUrl: iconPreview || undefined,
           isIndexed: inputType === 'number',
         }
 
@@ -344,6 +350,63 @@ export default function AddCategoryFilter() {
               )}
             </div>
 
+            {/* Icon Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filter Icon (Optional)
+              </label>
+              <div className="space-y-3">
+                {iconPreview && (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <img
+                      src={iconPreview}
+                      alt="Filter icon"
+                      className="w-10 h-10 object-contain"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-700">Current icon</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIconFile(null)
+                        setIconPreview(null)
+                      }}
+                      className="text-red-600 hover:text-red-700 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setIconFile(file)
+                        const reader = new FileReader()
+                        reader.onload = (e) => {
+                          setIconPreview(e.target?.result as string)
+                        }
+                        reader.readAsDataURL(file)
+                      }
+                    }}
+                    className="hidden"
+                    id="icon-upload"
+                  />
+                  <label
+                    htmlFor="icon-upload"
+                    className="cursor-pointer text-sm text-[#F7931E] hover:text-[#E8840D]"
+                  >
+                    {iconPreview ? 'Change Icon' : '+ Upload Icon'}
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">PNG, JPG, SVG up to 2MB</p>
+                </div>
+              </div>
+            </div>
+
             {/* Options (always show, but only editable for radio/checkbox) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -438,125 +501,7 @@ export default function AddCategoryFilter() {
                 </div>
               </div>
 
-            {/* Categories - Checkbox Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Categories
-              </label>
-              <div className="rounded-lg border border-gray-200 bg-white p-4 max-h-60 overflow-y-auto">
-                {categories.length === 0 ? (
-                  <p className="text-sm text-gray-500">No categories available</p>
-                ) : (
-                  <div className="space-y-2">
-                    {categories.map((cat) => {
-                      const isSelected = selectedCategories.includes(cat.id)
-                      return (
-                        <label
-                          key={cat.id}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedCategories((prev) => [...prev, cat.id])
-                              } else {
-                                setSelectedCategories((prev) => prev.filter((id) => id !== cat.id))
-                              }
-                            }}
-                            className="w-4 h-4 rounded border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
-                          />
-                          <span className="text-sm text-gray-700 flex-1">{cat.name}</span>
-                        </label>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-              {selectedCategories.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedCategories.map((catId) => {
-                    const cat = categories.find((c) => c.id === catId)
-                    return cat ? (
-                      <span
-                        key={catId}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200"
-                      >
-                        {cat.name}
-                        <button
-                          type="button"
-                          onClick={() => setSelectedCategories((prev) => prev.filter((id) => id !== catId))}
-                          className="text-orange-600 hover:text-orange-800"
-                        >
-                          <XIcon className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ) : null
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Subcategories - Checkbox Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Subcategories
-              </label>
-              <div className="rounded-lg border border-gray-200 bg-white p-4 max-h-60 overflow-y-auto">
-                {subCategories.length === 0 ? (
-                  <p className="text-sm text-gray-500">No subcategories available</p>
-                ) : (
-                  <div className="space-y-2">
-                    {subCategories.map((subCat) => {
-                      const isSelected = selectedSubCategories.includes(subCat.id)
-                      return (
-                        <label
-                          key={subCat.id}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedSubCategories((prev) => [...prev, subCat.id])
-                              } else {
-                                setSelectedSubCategories((prev) => prev.filter((id) => id !== subCat.id))
-                              }
-                            }}
-                            className="w-4 h-4 rounded border-gray-300 text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
-                          />
-                          <span className="text-sm text-gray-700 flex-1">{subCat.name}</span>
-                        </label>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-              {selectedSubCategories.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedSubCategories.map((subCatId) => {
-                    const subCat = subCategories.find((c) => c.id === subCatId)
-                    return subCat ? (
-                      <span
-                        key={subCatId}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
-                      >
-                        {subCat.name}
-                        <button
-                          type="button"
-                          onClick={() => setSelectedSubCategories((prev) => prev.filter((id) => id !== subCatId))}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <XIcon className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ) : null
-                  })}
-                </div>
-              )}
-            </div>
+            {/* Category/Subcategory selection removed per request */}
           </div>
         </div>
 

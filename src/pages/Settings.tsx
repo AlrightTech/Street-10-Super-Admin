@@ -3,7 +3,11 @@ import { UploadIcon, EyeIcon, EyeOffIcon, ChevronDownIcon, CheckIcon, MegaphoneI
 import TextField from '../components/ui/TextField'
 import SearchBar from '../components/ui/SearchBar'
 import StatusBadge from '../components/users/StatusBadge'
-import { profileApi } from "../services/profile.api";
+import { profileApi, type MeUser } from "../services/profile.api";
+import { authApiService } from "../services/auth.api";
+import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { useTimezone } from '../contexts/TimezoneContext';
 
 /**
  * Notification item interface
@@ -98,30 +102,48 @@ const mockNotifications: NotificationItem[] = [
  * Settings page component with sidebar navigation and general settings form
  */
 export default function Settings() {
+  const { language: currentLanguage, setLanguage: setLanguageContext } = useLanguage()
+  const { darkMode, setDarkMode: setDarkModeContext } = useTheme()
+  const { timezone, setTimezone: setTimezoneContext } = useTimezone()
   const [activeSection, setActiveSection] = useState('admin-profile')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   })
   const [showPassword, setShowPassword] = useState(false)
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null)
+  // Sync account preferences with contexts
   const [accountPreferences, setAccountPreferences] = useState(() => {
-    // Load dark mode preference from localStorage
-    const savedDarkMode = localStorage.getItem('darkMode')
-    const isDarkMode = savedDarkMode === 'true'
+    // Initialize from contexts
+    const languageDisplay = currentLanguage === 'ar' ? 'Arabic' : 'English'
+    
     return {
-      darkMode: isDarkMode,
-      language: localStorage.getItem('language') || '',
-      timeZone: localStorage.getItem('timeZone') || '',
+      darkMode: darkMode,
+      language: languageDisplay,
+      timeZone: timezone || '',
     }
   })
+
+  // Sync preferences when contexts change
+  useEffect(() => {
+    const languageDisplay = currentLanguage === 'ar' ? 'Arabic' : 'English'
+    setAccountPreferences((prev) => ({
+      ...prev,
+      darkMode: darkMode,
+      language: languageDisplay,
+      timeZone: timezone || prev.timeZone,
+    }))
+  }, [darkMode, currentLanguage, timezone])
   const [securitySettings, setSecuritySettings] = useState({
     twoFactorAuth: false,
   })
+  const [, setCurrentUser] = useState<MeUser | null>(null)
   const [subAdminSearch, setSubAdminSearch] = useState('')
   const [subAdminPage, setSubAdminPage] = useState(1)
   const [selectedSubAdminId] = useState<number | null>(5) // Row 5 highlighted
@@ -159,7 +181,7 @@ export default function Settings() {
 
   const SUB_ADMIN_PAGE_SIZE = 18
 
-  const languageOptions = ['English', 'Arabic', 'French', 'Spanish']
+  const languageOptions = ['English', 'Arabic']
   const timeZoneOptions = ['UTC', 'EST', 'PST', 'GMT', 'CST']
 
   // Filter and paginate sub admins
@@ -237,16 +259,28 @@ export default function Settings() {
     setSubAdminPage(page)
   }
 
-  // Apply dark mode to document
-  useEffect(() => {
-    if (accountPreferences.darkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
+  // Update contexts when preferences change in UI (before save)
+  const handleDarkModeToggle = () => {
+    const newDarkMode = !accountPreferences.darkMode
+    setAccountPreferences((prev) => ({ ...prev, darkMode: newDarkMode }))
+    // Update context immediately for instant feedback
+    setDarkModeContext(newDarkMode)
+  }
+
+  const handleLanguageChange = (languageDisplay: string) => {
+    setAccountPreferences((prev) => ({ ...prev, language: languageDisplay }))
+    // Map to language code and update context
+    const langCode = languageDisplay === 'Arabic' ? 'ar' : languageDisplay === 'English' ? 'en' : currentLanguage
+    if (langCode === 'ar' || langCode === 'en') {
+      setLanguageContext(langCode as 'en' | 'ar')
     }
-    // Save to localStorage
-    localStorage.setItem('darkMode', accountPreferences.darkMode.toString())
-  }, [accountPreferences.darkMode])
+  }
+
+  const handleTimezoneChange = (tz: string) => {
+    setAccountPreferences((prev) => ({ ...prev, timeZone: tz }))
+    // Update context immediately
+    setTimezoneContext(tz)
+  }
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -283,25 +317,48 @@ export default function Settings() {
     setActiveSection(sectionId)
   }
 
-  // Load current user profile when admin-profile section is active
+  // Load current user profile when settings sections that need it are active
   useEffect(() => {
     const loadProfile = async () => {
       try {
         setProfileError(null)
         const user = await profileApi.getMe()
+        setCurrentUser(user)
         setFormData((prev) => ({
           ...prev,
           name: user.name || '',
           email: user.email || '',
         }))
         setProfileImagePreview(user.profileImageUrl || null)
+
+        // Initialize account preferences language from backend if not set
+        setAccountPreferences((prev) => {
+          const languageLabel =
+            user.lang === 'ar' ? 'Arabic' : 'English'
+          // Sync with LanguageContext if backend has a different value
+          if (user.lang && user.lang !== currentLanguage) {
+            setLanguageContext(user.lang as 'en' | 'ar')
+            localStorage.setItem('app_language', user.lang)
+          }
+          return {
+            ...prev,
+            language: prev.language || languageLabel,
+            timeZone: prev.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+          }
+        })
+
+        // Initialize security settings from backend twoFactorEnabled flag
+        setSecuritySettings((prev) => ({
+          ...prev,
+          twoFactorAuth: !!user.twoFactorEnabled,
+        }))
       } catch (error: any) {
         console.error("Failed to load profile:", error)
         setProfileError(error.response?.data?.message || "Failed to load profile")
       }
     }
 
-    if (activeSection === "admin-profile") {
+    if (activeSection === "admin-profile" || activeSection === "account-preferences" || activeSection === "security-settings") {
       void loadProfile()
     }
   }, [activeSection])
@@ -321,12 +378,23 @@ export default function Settings() {
         await profileApi.updateMe(updatePayload)
       }
 
-      if (formData.password.trim().length >= 6) {
-        await profileApi.changePassword(formData.password.trim())
+      // Handle password change if new password is provided
+      if (formData.newPassword.trim().length >= 6) {
+        if (!formData.currentPassword.trim()) {
+          throw new Error("Current password is required to change password")
+        }
+        if (formData.newPassword !== formData.confirmPassword) {
+          throw new Error("New password and confirm password do not match")
+        }
+        await profileApi.changePassword(
+          formData.currentPassword.trim(),
+          formData.newPassword.trim(),
+          formData.confirmPassword.trim()
+        )
       }
 
       setProfileSuccess("Profile updated successfully")
-      setFormData((prev) => ({ ...prev, password: '' }))
+      setFormData((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }))
     } catch (error: any) {
       console.error("Failed to save profile:", error)
       setProfileError(error.response?.data?.message || "Failed to update profile")
@@ -342,37 +410,61 @@ export default function Settings() {
     }
   }
 
-  const handleSavePreferences = () => {
-    // Save preferences to localStorage
-    localStorage.setItem('darkMode', accountPreferences.darkMode.toString())
-    localStorage.setItem('language', accountPreferences.language)
-    localStorage.setItem('timeZone', accountPreferences.timeZone)
-    
-    // Handle save preferences logic here
-    console.log('Saving preferences:', accountPreferences)
-    // You can add a success notification here
-    alert('Preferences saved successfully!')
+  const handleSavePreferences = async () => {
+    try {
+      // Update contexts (they already handle localStorage)
+      setDarkModeContext(accountPreferences.darkMode)
+      setTimezoneContext(accountPreferences.timeZone)
+
+      // Map language label to backend code
+      let langCode: string | undefined
+      if (accountPreferences.language === 'Arabic') {
+        langCode = 'ar'
+      } else if (accountPreferences.language === 'English') {
+        langCode = 'en'
+      } else if (accountPreferences.language === 'French') {
+        langCode = 'en' // Default to English if French not supported
+      } else if (accountPreferences.language === 'Spanish') {
+        langCode = 'en' // Default to English if Spanish not supported
+      }
+
+      // Update LanguageContext
+      if (langCode && (langCode === 'ar' || langCode === 'en')) {
+        setLanguageContext(langCode as 'en' | 'ar')
+      }
+
+      // Persist preferences to backend
+      if (langCode && (langCode === 'ar' || langCode === 'en')) {
+        await profileApi.updateMe({ lang: langCode })
+      }
+
+      // Note: Dark mode and timezone are stored in localStorage by contexts
+      // Backend support for these can be added later if needed
+
+      // Show success message
+      alert('Preferences saved successfully!')
+    } catch (error) {
+      console.error('Failed to save preferences:', error)
+      alert('Failed to save preferences. Please try again.')
+    }
   }
 
   const handleLogoutAllDevices = () => {
-    // Handle logout from all devices logic here
-    if (window.confirm('Are you sure you want to logout from all devices? This will end all active sessions.')) {
-      // Mock data: Simulate logging out from all devices
-      const mockDevices = [
-        { id: '1', device: 'Chrome on Windows', location: 'New York, USA', lastActive: '2 hours ago' },
-        { id: '2', device: 'Safari on iPhone', location: 'Los Angeles, USA', lastActive: '5 hours ago' },
-        { id: '3', device: 'Firefox on Mac', location: 'London, UK', lastActive: '1 day ago' },
-      ]
-      
-      console.log('Logging out from all devices:', mockDevices)
-      
-      // Simulate API call delay
-      setTimeout(() => {
-        alert('Successfully logged out from all devices. You will need to log in again on all devices.')
-        // In a real app, you would redirect to login page or refresh the session
-        // window.location.href = '/login'
-      }, 500)
+    const run = async () => {
+      if (!window.confirm('Are you sure you want to logout from all devices? This will end all active sessions on this browser.')) {
+        return
+      }
+
+      try {
+        // For now, log out from this device by clearing auth storage
+        authApiService.logout()
+      } catch (error) {
+        console.error('Failed to logout from all devices:', error)
+        alert('Failed to logout. Please try again.')
+      }
     }
+
+    void run()
   }
 
   return (
@@ -391,7 +483,7 @@ export default function Settings() {
           </div>
 
           {/* Content */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-6 transition-colors">
             {/* Multi-Step Progress Indicator */}
             <div className="flex items-center justify-between mb-8">
               {/* Step 1 */}
@@ -615,7 +707,7 @@ export default function Settings() {
                       <MegaphoneIcon className="h-6 w-6 text-pink-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-1">Marketing Admin</h4>
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Marketing Admin</h4>
                       <p className="text-xs text-gray-600">Manages campaigns, content, and marketing analytics.</p>
                     </div>
                     <div className="flex-shrink-0">
@@ -685,7 +777,7 @@ export default function Settings() {
                       <DollarSignIcon className="h-6 w-6 text-green-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-1">Finance Admin</h4>
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Finance Admin</h4>
                       <p className="text-xs text-gray-600">Access to financial reports and budget management.</p>
                     </div>
                     <div className="flex-shrink-0">
@@ -740,7 +832,7 @@ export default function Settings() {
             {addSubAdminStep === 3 && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">Permission Control</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Permission Control</h3>
                   <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6">
                     Customize access permissions for the selected role:{' '}
                     <span className="text-blue-600 underline cursor-pointer">
@@ -820,7 +912,7 @@ export default function Settings() {
                             { key: 'delete', label: 'Delete Products' },
                             { key: 'approve', label: 'Approve Products' },
                           ].map((permission) => (
-                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded-lg p-3 bg-white">
+                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 transition-colors">
                               <input
                                 type="checkbox"
                                 checked={addSubAdminForm.permissions.productManagement.includes(permission.key)}
@@ -912,7 +1004,7 @@ export default function Settings() {
                             { key: 'delete', label: 'Delete Users' },
                             { key: 'approve', label: 'Approve Users' },
                           ].map((permission) => (
-                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded-lg p-3 bg-white">
+                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 transition-colors">
                               <input
                                 type="checkbox"
                                 checked={addSubAdminForm.permissions.userManagement.includes(permission.key)}
@@ -1004,7 +1096,7 @@ export default function Settings() {
                             { key: 'delete', label: 'Delete Orders' },
                             { key: 'approve', label: 'Approve Orders' },
                           ].map((permission) => (
-                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded-lg p-3 bg-white">
+                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 transition-colors">
                               <input
                                 type="checkbox"
                                 checked={addSubAdminForm.permissions.orderManagement.includes(permission.key)}
@@ -1096,7 +1188,7 @@ export default function Settings() {
                             { key: 'delete', label: 'Delete Tickets' },
                             { key: 'approve', label: 'Approve Tickets' },
                           ].map((permission) => (
-                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded-lg p-3 bg-white">
+                            <label key={permission.key} className="flex items-center gap-2 cursor-pointer border border-gray-300 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 transition-colors">
                               <input
                                 type="checkbox"
                                 checked={addSubAdminForm.permissions.supportTickets.includes(permission.key)}
@@ -1159,7 +1251,7 @@ export default function Settings() {
                             type={showAddSubAdminPassword ? 'text' : 'password'}
                             value={addSubAdminForm.password}
                             onChange={(e) => setAddSubAdminForm((prev) => ({ ...prev, password: e.target.value }))}
-                            className="block w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 pr-10 text-sm placeholder:text-gray-400 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20"
+                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 sm:px-4 py-2 sm:py-2.5 pr-10 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20 transition-colors"
                             placeholder="Enter password"
                           />
                           <button
@@ -1187,7 +1279,7 @@ export default function Settings() {
                             type={showAddSubAdminConfirmPassword ? 'text' : 'password'}
                             value={addSubAdminForm.confirmPassword}
                             onChange={(e) => setAddSubAdminForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-                            className="block w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 pr-10 text-sm placeholder:text-gray-400 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20"
+                            className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 sm:px-4 py-2 sm:py-2.5 pr-10 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-[#F7931E] focus:outline-none focus:ring-2 focus:ring-[#F7931E]/20 transition-colors"
                             placeholder="Confirm password"
                           />
                           <button
@@ -1327,8 +1419,8 @@ export default function Settings() {
           {activeSection === 'sub-admins' && (
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4 lg:mb-6">
           <div>
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-0.5">Settings</h1>
-            <p className="text-xs sm:text-sm text-gray-500">Dashboard - Sub Admin</p>
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-0.5">Settings</h1>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Dashboard - Sub Admin</p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto sm:ml-auto">
             <div className="w-full sm:w-48 md:w-64">
@@ -1385,13 +1477,13 @@ export default function Settings() {
           {/* Header outside sidebar */}
           {activeSection !== 'sub-admins' && (
             <div className="mb-3 sm:mb-4">
-              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-0.5">Profile Setting</h1>
-              <p className="text-xs sm:text-sm text-gray-500">Dashboard - Setting</p>
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-0.5">Profile Setting</h1>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Dashboard - Setting</p>
             </div>
           )}
           
           {/* Sidebar Card */}
-          <div className="bg-white rounded-lg p-3 sm:p-4 lg:p-6 shadow-sm w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 lg:p-6 shadow-sm w-full transition-colors">
             <nav className="space-y-1">
               {settingsSections.map((section) => (
                 <button
@@ -1401,7 +1493,7 @@ export default function Settings() {
                   className={`w-full text-left px-3 sm:px-4 py-2 sm:py-2.5 lg:py-3 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                     activeSection === section.id
                       ? 'bg-[#F7931E] text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
                   {section.label}
@@ -1415,10 +1507,10 @@ export default function Settings() {
         <div className="flex-1 min-w-0 w-full">
           {activeSection === 'admin-profile' && (
             <>
-              <div className="bg-white rounded-lg p-3 mt-17 sm:p-4 md:p-6 lg:p-8 shadow-sm">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mt-17 sm:p-4 md:p-6 lg:p-8 shadow-sm transition-colors">
                 <div className="mb-4 sm:mb-6 lg:mb-8">
-                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">General Settings</h2>
-                  <p className="text-xs sm:text-sm lg:text-base text-gray-600">Update your profile</p>
+                  <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2">General Settings</h2>
+                  <p className="text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-400">Update your profile</p>
                 </div>
 
                 <div className="space-y-4 sm:space-y-5 lg:space-y-6">
@@ -1434,7 +1526,7 @@ export default function Settings() {
                   )}
                   {/* Upload Image Section */}
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">Upload image</label>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">Upload image</label>
                     <div className="flex items-center gap-3 sm:gap-4">
                       <div className="relative group">
                         <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group-hover:border-gray-400 transition-colors">
@@ -1492,31 +1584,73 @@ export default function Settings() {
                     className="w-full"
                   />
 
-                  {/* Change Password Field */}
-                  <div className="space-y-1">
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  {/* Change Password Fields */}
+                  <div className="space-y-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Change Password
                     </label>
-                    <div className="relative">
-                      <input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                        className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-sm placeholder:text-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20"
-                        placeholder="Enter new password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none cursor-pointer"
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      >
-                        {showPassword ? (
-                          <EyeOffIcon className="h-5 w-5" />
-                        ) : (
-                          <EyeIcon className="h-5 w-5" />
-                        )}
-                      </button>
+                    
+                    {/* Current Password */}
+                    <div className="space-y-1">
+                      <label htmlFor="currentPassword" className="block text-xs text-gray-600 dark:text-gray-400">
+                        Current Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="currentPassword"
+                          type={showPassword ? 'text' : 'password'}
+                          value={formData.currentPassword}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                          className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-3 pr-12 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20"
+                          placeholder="Enter current password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none cursor-pointer"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? (
+                            <EyeOffIcon className="h-5 w-5" />
+                          ) : (
+                            <EyeIcon className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* New Password */}
+                    <div className="space-y-1">
+                      <label htmlFor="newPassword" className="block text-xs text-gray-600 dark:text-gray-400">
+                        New Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="newPassword"
+                          type={showPassword ? 'text' : 'password'}
+                          value={formData.newPassword}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, newPassword: e.target.value }))}
+                          className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-3 pr-12 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20"
+                          placeholder="Enter new password (min 6 characters)"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="space-y-1">
+                      <label htmlFor="confirmPassword" className="block text-xs text-gray-600 dark:text-gray-400">
+                        Confirm New Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="confirmPassword"
+                          type={showPassword ? 'text' : 'password'}
+                          value={formData.confirmPassword}
+                          onChange={(e) => setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                          className="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-3 pr-12 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:border-[#F7941D] focus:outline-none focus:ring-2 focus:ring-[#F7941D]/20"
+                          placeholder="Confirm new password"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1544,20 +1678,20 @@ export default function Settings() {
           )}
 
           {activeSection === 'notification' && (
-            <div className="bg-white rounded-lg p-3 mt-17 sm:p-4 md:p-6 lg:p-8 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-3 mt-17 sm:p-4 md:p-6 lg:p-8 shadow-sm transition-colors">
               <div className="space-y-0">
                 {mockNotifications.map((notification, index) => (
                   <div
                     key={notification.id}
                     className={`py-2 ${
-                      index !== mockNotifications.length - 1 ? 'border-b border-gray-200' : ''
+                      index !== mockNotifications.length - 1 ? 'border-b border-gray-200 dark:border-gray-700' : ''
                     }`}
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <p className="flex-1 text-sm text-gray-900 leading-relaxed">
+                      <p className="flex-1 text-sm text-gray-900 dark:text-gray-100 leading-relaxed">
                         {notification.message}
                       </p>
-                      <span className="text-sm text-gray-500 whitespace-nowrap flex-shrink-0">
+                      <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0">
                         {notification.timestamp}
                       </span>
                     </div>
@@ -1569,19 +1703,19 @@ export default function Settings() {
 
           {activeSection === 'account-preferences' && (
             <>
-              <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 lg:p-8 shadow-sm mt-17">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 md:p-6 lg:p-8 shadow-sm mt-17 transition-colors">
                 <div className="space-y-4 sm:space-y-6">
                   {/* Row 1: Dark Mode / Light Mode and Language */}
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                     {/* Dark Mode / Light Mode - Bordered Container */}
-                    <div className="flex-1 rounded-lg border border-gray-200 px-2.5 py-2">
+                    <div className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-sm   text-gray-500">
+                        <label className="text-sm text-gray-500 dark:text-gray-400">
                           Dark Mode / Light Mode
                         </label>
                         <button
                           type="button"
-                          onClick={() => setAccountPreferences((prev) => ({ ...prev, darkMode: !prev.darkMode }))}
+                          onClick={handleDarkModeToggle}
                           className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 ${
                             accountPreferences.darkMode ? 'bg-gray-900' : 'bg-gray-300'
                           }`}
@@ -1603,26 +1737,30 @@ export default function Settings() {
                         <button
                           type="button"
                           onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
-                          className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full justify-between"
+                          className="flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 sm:px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors w-full justify-between"
                         >
-                          <span className="text-sm text-gray-500">
+                          <span className={`text-sm ${accountPreferences.language ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
                             {accountPreferences.language || 'Language'}
                           </span>
-                          <ChevronDownIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          <ChevronDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                         </button>
 
                         {languageDropdownOpen && (
-                          <div className="absolute left-0 right-0 z-50 mt-2 w-full origin-top rounded-lg border border-gray-200 bg-white shadow-lg">
+                          <div className="absolute left-0 right-0 z-50 mt-2 w-full origin-top rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
                             <div className="py-1" role="menu">
                               {languageOptions.map((option) => (
                                 <button
                                   key={option}
                                   type="button"
                                   onClick={() => {
-                                    setAccountPreferences((prev) => ({ ...prev, language: option }))
+                                    handleLanguageChange(option)
                                     setLanguageDropdownOpen(false)
                                   }}
-                                  className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                                  className={`block w-full px-4 py-2 text-left text-sm transition-colors cursor-pointer ${
+                                    accountPreferences.language === option
+                                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-medium'
+                                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                  }`}
                                   role="menuitem"
                                 >
                                   {option}
@@ -1641,26 +1779,30 @@ export default function Settings() {
                       <button
                         type="button"
                         onClick={() => setTimeZoneDropdownOpen(!timeZoneDropdownOpen)}
-                        className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 text-sm hover:bg-gray-50 transition-colors w-full justify-between"
+                        className="flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 sm:px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors w-full justify-between"
                       >
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
                           {accountPreferences.timeZone || 'Time Zone'}
                         </span>
-                        <ChevronDownIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <ChevronDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                       </button>
 
                       {timeZoneDropdownOpen && (
-                        <div className="absolute left-0 right-0 z-50 mt-2 w-full origin-top rounded-lg border border-gray-200 bg-white shadow-lg">
+                        <div className="absolute left-0 right-0 z-50 mt-2 w-full origin-top rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
                           <div className="py-1" role="menu">
                             {timeZoneOptions.map((option) => (
                               <button
                                 key={option}
                                 type="button"
                                 onClick={() => {
-                                  setAccountPreferences((prev) => ({ ...prev, timeZone: option }))
+                                  handleTimezoneChange(option)
                                   setTimeZoneDropdownOpen(false)
                                 }}
-                                className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                                className={`block w-full px-4 py-2 text-left text-sm transition-colors cursor-pointer ${
+                                  accountPreferences.timeZone === option
+                                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-medium'
+                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                }`}
                                 role="menuitem"
                               >
                                 {option}
@@ -1689,24 +1831,39 @@ export default function Settings() {
 
           {activeSection === 'security-settings' && (
             <>
-              <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 lg:p-8 shadow-sm mt-17">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 md:p-6 lg:p-8 shadow-sm mt-17 transition-colors">
                 <div className="space-y-4">
                   {/* Two-Factor Authentication */}
-                  <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-                    <label className="text-sm font-medium text-gray-900">
-                      Two-Factor Authentication
-                    </label>
+                  <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <div>
+                      <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Two-Factor Authentication
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Recommended for better security. Currently managed via email verification.
+                      </p>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setSecuritySettings((prev) => ({ ...prev, twoFactorAuth: !prev.twoFactorAuth }))}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 ${
-                        securitySettings.twoFactorAuth ? 'bg-gray-900' : 'bg-gray-300'
+                      onClick={() => {
+                        const next = !securitySettings.twoFactorAuth
+                        setSecuritySettings((prev) => ({ ...prev, twoFactorAuth: next }))
+                        // Persist preference to backend so we can hook real 2FA later
+                        void profileApi.updateMe({ twoFactorEnabled: next }).catch((error) => {
+                          console.error('Failed to update two-factor preference:', error)
+                          // Revert on error
+                          setSecuritySettings((prev) => ({ ...prev, twoFactorAuth: !next }))
+                          alert('Failed to update two-factor preference. Please try again.')
+                        })
+                      }}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-600 focus:ring-offset-2 ${
+                        securitySettings.twoFactorAuth ? 'bg-gray-900 dark:bg-gray-700' : 'bg-gray-300 dark:bg-gray-600'
                       }`}
                       role="switch"
                       aria-checked={securitySettings.twoFactorAuth}
                     >
                       <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white dark:bg-gray-300 shadow ring-0 transition duration-200 ease-in-out ${
                           securitySettings.twoFactorAuth ? 'translate-x-5' : 'translate-x-0'
                         }`}
                       />
@@ -1718,19 +1875,19 @@ export default function Settings() {
                     <button
                       type="button"
                       onClick={() => setLoginHistoryDropdownOpen(!loginHistoryDropdownOpen)}
-                      className="w-full flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors justify-between"
+                      className="w-full flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 sm:px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors justify-between"
                     >
-                      <span className="text-sm text-gray-500">See recent login history</span>
-                      <ChevronDownIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">See recent login history</span>
+                      <ChevronDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                     </button>
 
                     {loginHistoryDropdownOpen && (
-                      <div className="absolute left-0 z-50 mt-2 w-full origin-top-left rounded-lg border border-gray-200 bg-white shadow-lg">
+                      <div className="absolute left-0 z-50 mt-2 w-full origin-top-left rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg transition-colors">
                         <div className="py-1" role="menu">
-                          <div className="px-4 py-3 text-sm text-gray-600 border-b border-gray-200">
+                          <div className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
                             Recent Login History
                           </div>
-                          <div className="px-4 py-2 text-xs text-gray-500">
+                          <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                             No recent login history available
                           </div>
                         </div>
@@ -1757,32 +1914,32 @@ export default function Settings() {
             
             <div className="">
               {/* Table Section */}
-              <div className="border border-gray-200 shadow-sm rounded-lg overflow-hidden">
+              <div className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden transition-colors">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[600px]">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                       <tr>
-                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700">
+                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                           ID:
                         </th>
-                        <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs sm:text-sm font-medium text-gray-700">
+                        <th className="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                           <div className="flex items-center gap-1">
                             Name
-                            <ChevronDownIcon className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+                            <ChevronDownIcon className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 dark:text-gray-500" />
                           </div>
                         </th>
-                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700">
+                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                           Role
                         </th>
-                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700">
+                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                           Status
                         </th>
-                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700">
+                        <th className="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                           Action
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
                       {paginatedSubAdmins.map((admin) => {
                         const isHighlighted = admin.id === selectedSubAdminId
                         return (
@@ -1790,24 +1947,24 @@ export default function Settings() {
                             key={admin.id}
                             className={`transition-colors ${
                               isHighlighted
-                                ? 'bg-gray-100'
-                                : 'hover:bg-gray-50'
+                                ? 'bg-gray-100 dark:bg-gray-700'
+                                : 'hover:bg-gray-50 dark:hover:bg-gray-700'
                             }`}
                           >
-                            <td className="px-3 sm:px-4 lg:px-6 py-2 text-xs sm:text-sm text-gray-900">
+                            <td className="px-3 sm:px-4 lg:px-6 py-2 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
                               {admin.id}
                             </td>
                             <td className="px-3 sm:px-4 lg:px-6 py-2">
                               <div className="flex items-center gap-2 sm:gap-3">
-                                <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600 flex-shrink-0">
+                                <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300 flex-shrink-0">
                                   {getAvatarInitials(admin.name)}
                                 </div>
-                                <span className="text-xs sm:text-sm text-gray-900 truncate max-w-[150px] sm:max-w-none">
+                                <span className="text-xs sm:text-sm text-gray-900 dark:text-gray-100 truncate max-w-[150px] sm:max-w-none">
                                   {admin.name}
                                 </span>
                               </div>
                             </td>
-                            <td className="px-3 sm:px-4 lg:px-6 py-2 text-xs sm:text-sm text-gray-900">
+                            <td className="px-3 sm:px-4 lg:px-6 py-2 text-xs sm:text-sm text-gray-900 dark:text-gray-100">
                               {admin.role}
                             </td>
                             <td className="px-3 sm:px-4 lg:px-6 py-2">
@@ -1816,10 +1973,10 @@ export default function Settings() {
                             <td className="px-3 sm:px-4 lg:px-6 py-2">
                               <button
                                 type="button"
-                                className="p-1.5 rounded-lg cursor-pointer"
+                                className="p-1.5 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                 aria-label="Actions"
                               >
-                                <MoreVerticalIcon className="h-5 w-5 text-gray-600" />
+                                <MoreVerticalIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                               </button>
                             </td>
                           </tr>
@@ -1831,13 +1988,13 @@ export default function Settings() {
 
                 {/* Pagination */}
                 {totalSubAdminPages > 1 && (
-                  <div className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-200 px-4 py-4 sm:px-6">
+                  <div className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-4 sm:px-6">
                     <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center">
                       <button
                         type="button"
                         onClick={() => handleSubAdminPageChange(subAdminPage - 1)}
                         disabled={subAdminPage === 1}
-                        className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         &lt; Back
                       </button>
@@ -1845,7 +2002,7 @@ export default function Settings() {
                         {getSubAdminPageNumbers().map((page, idx) => {
                           if (page === '...') {
                             return (
-                              <span key={`ellipsis-${idx}`} className="px-2 text-xs sm:text-sm text-gray-600">
+                              <span key={`ellipsis-${idx}`} className="px-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                                 ...
                               </span>
                             )
@@ -1859,7 +2016,7 @@ export default function Settings() {
                               className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
                                 subAdminPage === pageNum
                                   ? 'bg-blue-600 text-white'
-                                  : 'text-gray-600 hover:bg-gray-100'
+                                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                               }`}
                             >
                               {pageNum}
@@ -1871,7 +2028,7 @@ export default function Settings() {
                         type="button"
                         onClick={() => handleSubAdminPageChange(subAdminPage + 1)}
                         disabled={subAdminPage === totalSubAdminPages}
-                        className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Next &gt;
                       </button>

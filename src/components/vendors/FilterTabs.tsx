@@ -28,8 +28,8 @@ export default function FilterTabs({ activeFilter, onFilterChange, counts }: Fil
           onClick={() => onFilterChange(tab.id)}
           className={`relative px-4 p-3 text-sm font-medium transition-colors cursor-pointer ${
             activeFilter === tab.id
-              ? 'bg-transparent text-gray-900 border-b-2 border-gray-900'
-              : 'bg-transparent text-gray-600 hover:bg-transparent border-b-2 border-transparent'
+              ? 'bg-transparent text-[#F7931E] dark:text-[#F7931E] border-b-2 border-[#F7931E]'
+              : 'bg-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 border-b-2 border-transparent'
           }`}
         >
           {tab.label}
@@ -38,12 +38,12 @@ export default function FilterTabs({ activeFilter, onFilterChange, counts }: Fil
               activeFilter === tab.id
                 ? 'bg-[#6B46C1] text-white'
                 : tab.id === 'pending'
-                  ? 'bg-yellow-100 text-yellow-800'
+                  ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
                   : tab.id === 'approved'
-                    ? 'bg-green-100 text-green-800'
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                     : tab.id === 'rejected'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-gray-100 text-gray-800'
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
             }`}
           >
             {tab.count}

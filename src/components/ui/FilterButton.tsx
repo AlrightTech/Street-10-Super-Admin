@@ -40,8 +40,8 @@ export default function FilterButton({
       onClick={onClick}
       className={`relative flex items-center gap-2
          bg-transparent px-0 p-3  text-sm font-medium
-          text-gray-700 cursor-pointer
-           ${active ? 'border-gray-700 border-b-2 ' : 'border-gray-300'} ${className}`}
+          text-gray-700 dark:text-gray-300 cursor-pointer transition-colors
+           ${active ? 'border-gray-700 dark:border-gray-400 border-b-2 ' : 'border-gray-300 dark:border-gray-600'} ${className}`}
     >
       <span>{label}</span>
       {count !== undefined && (

@@ -27,11 +27,11 @@ interface BiddingProductsTableProps {
 export default function BiddingProductsTable({ products, emptyState, onView, onDelete }: BiddingProductsTableProps) {
   if (products.length === 0) {
     return (
-      <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
+      <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-12 text-center transition-colors">
         {emptyState ?? (
           <>
-            <p className="text-base font-semibold text-gray-800">No products to show</p>
-            <p className="mt-1 max-w-sm text-sm text-gray-500">
+            <p className="text-base font-semibold text-gray-800 dark:text-gray-200">No products to show</p>
+            <p className="mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">
               Try adjusting your filters or search criteria to see different products.
             </p>
           </>
@@ -44,7 +44,7 @@ export default function BiddingProductsTable({ products, emptyState, onView, onD
     <Fragment>
       <div className="w-full">
         <div className="overflow-x-auto lg:overflow-x-visible">
-          <table className="w-full border-collapse bg-white">
+          <table className="w-full border-collapse bg-white dark:bg-gray-800 transition-colors">
             <colgroup>
               <col style={{ width: 'auto' }} />
               <col style={{ width: 'auto' }} />
@@ -54,7 +54,7 @@ export default function BiddingProductsTable({ products, emptyState, onView, onD
               <col style={{ width: '140px', minWidth: '140px' }} />
               <col style={{ width: 'auto' }} />
             </colgroup>
-            <thead className="bg-white">
+            <thead className="bg-white dark:bg-gray-800">
               <tr>
                 <TableHeader>Product</TableHeader>
                 <TableHeader>Starting Price</TableHeader>
@@ -65,9 +65,9 @@ export default function BiddingProductsTable({ products, emptyState, onView, onD
                 <TableHeader align="center">Action</TableHeader>
               </tr>
             </thead>
-            <tbody className="bg-white">
+            <tbody className="bg-white dark:bg-gray-800">
               {products.map((product, index) => (
-                <tr key={product.id} className={`hover:bg-gray-50 border-b border-gray-200 ${index === products.length - 1 ? 'border-b-0' : ''}`}>
+                <tr key={product.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700 transition-colors ${index === products.length - 1 ? 'border-b-0' : ''}`}>
                   <TableCell className="py-2">
                     <div className="flex items-center gap-3 min-w-0">
                       {product.imageUrl ? (
@@ -77,22 +77,22 @@ export default function BiddingProductsTable({ products, emptyState, onView, onD
                           className="h-12 w-12 rounded-lg object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
-                          <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                          <svg className="h-6 w-6 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </div>
                       )}
                       <div className="flex flex-col min-w-0 flex-1">
-                        <span className="text-gray-900 font-normal text-sm truncate">{product.name}</span>
-                        <span className="text-gray-500 text-xs mt-0.5 truncate">{product.category}</span>
+                        <span className="text-gray-900 dark:text-gray-100 font-normal text-sm truncate">{product.name}</span>
+                        <span className="text-gray-500 dark:text-gray-400 text-xs mt-0.5 truncate">{product.category}</span>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-900 font-normal py-2 whitespace-nowrap">{product.startingPrice}</TableCell>
-                  <TableCell className="text-sm text-gray-900 font-normal py-2 whitespace-nowrap">{product.currentBid}</TableCell>
-                  <TableCell className="text-sm text-gray-600 font-normal py-2 whitespace-nowrap">{product.bids}</TableCell>
-                  <TableCell className="text-sm text-gray-600 font-normal py-2 whitespace-nowrap">{product.timeLeft}</TableCell>
+                  <TableCell className="text-sm text-gray-900 dark:text-gray-100 font-normal py-2 whitespace-nowrap">{product.startingPrice}</TableCell>
+                  <TableCell className="text-sm text-gray-900 dark:text-gray-100 font-normal py-2 whitespace-nowrap">{product.currentBid}</TableCell>
+                  <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-normal py-2 whitespace-nowrap">{product.bids}</TableCell>
+                  <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-normal py-2 whitespace-nowrap">{product.timeLeft}</TableCell>
                   <TableCell className="py-2 max-w-[140px] text-xs">
                     <div className="flex items-center  justify-start">
                       <BiddingProductStatusBadge status={product.status} />
@@ -156,7 +156,7 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
   return (
     <th
       scope="col"
-      className={`px-4 py-3 text-sm font-semibold text-gray-700 tracking-wider border-b border-gray-300 bg-white whitespace-nowrap ${textAlign}`}
+      className={`px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 tracking-wider border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 whitespace-nowrap transition-colors ${textAlign}`}
     >
       {children}
     </th>

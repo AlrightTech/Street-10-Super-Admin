@@ -19,8 +19,8 @@ export default function CategoriesFilterTabs({ tabs, activeTab, onTabChange, cla
             className={`px-2 sm:px-3 p-4 text-xs sm:text-sm
                font-medium transition-colors duration-150 border-b-2 cursor-pointer ${
               isActive
-                ? 'text-black border-[#F7931E]'
-                : 'text-gray-600 hover:text-gray-900 border-transparent'
+                ? 'text-[#F7931E] dark:text-[#F7931E] border-[#F7931E]'
+                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 border-transparent'
             }`}
           >
             {tab.label}

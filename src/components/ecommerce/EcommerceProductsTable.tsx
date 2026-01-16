@@ -68,10 +68,10 @@ export default function EcommerceProductsTable({ products, emptyState, onProduct
   }
 
   return (
-    <div className="w-full bg-white">
+    <div className="w-full bg-white dark:bg-gray-800 transition-colors">
       <div className="overflow-x-auto">
         <table className="min-w-full w-full border-collapse">
-          <thead className="bg-white">
+          <thead className="bg-white dark:bg-gray-800 transition-colors">
             <tr>
               <TableHeader>Product</TableHeader>
               <TableHeader>Category</TableHeader>
@@ -81,36 +81,36 @@ export default function EcommerceProductsTable({ products, emptyState, onProduct
               <TableHeader align="center">Action</TableHeader>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {products.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50">
+                <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   <TableCell>
                     <div className="flex items-center gap-2 sm:gap-3">
                       {product.imageUrl ? (
                         <img
                           src={product.imageUrl}
                           alt={product.name}
-                          className="h-8 w-8 sm:h-10 sm:w-10 rounded object-cover flex-shrink-0"
+                          className="h-8 w-8 sm:h-10 sm:w-10 rounded object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700"
                         />
                       ) : (
-                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded bg-gray-200 flex items-center justify-center flex-shrink-0">
-                          <svg className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                          <svg className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </div>
                       )}
-                      <span className="text-gray-900 font-medium text-xs sm:text-sm truncate">{product.name}</span>
+                      <span className="text-gray-900 dark:text-gray-100 font-medium text-xs sm:text-sm truncate">{product.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs sm:text-sm text-gray-700">{product.category}</TableCell>
-                  <TableCell className={`text-xs sm:text-sm ${product.price === 'No bids' ? 'text-gray-700' : 'font-medium text-gray-900'}`}>{product.price}</TableCell>
-                  <TableCell className="text-xs sm:text-sm text-gray-700">{product.stock}</TableCell>
+                  <TableCell className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{product.category}</TableCell>
+                  <TableCell className={`text-xs sm:text-sm ${product.price === 'No bids' ? 'text-gray-700 dark:text-gray-300' : 'font-medium text-gray-900 dark:text-gray-100'}`}>{product.price}</TableCell>
+                  <TableCell className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{product.stock}</TableCell>
                   <TableCell>
                     <span
                       className={`inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium ${
                         product.status === 'active'
-                          ? 'bg-[#DCF6E5] text-[#118D57]'
-                          : 'bg-gray-100 text-gray-600'
+                          ? 'bg-[#DCF6E5] dark:bg-green-900/30 text-[#118D57] dark:text-green-300'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                       }`}
                     >
                       {product.status === 'active' ? 'Active' : 'Inactive'}
@@ -144,8 +144,8 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
     <th
       scope="col"
       className={`whitespace-nowrap px-2 sm:px-4 py-1 
-        text-left text-xs sm:text-sm font-semibold text-black
-         tracking-wider border-b border-gray-200 ${textAlign}`}
+        text-left text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300
+         tracking-wider border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${textAlign} transition-colors`}
     >
       {children}
     </th>

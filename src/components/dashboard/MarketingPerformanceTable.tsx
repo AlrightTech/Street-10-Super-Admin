@@ -102,11 +102,9 @@ export default function MarketingPerformanceTable({ campaigns }: MarketingPerfor
         </Button>
       </div>
 
-      <div className=" bg-white rounded-lg
-        shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm transition-colors">
         {/* Filter Buttons */}
-        <div className="mb-3  flex px-4 border-b  border-gray-300
-         flex-wrap gap-3 sm:gap-4 md:gap-6">
+        <div className="mb-3 flex px-4 border-b border-gray-300 dark:border-gray-700 flex-wrap gap-3 sm:gap-4 md:gap-6">
         <FilterButton
           label="All"
           count={allCount}
@@ -134,21 +132,21 @@ export default function MarketingPerformanceTable({ campaigns }: MarketingPerfor
       <div className="w-full overflow-x-auto">
         <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
           <table className="w-full min-w-[800px]">
-            <thead className="sticky top-0 z-10 bg-white">
-              <tr className="border-b border-gray-200">
-                <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2 text-left text-sm font-medium text-gray-700 whitespace-nowrap sm:whitespace-normal bg-white">Campaign</th>
-                <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2 text-left text-sm font-medium text-gray-700 whitespace-nowrap sm:whitespace-normal bg-white">Engagement</th>
-                <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2 text-left text-sm font-medium text-gray-700 whitespace-nowrap sm:whitespace-normal bg-white">Conversion</th>
-                <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2 text-left text-sm font-medium text-gray-700 whitespace-nowrap sm:whitespace-normal bg-white">Status</th>
-                <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2 text-left text-sm font-medium text-gray-700 whitespace-nowrap sm:whitespace-normal bg-white">Action</th>
+            <thead className="sticky top-0 z-10 bg-white dark:bg-gray-800">
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap sm:whitespace-normal bg-white dark:bg-gray-800">Campaign</th>
+                <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap sm:whitespace-normal bg-white dark:bg-gray-800">Engagement</th>
+                <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap sm:whitespace-normal bg-white dark:bg-gray-800">Conversion</th>
+                <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap sm:whitespace-normal bg-white dark:bg-gray-800">Status</th>
+                <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap sm:whitespace-normal bg-white dark:bg-gray-800">Action</th>
               </tr>
             </thead>
-            <tbody className="border-b border-gray-300">
+            <tbody className="border-b border-gray-300 dark:border-gray-700">
               {filteredCampaigns.map((campaign) => (
-                <tr key={campaign.id} className="hover:bg-gray-50 border-b border-gray-200">
-                  <td className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 sm:text-sm text-gray-900 whitespace-nowrap sm:whitespace-normal sm:break-words">{campaign.campaign}</td>
-                  <td className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 sm:text-sm text-gray-600 whitespace-nowrap sm:whitespace-normal sm:break-words">{campaign.engagement}</td>
-                  <td className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 sm:text-sm text-gray-600 whitespace-nowrap sm:whitespace-normal sm:break-words">{campaign.conversion}</td>
+                <tr key={campaign.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
+                  <td className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 sm:text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap sm:whitespace-normal sm:break-words">{campaign.campaign}</td>
+                  <td className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 sm:text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap sm:whitespace-normal sm:break-words">{campaign.engagement}</td>
+                  <td className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 sm:text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap sm:whitespace-normal sm:break-words">{campaign.conversion}</td>
                   <td className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 whitespace-nowrap sm:whitespace-normal">
                     <span
                       className={`inline-flex rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium ${
@@ -197,30 +195,30 @@ export default function MarketingPerformanceTable({ campaigns }: MarketingPerfor
       <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} title="Edit Campaign">
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Campaign Name</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Campaign Name</label>
             <input
               type="text"
               value={editForm.campaign}
               onChange={(e) => setEditForm((prev) => ({ ...prev, campaign: e.target.value }))}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-2 text-sm focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Engagement</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Engagement</label>
             <input
               type="text"
               value={editForm.engagement}
               onChange={(e) => setEditForm((prev) => ({ ...prev, engagement: e.target.value }))}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-2 text-sm focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Conversion</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Conversion</label>
             <input
               type="text"
               value={editForm.conversion}
               onChange={(e) => setEditForm((prev) => ({ ...prev, conversion: e.target.value }))}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-2 text-sm focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
@@ -230,7 +228,7 @@ export default function MarketingPerformanceTable({ campaigns }: MarketingPerfor
                 setEditModalOpen(false)
                 setCampaignToEdit(null)
               }}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
             >
               Cancel
             </button>

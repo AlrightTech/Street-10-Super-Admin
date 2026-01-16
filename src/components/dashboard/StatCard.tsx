@@ -184,20 +184,20 @@ export default function StatCard({ stat }: StatCardProps) {
 
   return (
     <div
-      className={`w-full min-w-0 rounded-2xl border border-gray-200 bg-white p-4 transition-colors ${
-        isClickable ? 'cursor-pointer hover:bg-gray-100' : ''
+      className={`w-full min-w-0 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 transition-colors ${
+        isClickable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''
       }`}
       onClick={isClickable ? handleCardClick : undefined}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           {/* Title */}
-          <h3 className="text-xs sm:text-sm font-normal text-[#555555]">{stat.title}</h3>
+          <h3 className="text-xs sm:text-sm font-normal text-[#555555] dark:text-gray-400">{stat.title}</h3>
           
           {/* Value and Chart Row */}
           <div className="mt-2 sm:mt-3 flex items-center justify-between gap-2">
             {/* Value */}
-            <p className="flex-1 min-w-[160px] sm:min-w-[120px] text-xl sm:text-2xl font-bold text-[#333333] break-words">
+            <p className="flex-1 min-w-[160px] sm:min-w-[120px] text-xl sm:text-2xl font-bold text-[#333333] dark:text-gray-100 break-words">
               {stat.value}
             </p>
             

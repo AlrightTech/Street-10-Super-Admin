@@ -36,17 +36,17 @@ export default function UsersTable({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden transition-colors">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[800px]">
-            <thead className="sticky top-0 z-10 bg-white">
-              <tr className="border-b border-gray-200">
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 bg-white">ID</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 bg-white">
+            <thead className="sticky top-0 z-10 bg-white dark:bg-gray-800">
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800">ID</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800">
                   <div className="flex items-center gap-2">
                     Name
                     <svg
-                      className="h-4 w-4 text-gray-400"
+                      className="h-4 w-4 text-gray-400 dark:text-gray-500"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -55,22 +55,22 @@ export default function UsersTable({
                     </svg>
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 bg-white">Email</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 bg-white">Role</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 bg-white">Total Purchase</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 bg-white">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 bg-white">Join Date</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 bg-white">Action</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800">Email</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800">Role</th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800">Total Purchase</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800">Join Date</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {users.map((user) => (
                 <tr
                   key={user.id}
-                  className="hover:bg-[#f7f7f7] transition-colors"
+                  className="hover:bg-[#f7f7f7] dark:hover:bg-gray-700 transition-colors"
                 >
-                  <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm text-gray-600">{user.id}</td>
-                  <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm text-gray-600">
+                  <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm text-gray-600 dark:text-gray-300">{user.id}</td>
+                  <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                     <Link
                       to={`/users/${user.id}`}
                       className="flex items-center gap-2 sm:gap-3 hover:text-[#FF8C00] transition-colors"
@@ -79,7 +79,7 @@ export default function UsersTable({
                         <img
                           src={user.avatar}
                           alt={user.name}
-                          className="h-7 w-7 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0 border border-gray-200"
+                          className="h-7 w-7 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700"
                           onError={(e) => {
                             // Fallback to initials if image fails to load
                             const target = e.target as HTMLImageElement;

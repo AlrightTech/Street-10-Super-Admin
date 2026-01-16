@@ -45,7 +45,7 @@ export default function VendorPayoutTable({ payouts, onActionSelect, onRowClick,
       <div className="w-full rounded-xl" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
         <div className="overflow-x-auto md:overflow-x-visible">
           <table className="min-w-[1200px] md:min-w-full w-full border-collapse text-sm">
-            <thead className="bg-transparent">
+            <thead className="bg-white dark:bg-gray-800 transition-colors">
               <tr>
                 <TableHeader>ID</TableHeader>
                 <TableHeader>Name</TableHeader>
@@ -59,31 +59,31 @@ export default function VendorPayoutTable({ payouts, onActionSelect, onRowClick,
                 <TableHeader align="center">Action</TableHeader>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {payouts.map((payout, index) => (
                 <tr 
                   key={payout.id} 
-                  className={`border-b border-gray-200 last:border-b-0 ${onRowClick ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
+                  className={`border-b border-gray-200 dark:border-gray-700 last:border-b-0 ${onRowClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors' : ''}`}
                   onClick={() => onRowClick?.(payout)}
                 >
                   <TableCell>{startIndex + index + 1}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Avatar name={payout.name} avatar={payout.avatar} />
-                      <span className="text-gray-700 text-sm font-medium">{payout.name}</span>
-                      <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <span className="text-gray-700 dark:text-gray-300 text-sm font-medium">{payout.name}</span>
+                      <svg className="h-4 w-4 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{payout.businessName}</TableCell>
-                  <TableCell align="right" className="text-sm whitespace-nowrap">{payout.totalSales}</TableCell>
-                  <TableCell align="right" className="text-sm whitespace-nowrap">{payout.commissionRate}</TableCell>
-                  <TableCell align="right" className="text-sm whitespace-nowrap">{payout.totalCommission}</TableCell>
+                  <TableCell className="text-sm text-gray-700 dark:text-gray-300">{payout.businessName}</TableCell>
+                  <TableCell align="right" className="text-sm whitespace-nowrap text-gray-700 dark:text-gray-300">{payout.totalSales}</TableCell>
+                  <TableCell align="right" className="text-sm whitespace-nowrap text-gray-700 dark:text-gray-300">{payout.commissionRate}</TableCell>
+                  <TableCell align="right" className="text-sm whitespace-nowrap text-gray-700 dark:text-gray-300">{payout.totalCommission}</TableCell>
                   <TableCell>
                     <StatusBadge status={payout.status} />
                   </TableCell>
-                  <TableCell align="right" className="text-sm whitespace-nowrap">{payout.totalPayout}</TableCell>
+                  <TableCell align="right" className="text-sm whitespace-nowrap text-gray-700 dark:text-gray-300">{payout.totalPayout}</TableCell>
                   <TableCell>
                     <PaymentStatusBadge status={payout.paymentStatus} />
                   </TableCell>
@@ -115,8 +115,8 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
       className={`whitespace-nowrap py-2
          text-xs
           sm:text-sm font-semibold tracking-wide
-           text-gray-700 border-b border-gray-300
-            bg-white ${textAlign} first:pl-4 sm:first:pl-6 last:pr-4 sm:last:pr-6`}
+           text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-700
+            bg-white dark:bg-gray-800 ${textAlign} first:pl-4 sm:first:pl-6 last:pr-4 sm:last:pr-6 transition-colors`}
     >
       {children}
     </th>
@@ -136,7 +136,7 @@ function TableCell({ children, className = '', align = 'left', onClick }: TableC
   return (
     <td
       onClick={onClick}
-      className={`py-2 text-gray-700 ${textAlign} text-sm first:pl-4
+      className={`py-2 text-gray-700 dark:text-gray-300 ${textAlign} text-sm first:pl-4
        sm:first:pl-6 last:pr-4 sm:last:pr-6 ${className}`}
     >
       {children}

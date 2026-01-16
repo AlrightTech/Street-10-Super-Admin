@@ -1,67 +1,72 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { CalendarIcon, EditIcon } from '../components/icons/Icons'
-import { type Product } from '../components/marketing/ProductsTable'
+import { CalendarIcon, ClockIcon, EditIcon } from '../components/icons/Icons'
 import MarketingStatusBadge from '../components/marketing/MarketingStatusBadge'
+import { featuredProductsApi } from '../services/featured-products.api'
 
-// Mock data - in a real app, this would come from an API
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: '2',
-    product: 'Payment Reminder',
-    vendor: 'User',
-    category: 'Reminder',
-    startDate: 'Dec 22, 2024',
-    endDate: 'Dec 22, 2024',
-    priority: 'Medium',
-    status: 'expired',
-  },
-  {
-    id: '6',
-    product: 'Flash Sale',
-    vendor: 'User',
-    category: 'Reminder',
-    startDate: 'Immediate',
-    endDate: 'Immediate',
-    priority: 'High',
-    status: 'expired',
-  },
-]
+// Helper function to format date from ISO string to "DD MMM YYYY"
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString)
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const day = date.getDate()
+  const month = months[date.getMonth()]
+  const year = date.getFullYear()
+  return `${day} ${month} ${year}`
+}
+
+// Helper function to format time from ISO string to "HH:MM AM/PM"
+const formatTime = (dateString: string): string => {
+  const date = new Date(dateString)
+  let hours = date.getHours()
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12
+  hours = hours ? hours : 12
+  return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`
+}
 
 export default function ProductExpiredDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [product, setProduct] = useState<Product | null>(null)
+  const [product, setProduct] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (id) {
-      const found = MOCK_PRODUCTS.find((p) => p.id === id && p.status === 'expired')
-      if (found) {
-        setProduct(found)
-      } else {
-        // Fallback to default expired data
-        setProduct(MOCK_PRODUCTS[0])
+    const fetchProduct = async () => {
+      if (!id) return
+
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const featuredProduct = await featuredProductsApi.getById(id)
+        setProduct(featuredProduct)
+      } catch (err: any) {
+        console.error('Error fetching featured product:', err)
+        setError(err.response?.data?.message || 'Failed to load featured product')
+      } finally {
+        setIsLoading(false)
       }
     }
+
+    fetchProduct()
   }, [id])
 
-  if (!product) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-gray-600">Loading product details...</p>
+        <p className="text-gray-600 dark:text-gray-400">Loading product details...</p>
       </div>
     )
   }
 
-  const productData = {
-    id: product.id,
-    product: product.product || 'Payment Reminder',
-    vendor: product.vendor || 'User',
-    category: product.category || 'Reminder',
-    startDate: product.startDate || 'Dec 22, 2024',
-    endDate: product.endDate || 'Dec 22, 2024',
-    priority: product.priority || 'Medium',
-    status: product.status || 'expired',
+  if (error || !product) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-red-600 dark:text-red-400">{error || 'Product not found'}</p>
+      </div>
+    )
   }
 
   const handleEdit = () => {
@@ -76,44 +81,44 @@ export default function ProductExpiredDetail() {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Marketing</h1>
-        <p className="text-sm text-gray-600 mt-1">Dashboard - Finance</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Marketing</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Dashboard - Products</p>
       </div>
 
       {/* Main Navigation Bar */}
-      <nav className="flex flex-wrap items-center gap-1 sm:gap-2 md:gap-4 border-b border-gray-200 overflow-x-auto pt-3 pb-1">
+      <nav className="flex flex-wrap items-center gap-1 sm:gap-2 md:gap-4 border-b border-gray-200 dark:border-gray-700 overflow-x-auto pt-3 pb-1">
         <button
           type="button"
-          onClick={() => navigate('/marketing')}
-          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+          onClick={() => navigate('/marketing?tab=story-highlight')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
         >
           Story Highlight
         </button>
         <button
           type="button"
-          onClick={() => navigate('/marketing')}
-          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+          onClick={() => navigate('/marketing?tab=banners')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
         >
           Banners
         </button>
         <button
           type="button"
-          onClick={() => navigate('/marketing')}
-          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+          onClick={() => navigate('/marketing?tab=pop-up')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
         >
           Pop-Up
         </button>
         <button
           type="button"
-          onClick={() => navigate('/marketing')}
-          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 hover:text-gray-900"
+          onClick={() => navigate('/marketing?tab=push-notifications')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer"
         >
           Push Notifications
         </button>
         <button
           type="button"
-          onClick={() => navigate('/marketing')}
-          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-[#F7931E] border-b-2 border-[#F7931E]"
+          onClick={() => navigate('/marketing?tab=product')}
+          className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap text-[#F7931E] border-b-2 border-[#F7931E] cursor-pointer"
         >
           Product
         </button>
@@ -121,18 +126,21 @@ export default function ProductExpiredDetail() {
 
       {/* Product Detail Section */}
       <div className="space-y-4">
-        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Product Detail</h2>
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Product Detail</h2>
 
-        <div className="rounded-xl bg-white shadow-sm p-4 sm:p-6">
+        <div className="rounded-xl bg-white dark:bg-gray-800 shadow-sm p-4 sm:p-6">
           <div className="space-y-4 sm:space-y-6">
             {/* Product Status */}
             <div className="flex items-center gap-2">
-              <MarketingStatusBadge status={productData.status} />
+              <MarketingStatusBadge status={product.status} />
             </div>
 
             {/* Product Name */}
             <div>
-              <p className="text-base sm:text-lg font-bold text-gray-900">{productData.product}</p>
+              <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">{product.product.title}</p>
+              {product.product.description && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{product.product.description}</p>
+              )}
             </div>
 
             {/* Product Details - Two Columns */}
@@ -140,46 +148,66 @@ export default function ProductExpiredDetail() {
               {/* Left Column */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">Vendor</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Vendor</span>
                 </div>
                 <div className="pl-0">
-                  <span className="text-sm text-gray-900">{productData.vendor}</span>
+                  <span className="text-sm text-gray-900 dark:text-gray-100">Super Admin</span>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
-                  <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm text-gray-500">Start Date</span>
+                  <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Start Date</span>
                 </div>
                 <div className="pl-6">
-                  <span className="text-sm text-gray-900">{productData.startDate}</span>
+                  <span className="text-sm text-gray-900 dark:text-gray-100">{formatDate(product.startDate)}</span>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
-                  <CalendarIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm text-gray-500">End Date</span>
+                  <ClockIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Start Time</span>
                 </div>
                 <div className="pl-6">
-                  <span className="text-sm text-gray-900">{productData.endDate}</span>
+                  <span className="text-sm text-gray-900 dark:text-gray-100">{formatTime(product.startDate)}</span>
+                </div>
+                <div className="flex items-center gap-2 pt-2">
+                  <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">End Date</span>
+                </div>
+                <div className="pl-6">
+                  <span className="text-sm text-gray-900 dark:text-gray-100">{formatDate(product.endDate)}</span>
+                </div>
+                <div className="flex items-center gap-2 pt-2">
+                  <ClockIcon className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">End Time</span>
+                </div>
+                <div className="pl-6">
+                  <span className="text-sm text-gray-900 dark:text-gray-100">{formatTime(product.endDate)}</span>
                 </div>
               </div>
 
               {/* Right Column - Category & Priority */}
               <div className="space-y-4 flex gap-8">
                 <div>
-                  <span className="text-sm text-gray-500">Category</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Category</span>
                   <div className="mt-2">
-                    <span className="inline-flex items-center rounded-md px-3 py-1 text-xs font-medium bg-purple-600 text-white">
-                      {productData.category}
-                    </span>
+                    {product.product.categories && product.product.categories.length > 0 && product.product.categories[0]?.category ? (
+                      <span className="inline-flex items-center rounded-md px-3 py-1 text-xs font-medium bg-purple-600 text-white">
+                        {product.product.categories[0].category.name}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-md px-3 py-1 text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        Uncategorized
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div>
-                  <span className="text-sm text-gray-500">Priority</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Priority</span>
                   <div className="mt-2">
                     <span className={`inline-flex items-center rounded-md px-3 py-1 text-xs font-medium ${
-                      productData.priority === 'High' ? 'bg-red-100 text-red-600' : 
-                      productData.priority === 'Medium' ? 'bg-yellow-100 text-yellow-600' : 
-                      'bg-gray-100 text-gray-600'
+                      product.priority === 'high' ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 
+                      product.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400' : 
+                      'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                     }`}>
-                      {productData.priority}
+                      {product.priority === 'high' ? 'High' : product.priority === 'medium' ? 'Medium' : 'Low'}
                     </span>
                   </div>
                 </div>
@@ -191,7 +219,7 @@ export default function ProductExpiredDetail() {
               <button
                 type="button"
                 onClick={handleCreateNew}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-white bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap w-full sm:w-auto cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-white dark:border-gray-800 bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap w-full sm:w-auto cursor-pointer"
               >
                 Create New Product
               </button>
@@ -210,4 +238,3 @@ export default function ProductExpiredDetail() {
     </div>
   )
 }
-

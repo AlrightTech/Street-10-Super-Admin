@@ -32,8 +32,8 @@ export default function MarketingFilterTabs({ tabs, activeTab, onTabChange, clas
             onClick={() => onTabChange(tab.key)}
             className={`inline-flex items-center px-2 sm:px-3 pt-1.5 pb-3 text-sm font-medium transition-colors duration-150 cursor-pointer ${
               isActive 
-                ? 'text-black border-b-2 border-black relative z-10 -mb-px' 
-                : 'text-gray-600 hover:text-gray-900 border-b-2 border-transparent'
+                ? 'text-[#F7931E] dark:text-[#F7931E] border-b-2 border-[#F7931E] relative z-10 -mb-px' 
+                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 border-b-2 border-transparent'
             }`}
           >
             {tab.icon}

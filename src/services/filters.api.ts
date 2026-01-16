@@ -10,6 +10,7 @@ export interface Filter {
     en?: { label: string; placeholder?: string };
     ar?: { label: string; placeholder?: string };
   };
+  iconUrl?: string;
   isIndexed: boolean;
   createdAt: string;
   updatedAt: string;
@@ -21,6 +22,7 @@ export interface CreateFilterData {
   options?: any;
   validation?: any;
   i18n?: Filter['i18n'];
+  iconUrl?: string;
   isIndexed?: boolean;
 }
 

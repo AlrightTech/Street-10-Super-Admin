@@ -4,6 +4,7 @@ import { UploadIcon } from '../components/icons/Icons'
 import SelectDropdown from '../components/ui/SelectDropdown'
 import { productsApi } from '../services/products.api'
 import { categoriesApi, type Category } from '../services/categories.api'
+import { filtersApi, type Filter as BackendFilter } from '../services/filters.api'
 
 export default function AddEcommerceProduct() {
   const navigate = useNavigate()
@@ -30,6 +31,8 @@ export default function AddEcommerceProduct() {
   const [documentFiles, setDocumentFiles] = useState<File[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
+  const [availableFilters, setAvailableFilters] = useState<BackendFilter[]>([])
+  const [selectedFilters, setSelectedFilters] = useState<Array<{ filterId: string; value: string }>>([])
 
   // Fetch categories from API
   useEffect(() => {
@@ -105,6 +108,20 @@ export default function AddEcommerceProduct() {
     }
   }
 
+  const handleAddFilter = () => {
+    setSelectedFilters([...selectedFilters, { filterId: '', value: '' }])
+  }
+
+  const handleFilterChange = (index: number, field: 'filterId' | 'value', value: string) => {
+    const updated = [...selectedFilters]
+    updated[index] = { ...updated[index], [field]: value }
+    setSelectedFilters(updated)
+  }
+
+  const removeFilter = (index: number) => {
+    setSelectedFilters(selectedFilters.filter((_, i) => i !== index))
+  }
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -142,6 +159,29 @@ export default function AddEcommerceProduct() {
   const removeDocumentFile = (index: number) => {
     setDocumentFiles(documentFiles.filter((_, i) => i !== index))
   }
+
+  // Load filters for selected category
+  useEffect(() => {
+    const loadCategoryFilters = async () => {
+      if (!formData.categoryId) {
+        setAvailableFilters([])
+        setSelectedFilters([])
+        return
+      }
+      try {
+        const categoryFilters = await categoriesApi.getCategoryFilters(formData.categoryId)
+        const filterIds = categoryFilters.map((cf: any) => cf.filterId)
+        const allFilters = await filtersApi.getAll()
+        const relevantFilters = allFilters.filter((f: BackendFilter) => filterIds.includes(f.id))
+        setAvailableFilters(relevantFilters)
+        // Reset selected filters when category changes
+        setSelectedFilters([])
+      } catch (err: any) {
+        console.error('Error fetching category filters for e-commerce product:', err)
+      }
+    }
+    loadCategoryFilters()
+  }, [formData.categoryId])
 
   // Convert files to data URLs (for now - in production, upload to S3/DO Spaces first)
   const convertFileToDataURL = (file: File): Promise<string> => {
@@ -213,6 +253,16 @@ export default function AddEcommerceProduct() {
         productUrlSlug: formData.productUrlSlug || undefined,
       }
 
+      // Prepare filter values (same structure as bidding products)
+      const filterValues: Array<{ filterId: string; value: string }> = []
+      for (const filter of selectedFilters) {
+        if (!filter.filterId || !filter.value.trim()) continue
+        filterValues.push({
+          filterId: filter.filterId,
+          value: filter.value.trim(),
+        })
+      }
+
       // Create product via API
       await productsApi.create({
         title: formData.productTitle,
@@ -224,6 +274,7 @@ export default function AddEcommerceProduct() {
         categoryIds: [formData.categoryId],
         attributes: attributes,
         mediaUrls: mediaUrls,
+        filterValues: filterValues.length > 0 ? filterValues : undefined,
       })
 
       setSuccessMessage('Product created successfully!')
@@ -580,6 +631,109 @@ export default function AddEcommerceProduct() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Product Filters Section */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+          <h2 className="text-base font-semibold text-gray-900">Product Filters</h2>
+          <p className="text-sm text-gray-600">
+            Select filters from the category and set their values for this product.
+            These filters will appear on the product detail page on the website.
+          </p>
+
+          {selectedFilters.map((filter, index) => {
+            const filterDetails = availableFilters.find((f: BackendFilter) => f.id === filter.filterId)
+            const filterOptions = (filterDetails as any)?.options?.values || []
+            const filterType = filterDetails?.type || 'text'
+
+            return (
+              <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-gray-700">Filter {index + 1}</h3>
+                  <button
+                    type="button"
+                    onClick={() => removeFilter(index)}
+                    className="text-red-600 hover:text-red-700 text-sm font-medium cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-[#888888] mb-2">
+                      Select Filter <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={filter.filterId}
+                      onChange={(e) => handleFilterChange(index, 'filterId', e.target.value)}
+                      className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-[#F7931E]"
+                      required
+                    >
+                      <option value="">-- Select Filter --</option>
+                      {availableFilters.map((f: BackendFilter) => (
+                        <option key={f.id} value={f.id}>
+                          {f.i18n?.en?.label || f.key}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {filter.filterId && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#888888] mb-2">
+                        Filter Value <span className="text-red-500">*</span>
+                      </label>
+                      {filterType === 'number' ? (
+                        <input
+                          type="number"
+                          value={filter.value}
+                          onChange={(e) => handleFilterChange(index, 'value', e.target.value)}
+                          placeholder="Enter value"
+                          className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-[#F7931E]"
+                          required
+                        />
+                      ) : filterOptions.length > 0 ? (
+                        <select
+                          value={filter.value}
+                          onChange={(e) => handleFilterChange(index, 'value', e.target.value)}
+                          className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-[#F7931E]"
+                          required
+                        >
+                          <option value="">-- Select Value --</option>
+                          {filterOptions.map((opt: string) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={filter.value}
+                          onChange={(e) => handleFilterChange(index, 'value', e.target.value)}
+                          placeholder="Enter value"
+                          className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-[#F7931E]"
+                          required
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+
+          <button
+            type="button"
+            onClick={handleAddFilter}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#F7931E] bg-[#FDF4EB] rounded-lg hover:bg-[#F9E8D3] transition-colors cursor-pointer"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Filter
+          </button>
         </div>
 
         {/* Error Message */}

@@ -35,7 +35,7 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
       <div className="w-full overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full w-full border-collapse">
-            <thead className="bg-white">
+            <thead className="bg-white dark:bg-gray-800 transition-colors">
               <tr>
                 <TableHeader>Order ID</TableHeader>
                 <TableHeader withIcon>Name</TableHeader>
@@ -47,7 +47,7 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                 <TableHeader align="center">Action</TableHeader>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {orders.map((order, idx) => {
                 const orderNumber = startIndex + idx + 1
                 const isHighlighted = orderNumber === 5 // Highlight row 5 as per reference image
@@ -57,12 +57,12 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                   <tr 
                     key={order.id} 
                     onClick={() => navigate(`/orders/${order.id.replace('#', '')}`)}
-                    className={`${isHighlighted ? 'bg-gray-50' : ''} 
-                    hover:bg-gray-50 transition-colors cursor-pointer
-                     ${!isLastRow ? 'border-b border-gray-200' : ''}`}
+                    className={`${isHighlighted ? 'bg-gray-50 dark:bg-gray-700' : ''} 
+                    hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer
+                     ${!isLastRow ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
                   >
                     <TableCell>
-                      <span className="text-sm text-gray-900">
+                      <span className="text-sm text-gray-900 dark:text-gray-100">
                         {order.id}
                       </span>
                     </TableCell>
@@ -79,7 +79,7 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                               onNameClick(order)
                             }
                           }}
-                          className={`font-medium text-gray-900 ${onNameClick ? 'cursor-pointer hover:text-gray-700 focus:text-gray-700 focus:outline-none' : ''}`}
+                          className={`font-medium text-gray-900 dark:text-gray-100 ${onNameClick ? 'cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 focus:text-gray-700 dark:focus:text-gray-300 focus:outline-none' : ''}`}
                         >
                           {order.customerName}
                         </span>
@@ -120,13 +120,13 @@ function TableHeader({ children, align = 'left', withIcon = false }: TableHeader
       scope="col"
       className={`whitespace-nowrap px-2 py-2 
         text-sm font-semibold 
-        tracking-wide text-gray-600 
-        border-b border-gray-200 bg-white ${textAlign}`}
+        tracking-wide text-gray-600 dark:text-gray-300 
+        border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${textAlign} transition-colors`}
     >
       <span className="inline-flex items-center gap-1.5">
         {children}
         {withIcon && (
-          <svg className="h-3.5 w-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" aria-hidden="true" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9l6 6 6-6" />
           </svg>
         )}
@@ -153,7 +153,7 @@ function TableCell({ children, className = '', align = 'left', onClick }: TableC
     <td
       onClick={onClick}
       className={`px-2 ${paddingClass} text-sm
-       text-gray-700 ${textAlign} ${className}`}
+       text-gray-700 dark:text-gray-300 ${textAlign} ${className}`}
     >
       {children}
     </td>

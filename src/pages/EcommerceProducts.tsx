@@ -621,7 +621,7 @@ export default function EcommerceProducts() {
         </div>
 
         {/* Products Table */}
-        <div className="rounded-xl bg-white shadow-sm">
+        <div className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
           <div className="py-2 sm:py-4">
             {loading ? (
               <div className="flex min-h-[240px] flex-col items-center justify-center py-12 text-center">
@@ -763,8 +763,8 @@ export default function EcommerceProducts() {
         <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">Admin Orders</h2>
 
         {/* Orders Table */}
-        <div className="rounded-xl bg-white shadow-sm">
-          <header className="flex flex-col gap-3 border-b border-gray-200 px-4 py-3
+        <div className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
+          <header className="flex flex-col gap-3 border-b border-gray-200 dark:border-gray-700 px-4 py-3
             sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-0">
             <div className="flex-1 flex items-center min-w-0">
               <OrdersFilterTabs
@@ -785,12 +785,12 @@ export default function EcommerceProducts() {
                   placeholder="Search Order #"
                   value={orderSearch}
                   onChange={(e) => handleOrderSearchChange(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white py-1.5 pl-7 pr-2 text-xs sm:text-sm outline-none placeholder:text-gray-400 focus:border-[#FF8C00] focus:ring-1 focus:ring-[#FF8C00]"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 py-1.5 pl-7 pr-2 text-xs sm:text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:ring-1 focus:ring-[#FF8C00] transition-colors"
                 />
               </div>
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 transition hover:bg-gray-50 dark:hover:bg-gray-600 whitespace-nowrap cursor-pointer w-full sm:w-auto"
               >
                 <FilterIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Filter
@@ -807,7 +807,7 @@ export default function EcommerceProducts() {
           {/* Pagination */}
           <footer className="flex flex-col 
           sm:flex-row justify-end items-center gap-3 
-          border-t border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
+          border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 sm:py-4 transition-colors">
             <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
               <button
                 type="button"
@@ -826,7 +826,7 @@ export default function EcommerceProducts() {
                     className={`h-8 w-8 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition ${
                       ordersPage === page
                         ? 'bg-[#6B46C1] text-white'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
                   >
                     {page}

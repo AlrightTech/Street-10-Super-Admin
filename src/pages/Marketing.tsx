@@ -1,18 +1,24 @@
 import { useMemo, useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import MarketingFilterTabs, { type MarketingFilterKey } from '../components/marketing/MarketingFilterTabs'
 import StoryHighlightTable, { type StoryHighlight } from '../components/marketing/StoryHighlightTable'
 import BannersTable, { type Banner } from '../components/marketing/BannersTable'
+import PopupsTable, { type Popup } from '../components/marketing/PopupsTable'
 import ProductsTable, { type Product } from '../components/marketing/ProductsTable'
 import PushNotificationsTable, { type PushNotification } from '../components/marketing/PushNotificationsTable'
 import { type StoryHighlightActionType } from '../components/marketing/StoryHighlightActionMenu'
 import { type BannerActionType } from '../components/marketing/BannersActionMenu'
+import { type PopupActionType } from '../components/marketing/PopupsActionMenu'
 import { type ProductActionType } from '../components/marketing/ProductsActionMenu'
 import { type PushNotificationActionType } from '../components/marketing/PushNotificationsActionMenu'
 import FilterDropdown from '../components/finance/FilterDropdown'
 import SearchBar from '../components/ui/SearchBar'
 import { CalendarIcon, PlusIcon, FilterIcon, XIcon } from '../components/icons/Icons'
 import { storyHighlightsApi, type StoryHighlight as ApiStoryHighlight } from '../services/story-highlights.api'
+import { bannersApi, type Banner as ApiBanner } from '../services/banners.api'
+import { popupsApi, type Popup as ApiPopup } from '../services/popups.api'
+import { featuredProductsApi, type FeaturedProduct as ApiFeaturedProduct } from '../services/featured-products.api'
+import { type MarketingStatus } from '../components/marketing/MarketingStatusBadge'
 
 // Helper function to format date from ISO string to "DD MMM YYYY"
 const formatDate = (dateString: string): string => {
@@ -39,188 +45,85 @@ const convertApiToUI = (apiHighlight: ApiStoryHighlight): StoryHighlight => {
   }
 }
 
-// Mock data for banners
-const MOCK_BANNERS: Banner[] = [
-  {
-    id: '1',
-    thumbnail: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=100&h=100&fit=crop',
-    title: 'Explore Our New Offers',
-    type: 'Image',
-    startDate: '12 Aug 2025',
-    endDate: '12 Aug 2025',
-    audience: 'User',
-    priority: 'High',
-    status: 'active',
-  },
-  {
-    id: '2',
-    thumbnail: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100&h=100&fit=crop',
-    title: 'Explore Our New Offers',
-    type: 'Video',
-    startDate: '12 Aug 2025',
-    endDate: '12 Aug 2025',
-    audience: 'Vendor',
-    priority: 'High',
-    status: 'active',
-  },
-  {
-    id: '3',
-    thumbnail: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=100&h=100&fit=crop',
-    title: 'Explore Our New Offers',
-    type: 'Video',
-    startDate: '12 Aug 2025',
-    endDate: '12 Aug 2025',
-    audience: 'User',
-    priority: 'Medium',
-    status: 'expired',
-  },
-  {
-    id: '4',
-    thumbnail: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=100&h=100&fit=crop',
-    title: 'Explore Our New Offers',
-    type: 'Image',
-    startDate: '12 Aug 2025',
-    endDate: '12 Aug 2025',
-    audience: 'Vendor',
-    priority: 'Medium',
-    status: 'scheduled',
-  },
-  // Add more mock data to reach 47 total
-  ...Array.from({ length: 43 }, (_, i) => {
-    let status: 'active' | 'scheduled' | 'expired' = 'active'
-    // First 6: expired
-    if (i < 6) {
-      status = 'expired'
-    }
-    // Next 5: scheduled (to reach 6 total including the 1 above)
-    else if (i < 11) {
-      status = 'scheduled'
-    }
-    // Next 3: active (to reach 6 total including the 2 above)
-    else if (i < 14) {
-      status = 'active'
-    }
-    // Rest: distribute evenly
-    else {
-      const remainder = (i - 14) % 3
-      status = remainder === 0 ? 'active' : remainder === 1 ? 'scheduled' : 'expired'
-    }
-    
-    return {
-      id: String(i + 5),
-      thumbnail: `https://images.unsplash.com/photo-${1552519507 + i}?w=100&h=100&fit=crop`,
-      title: 'Explore Our New Offers',
-      type: (i % 2 === 0 ? 'Image' : 'Video') as 'Image' | 'Video',
-      startDate: '12 Aug 2025',
-      endDate: '12 Aug 2025',
-      audience: i % 2 === 0 ? 'User' : 'Vendor',
-      priority: (i % 3 === 0 ? 'High' : i % 3 === 1 ? 'Medium' : 'Low') as 'High' | 'Medium' | 'Low',
-      status: status,
-    }
-  }),
-]
+// Helper function to normalize image URL (handle relative paths)
+const normalizeImageUrl = (url: string | null | undefined): string => {
+  if (!url) return ''
+  // If it's already a full URL (http/https), return as is
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url
+  }
+  // If it's a relative path starting with /, try to use it as is
+  // The browser will resolve it relative to the current domain
+  if (url.startsWith('/')) {
+    return url
+  }
+  // Otherwise, prepend / to make it a root-relative path
+  return `/${url}`
+}
 
-// Initial mock data for products
-const INITIAL_MOCK_PRODUCTS: Product[] = [
-  {
-    id: '1',
-    product: 'Flash Sale',
-    vendor: 'Vendor',
-    category: 'Promo',
-    startDate: 'Immediate',
-    endDate: 'Immediate',
-    priority: 'High',
-    status: 'active',
-  },
-  {
-    id: '2',
-    product: 'Payment Reminder',
-    vendor: 'User',
-    category: 'Reminder',
-    startDate: 'Dec 22, 2024',
-    endDate: 'Dec 22, 2024',
-    priority: 'Medium',
-    status: 'expired',
-  },
-  {
-    id: '3',
-    product: 'System Maintenance',
-    vendor: 'User',
-    category: '$100',
-    startDate: 'Immediate',
-    endDate: 'Immediate',
-    priority: 'Low',
-    status: 'active',
-  },
-  {
-    id: '4',
-    product: 'Flash Sale',
-    vendor: 'Vendor',
-    category: 'Info',
-    startDate: 'Dec 22, 2024',
-    endDate: 'Dec 22, 2024',
-    priority: 'High',
-    status: 'scheduled',
-  },
-  {
-    id: '5',
-    product: 'System Maintenance',
-    vendor: 'User',
-    category: 'Promo',
-    startDate: 'Immediate',
-    endDate: 'Immediate',
-    priority: 'High',
-    status: 'active',
-  },
-  {
-    id: '6',
-    product: 'Flash Sale',
-    vendor: 'User',
-    category: 'Reminder',
-    startDate: 'Immediate',
-    endDate: 'Immediate',
-    priority: 'High',
-    status: 'expired',
-  },
-  // Add more mock data to reach 47 total
-  // Distribution: 5 active (already have 3), 6 scheduled (already have 1), 6 expired (already have 2)
-  // So we need: 2 more active, 5 more scheduled, 4 more expired, and 29 more with mixed statuses
-  ...Array.from({ length: 41 }, (_, i) => {
-    let status: 'active' | 'scheduled' | 'expired' = 'active'
-    // First 2: active (to reach 5 total)
-    if (i < 2) {
-      status = 'active'
-    }
-    // Next 5: scheduled (to reach 6 total)
-    else if (i < 7) {
-      status = 'scheduled'
-    }
-    // Next 4: expired (to reach 6 total)
-    else if (i < 11) {
-      status = 'expired'
-    }
-    // Rest: distribute evenly
-    else {
-      const remainder = (i - 11) % 3
-      status = remainder === 0 ? 'active' : remainder === 1 ? 'scheduled' : 'expired'
-    }
-    
-    const products = ['Flash Sale', 'Payment Reminder', 'System Maintenance', 'New Product', 'Special Offer']
-    const vendors = ['Vendor', 'User']
-    const categories = ['Promo', 'Reminder', 'Info', '$100', 'Category A', 'Category B']
-    
-    return {
-      id: String(i + 7),
-      product: products[i % products.length],
-      vendor: vendors[i % vendors.length],
-      category: categories[i % categories.length],
-      startDate: i % 3 === 0 ? 'Immediate' : 'Dec 22, 2024',
-      endDate: i % 3 === 0 ? 'Immediate' : 'Dec 22, 2024',
-      priority: (i % 3 === 0 ? 'High' : i % 3 === 1 ? 'Medium' : 'Low') as 'High' | 'Medium' | 'Low',
-      status: status,
-    }
-  }),
-]
+// Helper function to convert API banner to UI banner
+const convertApiBannerToUI = (apiBanner: ApiBanner): Banner => {
+  // Get thumbnail - prioritize thumbnailUrl, then first mediaUrl, then empty string
+  let thumbnail = ''
+  if (apiBanner.thumbnailUrl) {
+    thumbnail = normalizeImageUrl(apiBanner.thumbnailUrl)
+  } else if (apiBanner.mediaUrls && Array.isArray(apiBanner.mediaUrls) && apiBanner.mediaUrls.length > 0) {
+    thumbnail = normalizeImageUrl(apiBanner.mediaUrls[0])
+  }
+  
+  return {
+    id: apiBanner.id,
+    thumbnail: thumbnail,
+    title: apiBanner.title,
+    type: apiBanner.type === 'image' ? 'Image' : 'Video',
+    startDate: formatDate(apiBanner.startDate),
+    endDate: formatDate(apiBanner.endDate),
+    audience: apiBanner.audience === 'user' ? 'User' : 'Vendor',
+    priority: apiBanner.priority === 'high' ? 'High' : apiBanner.priority === 'medium' ? 'Medium' : 'Low',
+    status: apiBanner.status,
+  }
+}
+
+// Helper function to convert API popup to UI popup
+const convertApiPopupToUI = (apiPopup: ApiPopup): Popup => {
+  // Use status from API (already calculated on backend)
+  let status: MarketingStatus = 'scheduled'
+  if (apiPopup.status === 'active') {
+    status = 'active'
+  } else if (apiPopup.status === 'expired') {
+    status = 'expired'
+  } else {
+    status = 'scheduled'
+  }
+
+  return {
+    id: apiPopup.id,
+    imageUrl: normalizeImageUrl(apiPopup.imageUrl) || '',
+    title: apiPopup.title,
+    redirectType: apiPopup.redirectType === 'product' ? 'Product' : apiPopup.redirectType === 'category' ? 'Category' : 'External',
+    startDate: formatDate(apiPopup.startDate),
+    endDate: formatDate(apiPopup.endDate),
+    priority: apiPopup.priority === 'high' ? 'High' : apiPopup.priority === 'medium' ? 'Medium' : 'Low',
+    status: status,
+    deviceTarget: apiPopup.deviceTarget === 'desktop' ? 'Desktop' : apiPopup.deviceTarget === 'mobile' ? 'Mobile' : 'Both',
+  }
+}
+
+// Helper function to convert API featured product to UI product
+const convertApiProductToUI = (apiProduct: ApiFeaturedProduct): Product => {
+  return {
+    id: apiProduct.id,
+    product: apiProduct.product.title,
+    vendor: 'Super Admin', // Featured products are always super admin products
+    category: apiProduct.product.categories && apiProduct.product.categories.length > 0 
+      ? apiProduct.product.categories[0]?.category?.name || 'Uncategorized'
+      : 'Uncategorized',
+    startDate: formatDate(apiProduct.startDate),
+    endDate: formatDate(apiProduct.endDate),
+    priority: apiProduct.priority === 'high' ? 'High' : apiProduct.priority === 'medium' ? 'Medium' : 'Low',
+    status: apiProduct.status === 'active' ? 'active' : apiProduct.status === 'scheduled' ? 'scheduled' : 'expired',
+  }
+}
 
 // Mock data for push notifications
 const MOCK_PUSH_NOTIFICATIONS: PushNotification[] = [
@@ -352,7 +255,27 @@ const STATUS_BADGE_CLASS: Record<MarketingFilterKey, { active: string; inactive:
  */
 export default function Marketing() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'story-highlight' | 'banners' | 'pop-up' | 'push-notifications' | 'product'>('story-highlight')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabFromUrl = searchParams.get('tab') as 'story-highlight' | 'banners' | 'pop-up' | 'push-notifications' | 'product' | null
+  const [activeTab, setActiveTab] = useState<'story-highlight' | 'banners' | 'pop-up' | 'push-notifications' | 'product'>(
+    tabFromUrl || 'story-highlight'
+  )
+
+  // Update URL when tab changes (but not on initial load)
+  useEffect(() => {
+    const currentTab = searchParams.get('tab')
+    if (currentTab !== activeTab) {
+      setSearchParams({ tab: activeTab }, { replace: true })
+    }
+  }, [activeTab, setSearchParams])
+
+  // Update activeTab when URL changes
+  useEffect(() => {
+    const urlTab = searchParams.get('tab') as typeof activeTab | null
+    if (urlTab && urlTab !== activeTab && ['story-highlight', 'banners', 'pop-up', 'push-notifications', 'product'].includes(urlTab)) {
+      setActiveTab(urlTab)
+    }
+  }, [searchParams])
   const [activeFilter, setActiveFilter] = useState<MarketingFilterKey>('all')
   const [bannerActiveFilter, setBannerActiveFilter] = useState<MarketingFilterKey>('all')
   const [productActiveFilter, setProductActiveFilter] = useState<MarketingFilterKey>('all')
@@ -371,9 +294,13 @@ export default function Marketing() {
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [bannerStatusFilter, setBannerStatusFilter] = useState('All Status')
   const [currentPage, setCurrentPage] = useState(1)
-  const [products, setProducts] = useState<Product[]>(INITIAL_MOCK_PRODUCTS)
+  const [products, setProducts] = useState<Product[]>([])
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
   const [deleteProductName, setDeleteProductName] = useState<string>('')
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
+  const [productsError, setProductsError] = useState<string | null>(null)
+  const [totalProducts, setTotalProducts] = useState(0)
+  const [totalProductsPages, setTotalProductsPages] = useState(1)
 
   // Story highlights state
   const [highlights, setHighlights] = useState<StoryHighlight[]>([])
@@ -382,6 +309,28 @@ export default function Marketing() {
   const [highlightsPage, setHighlightsPage] = useState(1)
   const [totalHighlights, setTotalHighlights] = useState(0)
   const [totalHighlightsPages, setTotalHighlightsPages] = useState(1)
+
+  // Banners state
+  const [banners, setBanners] = useState<Banner[]>([])
+  const [isLoadingBanners, setIsLoadingBanners] = useState(false)
+  const [bannersError, setBannersError] = useState<string | null>(null)
+  const [bannersPage, setBannersPage] = useState(1)
+  const [totalBanners, setTotalBanners] = useState(0)
+  const [totalBannersPages, setTotalBannersPages] = useState(1)
+
+  // Popups state
+  const [popups, setPopups] = useState<Popup[]>([])
+  const [isLoadingPopups, setIsLoadingPopups] = useState(false)
+  const [popupsError, setPopupsError] = useState<string | null>(null)
+  const [popupsPage, setPopupsPage] = useState(1)
+  const [totalPopups, setTotalPopups] = useState(0)
+  const [totalPopupsPages, setTotalPopupsPages] = useState(1)
+  const [popupActiveFilter, setPopupActiveFilter] = useState<MarketingFilterKey>('all')
+  const [popupSearchValue, setPopupSearchValue] = useState('')
+  const [popupSortBy, setPopupSortBy] = useState('Sort By Date')
+  const [popupStatusFilter, setPopupStatusFilter] = useState('All Status')
+  const [popupDeviceFilter, setPopupDeviceFilter] = useState('All Devices')
+  const [allPopupsForCounts, setAllPopupsForCounts] = useState<Popup[]>([])
 
   // Fetch story highlights
   useEffect(() => {
@@ -453,6 +402,170 @@ export default function Marketing() {
 
     fetchAllForCounts()
   }, [activeTab, highlights])
+
+  // Fetch banners
+  useEffect(() => {
+    const fetchBanners = async () => {
+      if (activeTab !== 'banners') return
+
+      setIsLoadingBanners(true)
+      setBannersError(null)
+
+      try {
+        const filters: any = {
+          page: bannersPage,
+          limit: 10,
+          sortBy: bannerSortBy === 'Newest First' ? 'newest' : bannerSortBy === 'Oldest First' ? 'oldest' : 'newest',
+        }
+
+        if (bannerSearchValue.trim()) {
+          filters.search = bannerSearchValue.trim()
+        }
+
+        if (bannerAudienceFilter !== 'All Audience') {
+          filters.audience = bannerAudienceFilter.toLowerCase()
+        }
+
+        if (bannerStatusFilter !== 'All Status') {
+          const statusMap: Record<string, 'active' | 'scheduled' | 'expired'> = {
+            'Active': 'active',
+            'Scheduled': 'scheduled',
+            'Expired': 'expired',
+          }
+          filters.status = statusMap[bannerStatusFilter]
+        }
+
+        if (bannerActiveFilter !== 'all') {
+          filters.status = bannerActiveFilter
+        }
+
+        const response = await bannersApi.getAll(filters)
+        const uiBanners = response.data.map(convertApiBannerToUI)
+        setBanners(uiBanners)
+        setTotalBanners(response.pagination.total)
+        setTotalBannersPages(response.pagination.totalPages)
+      } catch (error: any) {
+        console.error('Error fetching banners:', error)
+        setBannersError(error.response?.data?.message || 'Failed to load banners')
+        setBanners([])
+      } finally {
+        setIsLoadingBanners(false)
+      }
+    }
+
+    fetchBanners()
+  }, [activeTab, bannersPage, bannerSortBy, bannerSearchValue, bannerAudienceFilter, bannerStatusFilter, bannerActiveFilter])
+
+  // Fetch all banners for counts (without pagination)
+  const [allBannersForCounts, setAllBannersForCounts] = useState<ApiBanner[]>([])
+  
+  useEffect(() => {
+    const fetchAllBannersForCounts = async () => {
+      if (activeTab !== 'banners') return
+
+      try {
+        const response = await bannersApi.getAll({ limit: 1000 })
+        setAllBannersForCounts(response.data)
+      } catch (error) {
+        console.error('Error fetching banners for counts:', error)
+      }
+    }
+
+    fetchAllBannersForCounts()
+  }, [activeTab, banners])
+
+  // Reset popups page when filters change
+  useEffect(() => {
+    if (activeTab === 'pop-up') {
+      setPopupsPage(1)
+    }
+  }, [popupStatusFilter, popupDeviceFilter, popupActiveFilter, popupSearchValue, popupSortBy, activeTab])
+
+  // Fetch popups
+  useEffect(() => {
+    const fetchPopups = async () => {
+      if (activeTab !== 'pop-up') return
+
+      setIsLoadingPopups(true)
+      setPopupsError(null)
+
+      try {
+        const filters: any = {
+          page: popupsPage,
+          limit: 10,
+          sortBy: popupSortBy === 'Newest First' ? 'newest' : popupSortBy === 'Oldest First' ? 'oldest' : 'newest',
+        }
+
+        if (popupSearchValue.trim()) {
+          filters.search = popupSearchValue.trim()
+        }
+
+        // Apply status filter - prioritize dropdown filter over tab filter
+        if (popupStatusFilter !== 'All Status') {
+          const statusMap: Record<string, 'active' | 'scheduled' | 'expired'> = {
+            'Active': 'active',
+            'Scheduled': 'scheduled',
+            'Expired': 'expired',
+          }
+          if (statusMap[popupStatusFilter]) {
+            filters.status = statusMap[popupStatusFilter]
+          }
+        } else if (popupActiveFilter !== 'all') {
+          // Fallback to tab filter if dropdown filter is not set
+          const statusMap: Record<string, 'active' | 'scheduled' | 'expired'> = {
+            'active': 'active',
+            'scheduled': 'scheduled',
+            'expired': 'expired',
+          }
+          if (statusMap[popupActiveFilter]) {
+            filters.status = statusMap[popupActiveFilter]
+          }
+        }
+
+        if (popupDeviceFilter !== 'All Devices') {
+          const deviceMap: Record<string, 'desktop' | 'mobile' | 'both'> = {
+            'Desktop': 'desktop',
+            'Mobile': 'mobile',
+            'Both': 'both',
+          }
+          if (deviceMap[popupDeviceFilter]) {
+            filters.deviceTarget = deviceMap[popupDeviceFilter]
+          }
+        }
+
+        const response = await popupsApi.getAll(filters)
+        const uiPopups = response.data.map(convertApiPopupToUI)
+        setPopups(uiPopups)
+        setTotalPopups(response.pagination.total)
+        setTotalPopupsPages(response.pagination.totalPages)
+      } catch (error: any) {
+        console.error('Error fetching popups:', error)
+        setPopupsError(error.response?.data?.message || 'Failed to load popups')
+        setPopups([])
+      } finally {
+        setIsLoadingPopups(false)
+      }
+    }
+
+    fetchPopups()
+  }, [activeTab, popupsPage, popupSortBy, popupSearchValue, popupActiveFilter, popupStatusFilter, popupDeviceFilter])
+
+  // Fetch all popups for counts
+  useEffect(() => {
+    const fetchAllPopupsForCounts = async () => {
+      if (activeTab !== 'pop-up') return
+
+      try {
+        const response = await popupsApi.getAll({ limit: 1000 })
+        const uiPopups = response.data.map(convertApiPopupToUI)
+        setAllPopupsForCounts(uiPopups)
+      } catch (error) {
+        console.error('Error fetching popups for counts:', error)
+      }
+    }
+
+    fetchAllPopupsForCounts()
+  }, [activeTab, popups])
 
   const filterTabsWithCounts = useMemo(
     () => {
@@ -529,14 +642,73 @@ export default function Marketing() {
     navigate('/marketing/add-story')
   }
 
-  const handleBannerAction = (banner: Banner, action: BannerActionType) => {
+  const handleBannerAction = async (banner: Banner, action: BannerActionType) => {
     // Handle action selection
     if (action === 'add-new-banner') {
       navigate('/marketing/add-banner')
+    } else if (action === 'edit-banner') {
+      navigate(`/marketing/edit-banner/${banner.id}`)
+    } else if (action === 'delete-banner') {
+      if (window.confirm(`Are you sure you want to delete "${banner.title}"?`)) {
+        try {
+          await bannersApi.delete(banner.id)
+          // Refresh banners
+          const response = await bannersApi.getAll({
+            page: bannersPage,
+            limit: 10,
+            sortBy: bannerSortBy === 'Newest First' ? 'newest' : 'oldest',
+          })
+          const uiBanners = response.data.map(convertApiBannerToUI)
+          setBanners(uiBanners)
+          setTotalBanners(response.pagination.total)
+          setTotalBannersPages(response.pagination.totalPages)
+        } catch (error: any) {
+          alert(error.response?.data?.message || 'Failed to delete banner')
+        }
+      }
     } else if (action === 'explore-new-offer-banner') {
       navigate(`/marketing/banner/${banner.id}`)
     }
   }
+
+  // Fetch featured products
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (activeTab !== 'product') return
+
+      setIsLoadingProducts(true)
+      setProductsError(null)
+
+      try {
+        const filters: any = {
+          page: currentPage,
+          limit: 6,
+          sortBy: 'newest',
+        }
+
+        if (productActiveFilter !== 'all') {
+          filters.status = productActiveFilter
+        }
+
+        if (productNotificationSearch.trim()) {
+          filters.search = productNotificationSearch.trim()
+        }
+
+        const result = await featuredProductsApi.getAll(filters)
+        setProducts(result.data.map(convertApiProductToUI))
+        setTotalProducts(result.pagination.total)
+        setTotalProductsPages(result.pagination.totalPages)
+      } catch (err: any) {
+        console.error('Error fetching featured products:', err)
+        setProductsError(err.response?.data?.message || 'Failed to load featured products')
+        setProducts([])
+      } finally {
+        setIsLoadingProducts(false)
+      }
+    }
+
+    fetchProducts()
+  }, [activeTab, currentPage, productActiveFilter, productNotificationSearch])
 
   const handleProductAction = (product: Product, action: ProductActionType) => {
     // Handle action selection
@@ -548,25 +720,45 @@ export default function Marketing() {
     }
   }
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (deleteProductId) {
-      // Calculate remaining products before updating state
-      const remainingProducts = products.filter((p) => p.id !== deleteProductId)
-      const totalPages = Math.ceil(remainingProducts.length / 6)
-      
-      // Update products state
-      setProducts(remainingProducts)
-      
-      // Reset pagination if current page becomes empty
-      if (currentPage > totalPages && totalPages > 0) {
-        setCurrentPage(totalPages)
-      } else if (totalPages === 0) {
-        setCurrentPage(1)
+      try {
+        await featuredProductsApi.delete(deleteProductId)
+        
+        // Refetch products
+        const filters: any = {
+          page: currentPage,
+          limit: 6,
+          sortBy: 'newest',
+        }
+
+        if (productActiveFilter !== 'all') {
+          filters.status = productActiveFilter
+        }
+
+        if (productNotificationSearch.trim()) {
+          filters.search = productNotificationSearch.trim()
+        }
+
+        const result = await featuredProductsApi.getAll(filters)
+        setProducts(result.data.map(convertApiProductToUI))
+        setTotalProducts(result.pagination.total)
+        setTotalProductsPages(result.pagination.totalPages)
+        
+        // Reset pagination if current page becomes empty
+        if (currentPage > result.pagination.totalPages && result.pagination.totalPages > 0) {
+          setCurrentPage(result.pagination.totalPages)
+        } else if (result.pagination.totalPages === 0) {
+          setCurrentPage(1)
+        }
+      } catch (err: any) {
+        console.error('Error deleting featured product:', err)
+        alert(err.response?.data?.message || 'Failed to delete featured product')
+      } finally {
+        // Close modal
+        setDeleteProductId(null)
+        setDeleteProductName('')
       }
-      
-      // Close modal
-      setDeleteProductId(null)
-      setDeleteProductName('')
     }
   }
 
@@ -579,13 +771,47 @@ export default function Marketing() {
     navigate('/marketing/add-banner')
   }
 
-  // Banner filter tabs with counts
-  const bannerFilterTabsWithCounts = useMemo(
+  const handlePopupAction = async (popup: Popup, action: PopupActionType) => {
+    if (action === 'view-popup') {
+      navigate(`/marketing/popup/${popup.id}`)
+    } else if (action === 'edit-popup') {
+      navigate(`/marketing/edit-popup/${popup.id}`)
+    } else if (action === 'delete-popup') {
+      if (window.confirm(`Are you sure you want to delete "${popup.title}"?`)) {
+        try {
+          await popupsApi.delete(popup.id)
+          // Refresh popups
+          const response = await popupsApi.getAll({
+            page: popupsPage,
+            limit: 10,
+            sortBy: popupSortBy === 'Newest First' ? 'newest' : 'oldest',
+          })
+          const uiPopups = response.data.map(convertApiPopupToUI)
+          setPopups(uiPopups)
+          setTotalPopups(response.pagination.total)
+          setTotalPopupsPages(response.pagination.totalPages)
+        } catch (error: any) {
+          alert(error.response?.data?.message || 'Failed to delete popup')
+        }
+      }
+    }
+  }
+
+  const handleNewPopupClick = () => {
+    navigate('/marketing/add-popup')
+  }
+
+  const handlePopupFilterChange = (filterKey: MarketingFilterKey) => {
+    setPopupActiveFilter(filterKey)
+  }
+
+  // Popup filter tabs with counts
+  const popupFilterTabsWithCounts = useMemo(
     () => {
-      const allCount = MOCK_BANNERS.length
-      const scheduledCount = MOCK_BANNERS.filter((b) => b.status === 'scheduled').length
-      const activeCount = MOCK_BANNERS.filter((b) => b.status === 'active').length
-      const expiredCount = MOCK_BANNERS.filter((b) => b.status === 'expired').length
+      const allCount = allPopupsForCounts.length
+      const scheduledCount = allPopupsForCounts.filter((p) => p.status === 'scheduled').length
+      const activeCount = allPopupsForCounts.filter((p) => p.status === 'active').length
+      const expiredCount = allPopupsForCounts.filter((p) => p.status === 'expired').length
 
       return [
         {
@@ -614,52 +840,80 @@ export default function Marketing() {
         },
       ]
     },
-    [],
+    [allPopupsForCounts],
   )
 
-  const filteredBanners = useMemo(() => {
-    let result = [...MOCK_BANNERS]
+  const filteredPopups = popups
 
-    if (bannerActiveFilter !== 'all') {
-      result = result.filter((banner) => banner.status === bannerActiveFilter)
-    }
+  // Banner filter tabs with counts
+  const bannerFilterTabsWithCounts = useMemo(
+    () => {
+      const allCount = allBannersForCounts.length
+      const scheduledCount = allBannersForCounts.filter((b) => b.status === 'scheduled').length
+      const activeCount = allBannersForCounts.filter((b) => b.status === 'active').length
+      const expiredCount = allBannersForCounts.filter((b) => b.status === 'expired').length
 
-    if (bannerSearchValue.trim()) {
-      const query = bannerSearchValue.toLowerCase()
-      result = result.filter((banner) => banner.title.toLowerCase().includes(query))
-    }
+      return [
+        {
+          key: 'all' as MarketingFilterKey,
+          label: 'All',
+          count: allCount,
+          badgeClassName: STATUS_BADGE_CLASS.all,
+        },
+        {
+          key: 'scheduled' as MarketingFilterKey,
+          label: 'Scheduled',
+          count: scheduledCount,
+          badgeClassName: STATUS_BADGE_CLASS.scheduled,
+        },
+        {
+          key: 'active' as MarketingFilterKey,
+          label: 'Active',
+          count: activeCount,
+          badgeClassName: STATUS_BADGE_CLASS.active,
+        },
+        {
+          key: 'expired' as MarketingFilterKey,
+          label: 'Expired',
+          count: expiredCount,
+          badgeClassName: STATUS_BADGE_CLASS.expired,
+        },
+      ]
+    },
+    [allBannersForCounts],
+  )
 
-    if (bannerAudienceFilter !== 'All Audience') {
-      result = result.filter((banner) => banner.audience === bannerAudienceFilter)
-    }
-
-    if (bannerStatusFilter !== 'All Status') {
-      const statusMap: Record<string, MarketingFilterKey> = {
-        'Active': 'active',
-        'Scheduled': 'scheduled',
-        'Expired': 'expired',
-      }
-      const filterStatus = statusMap[bannerStatusFilter]
-      if (filterStatus) {
-        result = result.filter((banner) => banner.status === filterStatus)
-      }
-    }
-
-    // Limit to 8-10 rows for display
-    return result.slice(0, 10)
-  }, [bannerActiveFilter, bannerSearchValue, bannerAudienceFilter, bannerStatusFilter])
+  // Filtered banners are now handled by the API, but we keep this for any client-side filtering if needed
+  const filteredBanners = banners
 
   const handleBannerFilterChange = (filterKey: MarketingFilterKey) => {
     setBannerActiveFilter(filterKey)
   }
 
-  // Product filter tabs with counts
+  // Product filter tabs with counts - fetch all products for counts
+  const [allProductsForCounts, setAllProductsForCounts] = useState<Product[]>([])
+  
+  useEffect(() => {
+    const fetchAllProductsForCounts = async () => {
+      if (activeTab !== 'product') return
+      
+      try {
+        const result = await featuredProductsApi.getAll({ limit: 1000 })
+        setAllProductsForCounts(result.data.map(convertApiProductToUI))
+      } catch (err) {
+        console.error('Error fetching products for counts:', err)
+      }
+    }
+    
+    fetchAllProductsForCounts()
+  }, [activeTab])
+
   const productFilterTabsWithCounts = useMemo(
     () => {
-      const allCount = products.length
-      const scheduledCount = products.filter((p: Product) => p.status === 'scheduled').length
-      const activeCount = products.filter((p: Product) => p.status === 'active').length
-      const expiredCount = products.filter((p: Product) => p.status === 'expired').length
+      const allCount = allProductsForCounts.length
+      const scheduledCount = allProductsForCounts.filter((p: Product) => p.status === 'scheduled').length
+      const activeCount = allProductsForCounts.filter((p: Product) => p.status === 'active').length
+      const expiredCount = allProductsForCounts.filter((p: Product) => p.status === 'expired').length
 
       return [
         {
@@ -688,23 +942,8 @@ export default function Marketing() {
         },
       ]
     },
-    [],
+    [allProductsForCounts],
   )
-
-  const filteredProducts = useMemo(() => {
-    let result = [...products]
-
-    if (productActiveFilter !== 'all') {
-      result = result.filter((product) => product.status === productActiveFilter)
-    }
-
-    if (productNotificationSearch.trim()) {
-      const query = productNotificationSearch.toLowerCase()
-      result = result.filter((product) => product.product.toLowerCase().includes(query))
-    }
-
-    return result
-  }, [productActiveFilter, productNotificationSearch])
 
   const handleProductFilterChange = (filterKey: MarketingFilterKey) => {
     setProductActiveFilter(filterKey)
@@ -712,17 +951,19 @@ export default function Marketing() {
   }
 
   const handleProductPageChange = (page: number) => {
-    const totalPages = Math.ceil(filteredProducts.length / 6)
-    if (page < 1 || page > totalPages) return
+    if (page < 1 || page > totalProductsPages) return
     setCurrentPage(page)
   }
 
   const getProductPageNumbers = () => {
-    const totalPages = Math.ceil(filteredProducts.length / 6)
     const pages: (number | string)[] = []
     
-    if (totalPages <= 8) {
-      for (let i = 1; i <= totalPages; i++) {
+    if (!totalProductsPages || totalProductsPages === 0) {
+      return [1]
+    }
+    
+    if (totalProductsPages <= 8) {
+      for (let i = 1; i <= totalProductsPages; i++) {
         pages.push(i)
       }
     } else {
@@ -733,30 +974,26 @@ export default function Marketing() {
       }
       
       const start = Math.max(2, currentPage - 1)
-      const end = Math.min(totalPages - 1, currentPage + 1)
+      const end = Math.min(totalProductsPages - 1, currentPage + 1)
       
       for (let i = start; i <= end; i++) {
-        if (i !== 1 && i !== totalPages) {
+        if (i !== 1 && i !== totalProductsPages) {
           pages.push(i)
         }
       }
       
-      if (currentPage < totalPages - 2) {
+      if (currentPage < totalProductsPages - 2) {
         pages.push('...')
       }
       
-      if (totalPages > 1) {
-        pages.push(totalPages)
+      if (totalProductsPages > 1) {
+        pages.push(totalProductsPages)
       }
     }
     
     return pages
   }
 
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * 6
-    return filteredProducts.slice(start, start + 6)
-  }, [filteredProducts, currentPage])
 
   // Push Notifications filter tabs with counts
   const pushNotificationFilterTabsWithCounts = useMemo(
@@ -889,69 +1126,101 @@ export default function Marketing() {
     }
   }
 
+  // Get breadcrumb text based on active tab
+  const getBreadcrumbText = () => {
+    switch (activeTab) {
+      case 'story-highlight':
+        return 'Dashboard - Story Highlight'
+      case 'banners':
+        return 'Dashboard - Banners'
+      case 'pop-up':
+        return 'Dashboard - Pop-Up'
+      case 'push-notifications':
+        return 'Dashboard - Push Notifications'
+      case 'product':
+        return 'Dashboard - Products'
+      default:
+        return 'Dashboard - Marketing'
+    }
+  }
+
   return (
     <div className="space-y-4 md:space-y-6 px-4 md:px-0">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Marketing</h1>
-        <p className="text-sm text-gray-600 mt-1">Dashboard - Finance</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Marketing</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{getBreadcrumbText()}</p>
       </div>
 
       {/* Main Navigation Bar */}
-      <nav className="flex flex-nowrap items-center bg-white rounded-lg gap-1 
-      sm:gap-2 md:gap-4 border-b
-       border-gray-200 overflow-x-auto md:overflow-x-visible md:flex-wrap">
+      <nav className="flex flex-nowrap items-center bg-white dark:bg-gray-800 rounded-lg gap-1 
+      sm:gap-2 md:gap-4 border-b border-gray-200 dark:border-gray-700 overflow-x-auto md:overflow-x-visible md:flex-wrap transition-colors">
         <button
           type="button"
-          onClick={() => setActiveTab('story-highlight')}
+          onClick={() => {
+            setActiveTab('story-highlight')
+            setSearchParams({ tab: 'story-highlight' }, { replace: true })
+          }}
           className={`px-2 p-2 sm:px-3  text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'story-highlight'
               ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
-              : 'text-gray-600 hover:text-gray-900'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
           }`}
         >
           Story Highlight
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('banners')}
+          onClick={() => {
+            setActiveTab('banners')
+            setSearchParams({ tab: 'banners' }, { replace: true })
+          }}
           className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'banners'
               ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
-              : 'text-gray-600 hover:text-gray-900'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
           }`}
         >
           Banners
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('pop-up')}
+          onClick={() => {
+            setActiveTab('pop-up')
+            setSearchParams({ tab: 'pop-up' }, { replace: true })
+          }}
           className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'pop-up'
               ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
-              : 'text-gray-600 hover:text-gray-900'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
           }`}
         >
           Pop-Up
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('push-notifications')}
+          onClick={() => {
+            setActiveTab('push-notifications')
+            setSearchParams({ tab: 'push-notifications' }, { replace: true })
+          }}
           className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'push-notifications'
               ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
-              : 'text-gray-600 hover:text-gray-900'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
           }`}
         >
           Push Notifications
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('product')}
+          onClick={() => {
+            setActiveTab('product')
+            setSearchParams({ tab: 'product' }, { replace: true })
+          }}
           className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
             activeTab === 'product'
               ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
-              : 'text-gray-600 hover:text-gray-900'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
           }`}
         >
           Product
@@ -964,7 +1233,7 @@ export default function Marketing() {
           {/* Section Title and Filtering Controls */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
             {/* Section Title */}
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 whitespace-nowrap">Story Highlight</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">Story Highlight</h2>
 
             {/* Filtering and Search Controls */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-1">
@@ -1082,7 +1351,7 @@ export default function Marketing() {
       {activeTab === 'banners' && (
         <div className="space-y-4 md:space-y-6">
           {/* Section Title */}
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Banners</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Banners</h2>
 
           {/* Filtering and Search Controls */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1124,9 +1393,9 @@ export default function Marketing() {
           </div>
 
           {/* Data Table */}
-          <section className="rounded-xl bg-white shadow-sm">
+          <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors overflow-visible">
             {/* Status Tabs and Search/Filter Controls - Inside Table Section */}
-            <div className="flex flex-col gap-4 border-b border-gray-200 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 border-b border-gray-200 dark:border-gray-700 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between transition-colors">
               <div className="flex-1 w-full sm:w-auto">
                 <MarketingFilterTabs tabs={bannerFilterTabsWithCounts} activeTab={bannerActiveFilter} onTabChange={handleBannerFilterChange} />
               </div>
@@ -1139,15 +1408,25 @@ export default function Marketing() {
                 />
                 <button
                   type="button"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap cursor-pointer"
                 >
                   <FilterIcon className="h-4 w-4" />
                   Filter
                 </button>
               </div>
             </div>
-            <div className="">
-              <BannersTable banners={filteredBanners} onActionSelect={handleBannerAction} />
+            <div className="overflow-visible">
+              {isLoadingBanners ? (
+                <div className="flex min-h-[240px] flex-col items-center justify-center py-12">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Loading banners...</p>
+                </div>
+              ) : bannersError ? (
+                <div className="flex min-h-[240px] flex-col items-center justify-center py-12">
+                  <p className="text-sm text-red-600 dark:text-red-400">{bannersError}</p>
+                </div>
+              ) : (
+                <BannersTable banners={filteredBanners} onActionSelect={handleBannerAction} />
+              )}
             </div>
           </section>
         </div>
@@ -1158,7 +1437,7 @@ export default function Marketing() {
         <div className="space-y-4 md:space-y-6">
           {/* Section Title */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Products</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Products</h2>
             <button
               type="button"
               onClick={() => navigate('/marketing/add-product')}
@@ -1170,9 +1449,9 @@ export default function Marketing() {
           </div>
 
           {/* Data Table Section */}
-          <section className="rounded-xl bg-white shadow-sm">
+          <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
             {/* Status Tabs and Search/Filter Controls - Inside Table Section */}
-            <header className="flex flex-col gap-4 border-b border-gray-200 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+            <header className="flex flex-col gap-4 border-b border-gray-200 dark:border-gray-700 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1 w-full sm:w-auto">
                 <MarketingFilterTabs tabs={productFilterTabsWithCounts} activeTab={productActiveFilter} onTabChange={handleProductFilterChange} />
               </div>
@@ -1185,7 +1464,7 @@ export default function Marketing() {
                 />
                 <button
                   type="button"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-600 whitespace-nowrap cursor-pointer"
                 >
                   <FilterIcon className="h-4 w-4" />
                   Filter
@@ -1195,59 +1474,71 @@ export default function Marketing() {
 
             {/* Table Content */}
             <div className="">
-              <ProductsTable products={paginatedProducts} onActionSelect={handleProductAction} />
+              {isLoadingProducts ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-gray-500 dark:text-gray-400">Loading products...</div>
+                </div>
+              ) : productsError ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-red-500 dark:text-red-400">{productsError}</div>
+                </div>
+              ) : (
+                <ProductsTable products={products} onActionSelect={handleProductAction} />
+              )}
             </div>
 
             {/* Pagination */}
-            <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-6">
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleProductPageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  &lt; Back
-                </button>
-                <div className="flex items-center gap-0.5 sm:gap-1">
-                  {getProductPageNumbers().map((page, index) => {
-                    if (page === '...') {
+            {!isLoadingProducts && !productsError && (
+              <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-4 sm:px-6 transition-colors">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleProductPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    &lt; Back
+                  </button>
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    {getProductPageNumbers().map((page, index) => {
+                      if (page === '...') {
+                        return (
+                          <span key={`ellipsis-${index}`} className="px-2 text-gray-500 dark:text-gray-400">
+                            ...
+                          </span>
+                        )
+                      }
+                      
+                      const pageNum = page as number
+                      const isActive = pageNum === currentPage
+                      
                       return (
-                        <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
-                          ...
-                        </span>
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => handleProductPageChange(pageNum)}
+                          className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition cursor-pointer ${
+                            isActive
+                              ? 'bg-[#4C50A2] text-white'
+                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
                       )
-                    }
-                    
-                    const pageNum = page as number
-                    const isActive = pageNum === currentPage
-                    
-                    return (
-                      <button
-                        key={pageNum}
-                        type="button"
-                        onClick={() => handleProductPageChange(pageNum)}
-                        className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition cursor-pointer ${
-                          isActive
-                            ? 'bg-[#4C50A2] text-white'
-                            : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    )
-                  })}
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleProductPageChange(currentPage + 1)}
+                    disabled={currentPage >= totalProductsPages}
+                    className="cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next &gt;
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleProductPageChange(currentPage + 1)}
-                  disabled={currentPage >= Math.ceil(filteredProducts.length / 6)}
-                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Next &gt;
-                </button>
-              </div>
-            </footer>
+              </footer>
+            )}
           </section>
         </div>
       )}
@@ -1271,9 +1562,9 @@ export default function Marketing() {
           </div>
 
           {/* Data Table Section */}
-          <section className="rounded-xl bg-white shadow-sm">
+          <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
             {/* Status Tabs and Search/Filter Controls - Inside Table Section */}
-            <header className="flex flex-col gap-4 border-b border-gray-100 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+            <header className="flex flex-col gap-4 border-b border-gray-100 dark:border-gray-700 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1 w-full sm:w-auto">
                 <nav className="flex flex-nowrap items-center pt-3 gap-1 sm:gap-2 overflow-x-auto md:overflow-x-visible md:flex-wrap">
                   {pushNotificationFilterTabsWithCounts.map((tab) => {
@@ -1286,8 +1577,8 @@ export default function Marketing() {
                         onClick={() => handlePushNotificationFilterChange(tab.key)}
                         className={`inline-flex items-center px-2 sm:px-3 pt-1.5 pb-3 text-sm font-medium transition-colors duration-150 cursor-pointer ${
                           isActive 
-                            ? 'text-black border-b-2 border-black relative z-10 -mb-px' 
-                            : 'text-gray-600 hover:text-gray-900 border-b-2 border-transparent'
+                            ? 'text-[#F7931E] dark:text-[#F7931E] border-b-2 border-[#F7931E] relative z-10 -mb-px' 
+                            : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 border-b-2 border-transparent'
                         }`}
                       >
                         <span>{tab.label}</span>
@@ -1314,7 +1605,7 @@ export default function Marketing() {
                 />
                 <button
                   type="button"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 whitespace-nowrap cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-600 whitespace-nowrap cursor-pointer"
                 >
                   <FilterIcon className="h-4 w-4" />
                   Filter
@@ -1328,13 +1619,13 @@ export default function Marketing() {
             </div>
 
             {/* Pagination */}
-            <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 px-4 py-4 sm:px-6">
+            <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-4 sm:px-6 transition-colors">
               <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
                 <button
                   type="button"
                   onClick={() => handlePushNotificationPageChange(pushNotificationPage - 1)}
                   disabled={pushNotificationPage === 1}
-                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   &lt; Back
                 </button>
@@ -1342,7 +1633,7 @@ export default function Marketing() {
                   {getPushNotificationPageNumbers().map((page, index) => {
                     if (page === '...') {
                       return (
-                        <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+                        <span key={`ellipsis-${index}`} className="px-2 text-gray-500 dark:text-gray-400">
                           ...
                         </span>
                       )
@@ -1359,7 +1650,7 @@ export default function Marketing() {
                         className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition cursor-pointer ${
                           isActive
                             ? 'bg-[#4C50A2] text-white'
-                            : 'text-gray-600 hover:bg-gray-100'
+                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                       >
                         {pageNum}
@@ -1371,7 +1662,7 @@ export default function Marketing() {
                   type="button"
                   onClick={() => handlePushNotificationPageChange(pushNotificationPage + 1)}
                   disabled={pushNotificationPage >= Math.ceil(filteredPushNotifications.length / 6)}
-                  className="cursor-pointer rounded-lg border border-gray-200 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next &gt;
                 </button>
@@ -1381,10 +1672,113 @@ export default function Marketing() {
         </div>
       )}
 
+      {/* Popups Section */}
+      {activeTab === 'pop-up' && (
+        <div className="space-y-4 md:space-y-6">
+          {/* Section Title */}
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Popups</h2>
+
+          {/* Filtering and Search Controls */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto">
+              <FilterDropdown
+                label={popupSortBy}
+                options={['Sort By Date', 'Newest First', 'Oldest First']}
+                onSelect={(value) => setPopupSortBy(value)}
+                icon={<CalendarIcon className="h-4 w-4" />}
+                className="w-full sm:w-auto"
+              />
+              <FilterDropdown
+                label={popupStatusFilter}
+                options={['All Status', 'Active', 'Scheduled', 'Expired']}
+                onSelect={(value) => setPopupStatusFilter(value)}
+                className="w-full sm:w-auto"
+              />
+              <FilterDropdown
+                label={popupDeviceFilter}
+                options={['All Devices', 'Desktop', 'Mobile', 'Both']}
+                onSelect={(value) => setPopupDeviceFilter(value)}
+                className="w-full sm:w-auto"
+              />
+              <SearchBar
+                placeholder="Search by Title"
+                value={popupSearchValue}
+                onChange={setPopupSearchValue}
+                className="w-full sm:min-w-[220px] sm:min-w-[240px]"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleNewPopupClick}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap cursor-pointer"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Add New Popup
+            </button>
+          </div>
+
+          {/* Filter Tabs */}
+          <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors overflow-visible">
+            <div className="flex flex-col gap-4 p-4 sm:p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex-1">
+                  <MarketingFilterTabs tabs={popupFilterTabsWithCounts} activeTab={popupActiveFilter} onTabChange={handlePopupFilterChange} />
+                </div>
+              </div>
+              <div className="py-2">
+                {isLoadingPopups ? (
+                  <div className="flex min-h-[240px] items-center justify-center">
+                    <p className="text-gray-500 dark:text-gray-400">Loading popups...</p>
+                  </div>
+                ) : popupsError ? (
+                  <div className="flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-dashed border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 py-12 text-center">
+                    <p className="text-base font-semibold text-red-800 dark:text-red-200">Error loading popups</p>
+                    <p className="mt-1 max-w-sm text-sm text-red-600 dark:text-red-400">{popupsError}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <PopupsTable popups={filteredPopups} onActionSelect={handlePopupAction} />
+                    {totalPopupsPages > 1 && (
+                      <div className="mt-4 flex items-center justify-between px-4 sm:px-6">
+                        <div className="text-sm text-gray-700 dark:text-gray-300">
+                          Showing {((popupsPage - 1) * 10) + 1} to {Math.min(popupsPage * 10, totalPopups)} of {totalPopups} results
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setPopupsPage((p) => Math.max(1, p - 1))}
+                            disabled={popupsPage === 1}
+                            className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            Previous
+                          </button>
+                          <button
+                            onClick={() => setPopupsPage((p) => Math.min(totalPopupsPages, p + 1))}
+                            disabled={popupsPage >= totalPopupsPages}
+                            className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
       {/* Placeholder for other tabs */}
-      {activeTab !== 'story-highlight' && activeTab !== 'banners' && activeTab !== 'product' && activeTab !== 'push-notifications' && (
-        <div className="rounded-xl bg-white shadow-sm p-8 text-center">
-          <p className="text-gray-500">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon</p>
+      {activeTab !== 'story-highlight' && activeTab !== 'banners' && activeTab !== 'pop-up' && activeTab !== 'product' && activeTab !== 'push-notifications' && (
+        <div className="rounded-xl bg-white dark:bg-gray-800 shadow-sm p-8 text-center transition-colors">
+          <p className="text-gray-500 dark:text-gray-400">{String(activeTab).charAt(0).toUpperCase() + String(activeTab).slice(1)} section coming soon</p>
         </div>
       )}
 
@@ -1419,16 +1813,16 @@ function DeleteConfirmationModal({ productName, onClose, onConfirm }: DeleteConf
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
         <div
-          className="w-full max-w-md bg-white rounded-lg shadow-xl"
+          className="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200 relative">
-            <h2 className="text-xl font-semibold text-gray-900">Delete Product</h2>
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 relative">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Delete Product</h2>
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors cursor-pointer"
               aria-label="Close modal"
             >
               <XIcon className="h-5 w-5" />
@@ -1437,20 +1831,20 @@ function DeleteConfirmationModal({ productName, onClose, onConfirm }: DeleteConf
 
           {/* Content */}
           <div className="px-6 py-6">
-            <p className="text-gray-700 mb-4">
-              Are you sure you want to delete <span className="font-semibold text-gray-900">"{productName}"</span>?
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
+              Are you sure you want to delete <span className="font-semibold text-gray-900 dark:text-gray-100">"{productName}"</span>?
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               This action cannot be undone. The product will be permanently removed from the system.
             </p>
           </div>
 
           {/* Footer Buttons */}
-          <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors cursor-pointer"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors cursor-pointer"
             >
               Cancel
             </button>

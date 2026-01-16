@@ -420,24 +420,24 @@ export default function MainControl() {
         return (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
             {/* Website Logo Card */}
-            <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-6 shadow-sm transition-colors">
               <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <div className="rounded-lg bg-blue-100 p-2 sm:p-3 flex-shrink-0">
-                  <svg className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="rounded-lg bg-blue-100 dark:bg-blue-900/30 p-2 sm:p-3 flex-shrink-0">
+                  <svg className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg  font-semibold text-gray-900 mb-0.5">Website Logo</h3>
-                  <p className="text-xs   text-gray-600 break-words">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-0.5">Website Logo</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 break-words">
                     (recommended size: 250×80px, PNG/SVG)</p>
                 </div>
               </div>
               
               {/* Preview Section */}
               <div className="mb-3 sm:mb-4">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Preview</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 sm:p-4 bg-gray-50 flex items-center justify-center" style={{ minHeight: '100px' }}>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">Preview</label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 bg-gray-50 dark:bg-gray-700 flex items-center justify-center transition-colors" style={{ minHeight: '100px' }}>
                   {logos.websiteLogo ? (
                     <img 
                       src={logos.websiteLogo} 
@@ -449,14 +449,14 @@ export default function MainControl() {
                       }}
                     />
                   ) : (
-                    <p className="text-xs text-gray-400">No logo uploaded</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">No logo uploaded</p>
                   )}
                 </div>
               </div>
 
               {/* Change Logo Section */}
               <div className="mb-3 sm:mb-4">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Change logo</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">Change logo</label>
                 <input
                   type="file"
                   id="website-logo-upload"
@@ -472,24 +472,24 @@ export default function MainControl() {
                 />
                 <label
                   htmlFor="website-logo-upload"
-                  className={`border-2 border-dashed rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center transition-colors ${
+                  className={`border-2 border-dashed rounded-lg p-4 sm:p-8 bg-gray-50 dark:bg-gray-700 flex flex-col items-center justify-center transition-colors ${
                     uploadingLogo === 'website' 
-                      ? 'border-gray-400 cursor-wait opacity-50' 
-                      : 'border-gray-300 cursor-pointer hover:border-gray-400'
+                      ? 'border-gray-400 dark:border-gray-600 cursor-wait opacity-50' 
+                      : 'border-gray-300 dark:border-gray-600 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500'
                   }`}
                   style={{ minHeight: '120px' }}
                 >
                   {uploadingLogo === 'website' ? (
                     <>
-                      <div className="h-8 w-8 sm:h-10 sm:w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[#F7931E] mb-2"></div>
-                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Uploading...</p>
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600 border-t-[#F7931E] mb-2"></div>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center px-2">Uploading...</p>
                     </>
                   ) : (
                     <>
-                      <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 dark:text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
-                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center px-2">Drag and drop your logo here or click to browse</p>
                     </>
                   )}
                 </label>
@@ -497,23 +497,23 @@ export default function MainControl() {
             </div>
 
             {/* App Logo Card */}
-            <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-6 shadow-sm transition-colors">
               <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <div className="rounded-lg bg-green-100 p-2 sm:p-3 flex-shrink-0">
-                  <svg className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="rounded-lg bg-green-100 dark:bg-green-900/30 p-2 sm:p-3 flex-shrink-0">
+                  <svg className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-0.5">App Logo</h3>
-                  <p className="text-xs text-gray-600 break-words">(recommended size: 250×80px, PNG/SVG)</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-0.5">App Logo</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 break-words">(recommended size: 250×80px, PNG/SVG)</p>
                 </div>
               </div>
               
               {/* Preview Section */}
               <div className="mb-3 sm:mb-4">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Preview</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 sm:p-4 bg-gray-50 flex items-center justify-center" style={{ minHeight: '100px' }}>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">Preview</label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 bg-gray-50 dark:bg-gray-700 flex items-center justify-center transition-colors" style={{ minHeight: '100px' }}>
                   {logos.appLogo ? (
                     <img 
                       src={logos.appLogo} 
@@ -525,7 +525,7 @@ export default function MainControl() {
                       }}
                     />
                   ) : (
-                    <p className="text-xs text-gray-400">No logo uploaded</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">No logo uploaded</p>
                   )}
                 </div>
               </div>
@@ -548,24 +548,24 @@ export default function MainControl() {
                 />
                 <label
                   htmlFor="app-logo-upload"
-                  className={`border-2 border-dashed rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center transition-colors ${
+                  className={`border-2 border-dashed rounded-lg p-4 sm:p-8 bg-gray-50 dark:bg-gray-700 flex flex-col items-center justify-center transition-colors ${
                     uploadingLogo === 'app' 
-                      ? 'border-gray-400 cursor-wait opacity-50' 
-                      : 'border-gray-300 cursor-pointer hover:border-gray-400'
+                      ? 'border-gray-400 dark:border-gray-600 cursor-wait opacity-50' 
+                      : 'border-gray-300 dark:border-gray-600 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500'
                   }`}
                   style={{ minHeight: '120px' }}
                 >
                   {uploadingLogo === 'app' ? (
                     <>
-                      <div className="h-8 w-8 sm:h-10 sm:w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[#F7931E] mb-2"></div>
-                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Uploading...</p>
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600 border-t-[#F7931E] mb-2"></div>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center px-2">Uploading...</p>
                     </>
                   ) : (
                     <>
-                      <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 dark:text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
-                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center px-2">Drag and drop your logo here or click to browse</p>
                     </>
                   )}
                 </label>
@@ -573,23 +573,23 @@ export default function MainControl() {
             </div>
 
             {/* Favicon Card */}
-            <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-6 shadow-sm transition-colors">
               <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-                <div className="rounded-lg bg-purple-100 p-2 sm:p-3 flex-shrink-0">
-                  <svg className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" fill="currentColor" viewBox="0 0 24 24">
+                <div className="rounded-lg bg-purple-100 dark:bg-purple-900/30 p-2 sm:p-3 flex-shrink-0">
+                  <svg className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M4 4h16v4H4V4zm0 6h16v10H4V10z" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-0.5">Favicon</h3>
-                  <p className="text-xs  text-gray-600 break-words">(recommended size: 32x32, PNG)</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-0.5">Favicon</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 break-words">(recommended size: 32x32, PNG)</p>
                 </div>
               </div>
               
               {/* Preview Section */}
               <div className="mb-3 sm:mb-4">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Preview</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 sm:p-4 bg-gray-50 flex items-center justify-center" style={{ minHeight: '100px' }}>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">Preview</label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 sm:p-4 bg-gray-50 dark:bg-gray-700 flex items-center justify-center transition-colors" style={{ minHeight: '100px' }}>
                   {logos.favicon ? (
                     <img 
                       src={logos.favicon} 
@@ -601,14 +601,14 @@ export default function MainControl() {
                       }}
                     />
                   ) : (
-                    <p className="text-xs text-gray-400">No favicon uploaded</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">No favicon uploaded</p>
                   )}
                 </div>
               </div>
 
               {/* Change Logo Section */}
               <div className="mb-3 sm:mb-4">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Change logo</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">Change logo</label>
                 <input
                   type="file"
                   id="favicon-upload"
@@ -624,24 +624,24 @@ export default function MainControl() {
                 />
                 <label
                   htmlFor="favicon-upload"
-                  className={`border-2 border-dashed rounded-lg p-4 sm:p-8 bg-gray-50 flex flex-col items-center justify-center transition-colors ${
+                  className={`border-2 border-dashed rounded-lg p-4 sm:p-8 bg-gray-50 dark:bg-gray-700 flex flex-col items-center justify-center transition-colors ${
                     uploadingLogo === 'favicon' 
-                      ? 'border-gray-400 cursor-wait opacity-50' 
-                      : 'border-gray-300 cursor-pointer hover:border-gray-400'
+                      ? 'border-gray-400 dark:border-gray-600 cursor-wait opacity-50' 
+                      : 'border-gray-300 dark:border-gray-600 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500'
                   }`}
                   style={{ minHeight: '120px' }}
                 >
                   {uploadingLogo === 'favicon' ? (
                     <>
-                      <div className="h-8 w-8 sm:h-10 sm:w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[#F7931E] mb-2"></div>
-                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Uploading...</p>
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600 border-t-[#F7931E] mb-2"></div>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center px-2">Uploading...</p>
                     </>
                   ) : (
                     <>
-                      <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 dark:text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
-                      <p className="text-xs sm:text-sm text-gray-600 text-center px-2">Drag and drop your logo here or click to browse</p>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center px-2">Drag and drop your logo here or click to browse</p>
                     </>
                   )}
                 </label>
@@ -778,7 +778,7 @@ export default function MainControl() {
           <div className="space-y-6">
             {/* Contact Details */}
             <div>
-              <h4 className="text-base font-semibold text-gray-900 mb-4">Contact Details</h4>
+              <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Contact Details</h4>
               <div className="space-y-4">
                 {phoneNumbers.map((phone) => (
                   <div key={phone.id}>
@@ -789,7 +789,7 @@ export default function MainControl() {
                           type="text"
                           value={editingValue}
                           onChange={(e) => setEditingValue(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
                           autoFocus
                         />
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -817,7 +817,7 @@ export default function MainControl() {
                           type="text"
                           value={phone.value}
                           readOnly
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-sm text-gray-900 dark:text-gray-100 cursor-default"
                         />
                         <button
                           onClick={() => handleEdit(phone.id, phone.value, 'phone')}
@@ -841,20 +841,20 @@ export default function MainControl() {
 
                 {/* Email Address */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{emailAddress.label}</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{emailAddress.label}</label>
                   {editingId === emailAddress.id && editingType === 'email' ? (
                     <div className="relative">
                       <input
                         type="email"
                         value={editingValue}
                         onChange={(e) => setEditingValue(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 transition-colors"
                         autoFocus
                       />
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                         <button
                           onClick={handleSave}
-                          className="text-green-600 hover:text-green-700 cursor-pointer"
+                          className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-500 cursor-pointer"
                         >
                           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -862,7 +862,7 @@ export default function MainControl() {
                         </button>
                         <button
                           onClick={handleCancel}
-                          className="text-red-600 hover:text-red-700 cursor-pointer"
+                          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer"
                         >
                           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -876,11 +876,11 @@ export default function MainControl() {
                         type="email"
                         value={emailAddress.value}
                         readOnly
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-sm text-gray-900 dark:text-gray-100 cursor-default transition-colors"
                       />
                       <button
                         onClick={() => handleEdit(emailAddress.id, emailAddress.value, 'email')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 cursor-pointer"
                       >
                         <PencilIcon className="h-5 w-5" />
                       </button>
@@ -890,20 +890,20 @@ export default function MainControl() {
 
                 {/* Address */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{address.label}</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{address.label}</label>
                   {editingId === address.id && editingType === 'address' ? (
                     <div className="relative">
                       <input
                         type="text"
                         value={editingValue}
                         onChange={(e) => setEditingValue(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 transition-colors"
                         autoFocus
                       />
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                         <button
                           onClick={handleSave}
-                          className="text-green-600 hover:text-green-700 cursor-pointer"
+                          className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-500 cursor-pointer"
                         >
                           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -911,7 +911,7 @@ export default function MainControl() {
                         </button>
                         <button
                           onClick={handleCancel}
-                          className="text-red-600 hover:text-red-700 cursor-pointer"
+                          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer"
                         >
                           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -925,11 +925,11 @@ export default function MainControl() {
                         type="text"
                         value={address.value}
                         readOnly
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-sm text-gray-900 dark:text-gray-100 cursor-default transition-colors"
                       />
                       <button
                         onClick={() => handleEdit(address.id, address.value, 'address')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 cursor-pointer"
                       >
                         <PencilIcon className="h-5 w-5" />
                       </button>
@@ -941,7 +941,7 @@ export default function MainControl() {
 
             {/* Footer One Features */}
             <div>
-              <h4 className="text-base font-semibold text-gray-900 mb-4">Footer One Features</h4>
+              <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Footer One Features</h4>
               <div className="space-y-4">
                 {footerOneFeatures.map((feature) => (
                   <div key={feature.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
@@ -949,14 +949,14 @@ export default function MainControl() {
                       <div className="flex-1 space-y-3">
                         {/* Title */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Title</label>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
                           {editingId === feature.id && editingType === 'footerOneTitle' ? (
                             <div className="relative">
                               <input
                                 type="text"
                                 value={editingValue}
                                 onChange={(e) => setEditingValue(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
                                 autoFocus
                               />
                               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -984,7 +984,7 @@ export default function MainControl() {
                                 type="text"
                                 value={feature.title}
                                 readOnly
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-sm text-gray-900 dark:text-gray-100 cursor-default"
                               />
                               <button
                                 onClick={() => handleEdit(feature.id, feature.title, 'footerOneTitle')}
@@ -1005,7 +1005,7 @@ export default function MainControl() {
                                 type="url"
                                 value={editingValue}
                                 onChange={(e) => setEditingValue(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
                                 placeholder="https://"
                                 autoFocus
                               />
@@ -1034,7 +1034,7 @@ export default function MainControl() {
                                 type="url"
                                 value={feature.link}
                                 readOnly
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-sm text-gray-900 dark:text-gray-100 cursor-default"
                               />
                               <button
                                 onClick={() => handleEdit(feature.id, feature.link, 'footerOneLink')}
@@ -1073,7 +1073,7 @@ export default function MainControl() {
 
             {/* Footer Two Features */}
             <div>
-              <h4 className="text-base font-semibold text-gray-900 mb-4">Footer Two Features</h4>
+              <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Footer Two Features</h4>
               <div className="space-y-4">
                 {footerTwoFeatures.map((feature) => (
                   <div key={feature.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
@@ -1081,14 +1081,14 @@ export default function MainControl() {
                       <div className="flex-1 space-y-3">
                         {/* Title */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Title</label>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
                           {editingId === feature.id && editingType === 'footerTwoTitle' ? (
                             <div className="relative">
                               <input
                                 type="text"
                                 value={editingValue}
                                 onChange={(e) => setEditingValue(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
                                 autoFocus
                               />
                               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -1116,7 +1116,7 @@ export default function MainControl() {
                                 type="text"
                                 value={feature.title}
                                 readOnly
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-sm text-gray-900 dark:text-gray-100 cursor-default"
                               />
                               <button
                                 onClick={() => handleEdit(feature.id, feature.title, 'footerTwoTitle')}
@@ -1137,7 +1137,7 @@ export default function MainControl() {
                                 type="url"
                                 value={editingValue}
                                 onChange={(e) => setEditingValue(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
                                 placeholder="https://"
                                 autoFocus
                               />
@@ -1166,7 +1166,7 @@ export default function MainControl() {
                                 type="url"
                                 value={feature.link}
                                 readOnly
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-sm text-gray-900 dark:text-gray-100 cursor-default"
                               />
                               <button
                                 onClick={() => handleEdit(feature.id, feature.link, 'footerTwoLink')}
@@ -1205,7 +1205,7 @@ export default function MainControl() {
 
             {/* Footer Social Media Links */}
             <div>
-              <h4 className="text-base font-semibold text-gray-900 mb-4">Social Media Links</h4>
+              <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Social Media Links</h4>
               <div className="space-y-4">
                 {socialMediaLinks.map((link) => (
                   <div key={link.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
@@ -1213,7 +1213,7 @@ export default function MainControl() {
                       {/* Icon Preview/Upload */}
                       <div className="flex-shrink-0">
                         <label className="block text-xs font-medium text-gray-700 mb-1">Icon</label>
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 bg-gray-50 flex items-center justify-center" style={{ minHeight: '60px', minWidth: '60px' }}>
+                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2 bg-gray-50 dark:bg-gray-700 flex items-center justify-center transition-colors" style={{ minHeight: '60px', minWidth: '60px' }}>
                           {link.icon ? (
                             <img 
                               src={link.icon} 
@@ -1225,7 +1225,7 @@ export default function MainControl() {
                               }}
                             />
                           ) : (
-                            <p className="text-xs text-gray-400">No icon</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500">No icon</p>
                           )}
                         </div>
                         <input
@@ -1252,14 +1252,14 @@ export default function MainControl() {
                       <div className="flex-1 space-y-3">
                         {/* Name */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
                           {editingId === link.id && editingType === 'socialName' ? (
                             <div className="relative">
                               <input
                                 type="text"
                                 value={editingValue}
                                 onChange={(e) => setEditingValue(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
                                 autoFocus
                               />
                               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -1287,7 +1287,7 @@ export default function MainControl() {
                                 type="text"
                                 value={link.name}
                                 readOnly
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-sm text-gray-900 dark:text-gray-100 cursor-default"
                               />
                               <button
                                 onClick={() => handleEdit(link.id, link.name, 'socialName')}
@@ -1308,7 +1308,7 @@ export default function MainControl() {
                                 type="url"
                                 value={editingValue}
                                 onChange={(e) => setEditingValue(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20"
                                 placeholder="https://"
                                 autoFocus
                               />
@@ -1337,7 +1337,7 @@ export default function MainControl() {
                                 type="url"
                                 value={link.url}
                                 readOnly
-                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 cursor-default"
+                                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-10 text-sm text-gray-900 dark:text-gray-100 cursor-default"
                               />
                               <button
                                 onClick={() => handleEdit(link.id, link.url, 'social')}
@@ -1421,7 +1421,7 @@ export default function MainControl() {
 
         return (
           <div className="space-y-6">
-            <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900">Terms & Conditions</h3>
+            <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">Terms & Conditions</h3>
             <div className="space-y-6">
               {termsConditions.map((term, index) => (
                 <div key={term.id}>
@@ -1438,19 +1438,19 @@ export default function MainControl() {
                                 prev.map((item) => (item.id === term.id ? { ...item, title: e.target.value } : item))
                               )
                             }}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2"
                             placeholder="Section Title"
                           />
                         </div>
                       ) : (
-                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{term.title}</h4>
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">{term.title}</h4>
                       )}
                       {editingId === term.id && editingType === 'terms' ? (
                         <div className="relative">
                           <textarea
                             value={editingValue}
                             onChange={(e) => setEditingValue(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 min-h-[100px] resize-y"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 min-h-[100px] resize-y transition-colors"
                             autoFocus
                           />
                           <div className="absolute right-2 top-2 flex items-center gap-1">
@@ -1474,7 +1474,7 @@ export default function MainControl() {
                         </div>
                       ) : (
                         <div className="relative pr-8">
-                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{term.content}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{term.content}</p>
                           <div className="absolute right-0 top-0 flex items-center gap-2">
                             <button
                               onClick={() => handleEditTerms(term.id, term.content)}
@@ -1557,12 +1557,12 @@ export default function MainControl() {
 
         return (
           <div className="space-y-6">
-            <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900">Privacy Policy</h3>
+            <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">Privacy Policy</h3>
             <div className="space-y-6">
               {privacyPolicy.map((policy, index) => (
                 <div key={policy.id}>
                   <div className="flex items-start gap-3 mb-2">
-                    <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">{index + 1}.</span>
+                    <span className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 flex-shrink-0">{index + 1}.</span>
                     <div className="flex-1">
                       {editingId === policy.id && editingType === 'privacy' ? (
                         <div className="mb-2">
@@ -1574,25 +1574,25 @@ export default function MainControl() {
                                 prev.map((item) => (item.id === policy.id ? { ...item, title: e.target.value } : item))
                               )
                             }}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2 transition-colors"
                             placeholder="Section Title"
                           />
                         </div>
                       ) : (
-                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{policy.title}</h4>
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">{policy.title}</h4>
                       )}
                       {editingId === policy.id && editingType === 'privacy' ? (
                         <div className="relative">
                           <textarea
                             value={editingValue}
                             onChange={(e) => setEditingValue(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 min-h-[100px] resize-y"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 min-h-[100px] resize-y transition-colors"
                             autoFocus
                           />
                           <div className="absolute right-2 top-2 flex items-center gap-1">
                             <button
                               onClick={handleSaveSinglePrivacy}
-                              className="text-green-600 hover:text-green-700 cursor-pointer"
+                              className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-500 cursor-pointer"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1600,7 +1600,7 @@ export default function MainControl() {
                             </button>
                             <button
                               onClick={handleCancelPrivacy}
-                              className="text-red-600 hover:text-red-700 cursor-pointer"
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1610,17 +1610,17 @@ export default function MainControl() {
                         </div>
                       ) : (
                         <div className="relative pr-8">
-                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{policy.content}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{policy.content}</p>
                           <div className="absolute right-0 top-0 flex items-center gap-2">
                             <button
                               onClick={() => handleEditPrivacy(policy.id, policy.content)}
-                              className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 cursor-pointer"
                             >
                               <PencilIcon className="h-5 w-5" />
                             </button>
                             <button
                               onClick={() => handleDeletePrivacy(policy.id)}
-                              className="text-red-400 hover:text-red-600 cursor-pointer"
+                              className="text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 cursor-pointer"
                             >
                               <TrashIcon className="h-5 w-5" />
                             </button>
@@ -1693,12 +1693,12 @@ export default function MainControl() {
 
         return (
           <div className="space-y-6">
-            <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900">Help Center</h3>
+            <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">Help Center</h3>
             <div className="space-y-6">
               {helpCenter.map((help, index) => (
                 <div key={help.id}>
                   <div className="flex items-start gap-3 mb-2">
-                    <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">{index + 1}.</span>
+                    <span className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 flex-shrink-0">{index + 1}.</span>
                     <div className="flex-1">
                       {editingId === help.id && editingType === 'help' ? (
                         <div className="mb-2">
@@ -1710,25 +1710,25 @@ export default function MainControl() {
                                 prev.map((item) => (item.id === help.id ? { ...item, title: e.target.value } : item))
                               )
                             }}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2 transition-colors"
                             placeholder="Section Title"
                           />
                         </div>
                       ) : (
-                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{help.title}</h4>
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">{help.title}</h4>
                       )}
                       {editingId === help.id && editingType === 'help' ? (
                         <div className="relative">
                           <textarea
                             value={editingValue}
                             onChange={(e) => setEditingValue(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 min-h-[100px] resize-y"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 min-h-[100px] resize-y transition-colors"
                             autoFocus
                           />
                           <div className="absolute right-2 top-2 flex items-center gap-1">
                             <button
                               onClick={handleSaveSingleHelp}
-                              className="text-green-600 hover:text-green-700 cursor-pointer"
+                              className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-500 cursor-pointer"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1736,7 +1736,7 @@ export default function MainControl() {
                             </button>
                             <button
                               onClick={handleCancelHelp}
-                              className="text-red-600 hover:text-red-700 cursor-pointer"
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1746,17 +1746,17 @@ export default function MainControl() {
                         </div>
                       ) : (
                         <div className="relative pr-8">
-                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{help.content}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{help.content}</p>
                           <div className="absolute right-0 top-0 flex items-center gap-2">
                             <button
                               onClick={() => handleEditHelp(help.id, help.content)}
-                              className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 cursor-pointer"
                             >
                               <PencilIcon className="h-5 w-5" />
                             </button>
                             <button
                               onClick={() => handleDeleteHelp(help.id)}
-                              className="text-red-400 hover:text-red-600 cursor-pointer"
+                              className="text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 cursor-pointer"
                             >
                               <TrashIcon className="h-5 w-5" />
                             </button>
@@ -1829,12 +1829,12 @@ export default function MainControl() {
 
         return (
           <div className="space-y-6">
-            <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900">About Us</h3>
+            <h3 className="text-center text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">About Us</h3>
             <div className="space-y-6">
               {aboutUs.map((about, index) => (
                 <div key={about.id}>
                   <div className="flex items-start gap-3 mb-2">
-                    <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">{index + 1}.</span>
+                    <span className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 flex-shrink-0">{index + 1}.</span>
                     <div className="flex-1">
                       {editingId === about.id && editingType === 'about' ? (
                         <div className="mb-2">
@@ -1846,25 +1846,25 @@ export default function MainControl() {
                                 prev.map((item) => (item.id === about.id ? { ...item, title: e.target.value } : item))
                               )
                             }}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 mb-2 transition-colors"
                             placeholder="Section Title"
                           />
                         </div>
                       ) : (
-                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">{about.title}</h4>
+                        <h4 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100 mb-2">{about.title}</h4>
                       )}
                       {editingId === about.id && editingType === 'about' ? (
                         <div className="relative">
                           <textarea
                             value={editingValue}
                             onChange={(e) => setEditingValue(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-20 text-sm text-gray-900 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 min-h-[100px] resize-y"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 pr-20 text-sm text-gray-900 dark:text-gray-100 focus:border-[#FF8C00] focus:outline-none focus:ring-2 focus:ring-[#FF8C00]/20 min-h-[100px] resize-y transition-colors"
                             autoFocus
                           />
                           <div className="absolute right-2 top-2 flex items-center gap-1">
                             <button
                               onClick={handleSaveSingleAbout}
-                              className="text-green-600 hover:text-green-700 cursor-pointer"
+                              className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-500 cursor-pointer"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1872,7 +1872,7 @@ export default function MainControl() {
                             </button>
                             <button
                               onClick={handleCancelAbout}
-                              className="text-red-600 hover:text-red-700 cursor-pointer"
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 cursor-pointer"
                             >
                               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1882,17 +1882,17 @@ export default function MainControl() {
                         </div>
                       ) : (
                         <div className="relative pr-8">
-                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{about.content}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{about.content}</p>
                           <div className="absolute right-0 top-0 flex items-center gap-2">
                             <button
                               onClick={() => handleEditAbout(about.id, about.content)}
-                              className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 cursor-pointer"
                             >
                               <PencilIcon className="h-5 w-5" />
                             </button>
                             <button
                               onClick={() => handleDeleteAbout(about.id)}
-                              className="text-red-400 hover:text-red-600 cursor-pointer"
+                              className="text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-400 cursor-pointer"
                             >
                               <TrashIcon className="h-5 w-5" />
                             </button>
@@ -1939,13 +1939,13 @@ export default function MainControl() {
     <div className="mb-4 sm:mb-6">
       {/* Header */}
       <div className="mb-3 sm:mb-6">
-        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Main Control</h1>
-        <p className="text-xs sm:text-sm text-gray-600 mt-1">Dashboard • Main Control</p>
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Main Control</h1>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Dashboard • Main Control</p>
       </div>
 
       {/* Filters/Tabs */}
       <div className="mb-4 sm:mb-6">
-        <div className="flex gap-1 sm:gap-2 border-b border-gray-200 overflow-x-auto scrollbar-hide -mx-3 sm:mx-0 px-3 sm:px-0">
+        <div className="flex gap-1 sm:gap-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-hide -mx-3 sm:mx-0 px-3 sm:px-0">
           {filters.map((filter) => (
             <button
               key={filter.id}
@@ -1954,7 +1954,7 @@ export default function MainControl() {
               className={`px-3 sm:px-4 py-2.5 sm:py-2.5 text-xs sm:text-sm font-medium transition-colors border-b-2 -mb-px cursor-pointer whitespace-nowrap flex-shrink-0 ${
                 activeFilter === filter.id
                   ? 'border-[#F7931E] text-[#F7931E]'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  : 'border-transparent text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               {filter.label}
@@ -1965,21 +1965,21 @@ export default function MainControl() {
 
       {/* Error and Success Messages */}
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           {error}
         </div>
       )}
       {successMessage && (
-        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="mb-4 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-3 text-sm text-green-700 dark:text-green-300">
           {successMessage}
         </div>
       )}
 
       {/* Content Area */}
-      <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-6 shadow-sm">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:p-6 shadow-sm transition-colors">
         {isLoading && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-[#F7931E]"></div>
+          <div className="mb-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600 border-t-[#F7931E]"></div>
             <span>Loading...</span>
           </div>
         )}

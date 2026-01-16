@@ -173,8 +173,8 @@ export default function CategoryFilters() {
     <div className="space-y-6">
       {/* Header Section */}
       <div>
-        <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">Category Filters</h1>
-        <p className="mt-1 text-sm text-gray-600">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 sm:text-2xl">Category Filters</h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           <span>Dashboard</span>
           <span className="mx-1">•</span>
           <span>Filters</span>
@@ -182,7 +182,7 @@ export default function CategoryFilters() {
       </div>
 
       {/* Tabs Section */}
-      <section className="rounded-xl bg-white shadow-sm">
+      <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
         <div className="px-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CategoriesFilterTabs tabs={TAB_OPTIONS} activeTab="filter" onTabChange={handleTabChange} />
@@ -199,44 +199,44 @@ export default function CategoryFilters() {
       </section>
 
       {/* Main Content Card */}
-      <section className="rounded-xl bg-white shadow-sm">
+      <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
         <div className="px-4 sm:px-6 py-6">
           {/* Existing Filters Section */}
           <div className="mb-8">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Existing Filters</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Existing Filters</h2>
 
             {error && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="mb-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-3 py-2 text-sm text-red-700 dark:text-red-300">
                 {error}
               </div>
             )}
 
             {isLoading ? (
-              <div className="flex min-h-[200px] flex-col items-center justify-center text-sm text-gray-600">
+              <div className="flex min-h-[200px] flex-col items-center justify-center text-sm text-gray-600 dark:text-gray-400">
                 Loading filters...
               </div>
             ) : filters.length === 0 ? (
-              <div className="flex min-h-[200px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
-                <p className="text-base font-semibold text-gray-800">No filters available</p>
-                <p className="mt-1 max-w-sm text-sm text-gray-500">Add a new filter to get started.</p>
+              <div className="flex min-h-[200px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 py-12 text-center">
+                <p className="text-base font-semibold text-gray-800 dark:text-gray-200">No filters available</p>
+                <p className="mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400">Add a new filter to get started.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto  border border-gray-200 rounded-lg">
+              <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Filter Name</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Input Type</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Options</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                    <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 transition-colors">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Filter Name</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Input Type</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Options</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filters.map((filter) => (
-                      <tr key={filter.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{filter.filterName}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
+                      <tr key={filter.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-medium">{filter.filterName}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                           {filter.inputType === 'number' ? (
                             <span>Number</span>
                           ) : filter.inputType === 'radio' ? (
@@ -248,18 +248,18 @@ export default function CategoryFilters() {
                             getInputTypeLabel(filter.inputType)
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
                           {filter.options.length > 0 ? filter.options.join(', ') : '—'}
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <span className="text-green-600 font-medium">Active</span>
+                          <span className="text-green-600 dark:text-green-400 font-medium">Active</span>
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <div className="flex items-center gap-4">
                             <button
                               type="button"
                               onClick={() => handleEdit(filter)}
-                              className="text-blue-600 hover:text-blue-800 transition-colors cursor-pointer font-medium"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-500 transition-colors cursor-pointer font-medium"
                             >
                               Edit
                             </button>
@@ -269,8 +269,8 @@ export default function CategoryFilters() {
                               disabled={assignedFilterIds.has(filter.id)}
                               className={`transition-colors font-medium ${
                                 assignedFilterIds.has(filter.id)
-                                  ? 'text-gray-400 cursor-not-allowed opacity-50'
-                                  : 'text-red-600 hover:text-red-800 cursor-pointer'
+                                  ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
+                                  : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-500 cursor-pointer'
                               }`}
                               title={
                                 assignedFilterIds.has(filter.id)
@@ -292,11 +292,11 @@ export default function CategoryFilters() {
 
           {/* Preview Section */}
           <div>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Preview: How Vendors Will See These Filters
             </h2>
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Additional Information</h3>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 transition-colors">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Additional Information</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {filters.map((filter) => {
                   // For Cylinders, place it in the first column of second row
@@ -305,7 +305,7 @@ export default function CategoryFilters() {
                   
                   return (
                     <div key={filter.id} className={`flex flex-col ${gridColumn}`}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {filter.filterName}
                       </label>
                       {filter.inputType === 'number' ? (
@@ -313,7 +313,7 @@ export default function CategoryFilters() {
                           type="number"
                           value={previewValues[filter.id] || ''}
                           onChange={(e) => handlePreviewChange(filter.id, e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E]"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E] transition-colors"
                         />
                       ) : filter.inputType === 'radio' ? (
                         <div className="flex flex-wrap gap-4">
@@ -327,7 +327,7 @@ export default function CategoryFilters() {
                                 onChange={(e) => handlePreviewChange(filter.id, e.target.value)}
                                 className="text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
                               />
-                              <span className="text-sm text-gray-700">{option}</span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{option}</span>
                             </label>
                           ))}
                         </div>
@@ -347,7 +347,7 @@ export default function CategoryFilters() {
                                 }}
                                 className="text-[#F7931E] focus:ring-[#F7931E] cursor-pointer"
                               />
-                              <span className="text-sm text-gray-700">{option}</span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{option}</span>
                             </label>
                           ))}
                         </div>
@@ -356,7 +356,7 @@ export default function CategoryFilters() {
                           type="text"
                           value={previewValues[filter.id] || ''}
                           onChange={(e) => handlePreviewChange(filter.id, e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E]"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 outline-none focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E] transition-colors"
                         />
                       )}
                     </div>

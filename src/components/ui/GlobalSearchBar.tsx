@@ -201,9 +201,9 @@ export default function GlobalSearchBar({
             }
           }}
           onKeyDown={handleKeyDown}
-          className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-3 sm:pl-4 pr-9 sm:pr-10 text-sm outline-none placeholder:text-gray-400 focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E]"
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 pl-3 sm:pl-4 pr-9 sm:pr-10 text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E]"
         />
-        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-400">
           <SearchIcon className="h-4 w-4 sm:h-5 sm:w-5" />
         </div>
         {isLoading && (
@@ -215,33 +215,33 @@ export default function GlobalSearchBar({
 
       {/* Dropdown Results */}
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-96 overflow-y-auto">
+        <div className="absolute z-50 mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg max-h-96 overflow-y-auto">
           {isLoading ? (
             <div className="p-4">
               <LoadingSpinner />
             </div>
           ) : results.length === 0 && query.trim() ? (
-            <div className="p-4 text-center text-sm text-gray-500">
+            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
               No results found for &quot;{query}&quot;
             </div>
           ) : results.length > 0 ? (
             <>
               {/* Results Summary */}
-              <div className="border-b border-gray-200 px-4 py-2 bg-gray-50">
-                <p className="text-xs font-medium text-gray-600">
+              <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-2 bg-gray-50 dark:bg-gray-700">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-300">
                   Found {totalResults} result{totalResults !== 1 ? 's' : ''}
                 </p>
               </div>
 
               {/* Grouped Results */}
               {results.map((group, groupIndex) => (
-                <div key={group.type} className="border-b border-gray-100 last:border-b-0">
+                <div key={group.type} className="border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                   {/* Group Header */}
-                  <div className="sticky top-0 bg-gray-50 px-4 py-2 border-b border-gray-200">
+                  <div className="sticky top-0 bg-gray-50 dark:bg-gray-700 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
                     <div className="flex items-center gap-2">
                       {getTypeIcon(group.type)}
-                      <span className="text-xs font-semibold text-gray-700">{group.label}</span>
-                      <span className="text-xs text-gray-500">({group.count})</span>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{group.label}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">({group.count})</span>
                     </div>
                   </div>
 
@@ -258,25 +258,25 @@ export default function GlobalSearchBar({
                           key={result.id}
                           type="button"
                           onClick={() => handleResultClick(result)}
-                          className={`w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors ${
-                            isSelected ? 'bg-gray-100' : ''
+                          className={`w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                            isSelected ? 'bg-gray-100 dark:bg-gray-700' : ''
                           }`}
                         >
                           <div className="flex items-start gap-3">
-                            <div className="mt-0.5 flex-shrink-0 text-gray-400">
+                            <div className="mt-0.5 flex-shrink-0 text-gray-400 dark:text-gray-500">
                               {getTypeIcon(result.type)}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium text-gray-900 truncate">
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                                   {result.title}
                                 </p>
-                                <span className="flex-shrink-0 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                <span className="flex-shrink-0 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-0.5 rounded">
                                   {typeLabelMap[result.type]}
                                 </span>
                               </div>
                               {result.subtitle && (
-                                <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                                   {result.subtitle}
                                 </p>
                               )}
@@ -289,7 +289,7 @@ export default function GlobalSearchBar({
 
                   {/* Show more link if there are more results */}
                   {group.count > group.results.length && (
-                    <div className="px-4 py-2 border-t border-gray-100 bg-gray-50">
+                    <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
                       <button
                         type="button"
                         onClick={() => {

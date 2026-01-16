@@ -65,7 +65,7 @@ export default function ProductsTable({ products, emptyState, onActionSelect }: 
       <div className="w-full rounded-xl overflow-hidden">
         <div className="overflow-x-auto md:overflow-x-visible">
           <table className="w-full border-collapse text-sm min-w-[600px] md:min-w-0">
-              <thead className="bg-transparent sticky top-0 z-10">
+              <thead className="bg-white dark:bg-gray-800 sticky top-0 z-10 transition-colors">
                 <tr>
                   <TableHeader>Product</TableHeader>
                   <TableHeader>Vendor</TableHeader>
@@ -77,27 +77,27 @@ export default function ProductsTable({ products, emptyState, onActionSelect }: 
                   <TableHeader align="center">Action</TableHeader>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {products.map((product, index) => (
                   <tr 
                     key={product.id}
                     onClick={(e) => handleRowClick(product, e)}
-                    className={`border-b border-gray-200 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      index === 4 ? 'bg-gray-50' : ''
+                    className={`border-b border-gray-200 dark:border-gray-700 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                      index === 4 ? 'bg-gray-50 dark:bg-gray-700' : ''
                     }`}
                   >
                     <TableCell>
-                      <span className="text-gray-700 font-medium text-xs sm:text-sm">{product.product}</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium text-xs sm:text-sm">{product.product}</span>
                     </TableCell>
-                    <TableCell className="text-xs sm:text-sm">{product.vendor}</TableCell>
-                    <TableCell className="text-xs sm:text-sm">{product.category}</TableCell>
-                    <TableCell className="text-sm whitespace-nowrap">{product.startDate}</TableCell>
-                    <TableCell className="text-sm whitespace-nowrap">{product.endDate}</TableCell>
+                    <TableCell className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{product.vendor}</TableCell>
+                    <TableCell className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{product.category}</TableCell>
+                    <TableCell className="text-sm whitespace-nowrap text-gray-700 dark:text-gray-300">{product.startDate}</TableCell>
+                    <TableCell className="text-sm whitespace-nowrap text-gray-700 dark:text-gray-300">{product.endDate}</TableCell>
                     <TableCell>
                       <span className={`text-xs font-medium ${
-                        product.priority === 'High' ? 'text-red-600' : 
-                        product.priority === 'Medium' ? 'text-yellow-600' : 
-                        'text-gray-600'
+                        product.priority === 'High' ? 'text-red-600 dark:text-red-400' : 
+                        product.priority === 'Medium' ? 'text-yellow-600 dark:text-yellow-400' : 
+                        'text-gray-600 dark:text-gray-300'
                       }`}>
                         {product.priority}
                       </span>
@@ -105,8 +105,10 @@ export default function ProductsTable({ products, emptyState, onActionSelect }: 
                     <TableCell>
                       <MarketingStatusBadge status={product.status} />
                     </TableCell>
-                    <TableCell align="center">
-                      <ProductsActionMenu onSelect={(action) => onActionSelect?.(product, action)} />
+                    <TableCell align="center" className="relative z-10">
+                      <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                        <ProductsActionMenu onSelect={(action) => onActionSelect?.(product, action)} />
+                      </div>
                     </TableCell>
                   </tr>
                 ))}
@@ -131,7 +133,7 @@ function TableHeader({ children, align = 'left' }: TableHeaderProps) {
       scope="col"
       className={`whitespace-nowrap px-2 sm:px-3 
         md:px-5 py-2 sm:py-3 text-xs sm:text-sm font-semibold 
-         tracking-wide text-gray-700 border-b border-gray-300 bg-white ${textAlign}`}
+         tracking-wide text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 ${textAlign} transition-colors`}
     >
       {children}
     </th>
@@ -149,7 +151,7 @@ function TableCell({ children, className = '', align = 'left' }: TableCellProps)
   
   return (
     <td
-      className={`px-2 sm:px-3 md:px-5 py-2 text-gray-700 ${textAlign} ${className}`}
+      className={`px-2 sm:px-3 md:px-5 py-2 text-gray-700 dark:text-gray-300 ${textAlign} ${className}`}
     >
       {children}
     </td>

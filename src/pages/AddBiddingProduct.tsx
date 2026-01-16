@@ -5,6 +5,7 @@ import SelectDropdown from '../components/ui/SelectDropdown'
 import { productsApi } from '../services/products.api'
 import { auctionsApi } from '../services/auctions.api'
 import { categoriesApi, type Category } from '../services/categories.api'
+import { filtersApi, type Filter as BackendFilter } from '../services/filters.api'
 
 export default function AddBiddingProduct() {
   const navigate = useNavigate()
@@ -26,13 +27,14 @@ export default function AddBiddingProduct() {
     biddingMinimumAmount: '',
     dimensions: '',
     weight: '',
-    documentTitle: '',
     allowFullPayment: true,
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [mediaFiles, setMediaFiles] = useState<File[]>([])
-  const [documentFiles, setDocumentFiles] = useState<File[]>([])
+  const [documents, setDocuments] = useState<Array<{ file: File; title: string }>>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [availableFilters, setAvailableFilters] = useState<any[]>([])
+  const [selectedFilters, setSelectedFilters] = useState<Array<{ filterId: string; value: string }>>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -65,6 +67,40 @@ export default function AddBiddingProduct() {
     fetchCategories()
   }, [])
 
+  // Fetch available filters
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const filters = await filtersApi.getAll()
+        setAvailableFilters(filters)
+      } catch (err: any) {
+        console.error('Error fetching filters:', err)
+      }
+    }
+    fetchFilters()
+  }, [])
+
+  // Load filters for selected category
+  useEffect(() => {
+    const loadCategoryFilters = async () => {
+      if (!formData.categoryId) {
+        setAvailableFilters([])
+        return
+      }
+      try {
+        const categoryFilters = await categoriesApi.getCategoryFilters(formData.categoryId)
+        // Get full filter details
+        const filterIds = categoryFilters.map((cf: any) => cf.filterId)
+        const allFilters = await filtersApi.getAll()
+        const relevantFilters = allFilters.filter((f: BackendFilter) => filterIds.includes(f.id))
+        setAvailableFilters(relevantFilters)
+      } catch (err: any) {
+        console.error('Error fetching category filters:', err)
+      }
+    }
+    loadCategoryFilters()
+  }, [formData.categoryId])
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -89,19 +125,40 @@ export default function AddBiddingProduct() {
   }
 
   const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setDocumentFiles([...documentFiles, ...Array.from(e.target.files)])
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      setDocuments([...documents, { file, title: '' }])
       // Reset input to allow selecting same file again
       e.target.value = ''
     }
+  }
+
+  const updateDocumentTitle = (index: number, title: string) => {
+    const updated = [...documents]
+    updated[index] = { ...updated[index], title }
+    setDocuments(updated)
+  }
+
+  const removeDocument = (index: number) => {
+    setDocuments(documents.filter((_, i) => i !== index))
   }
 
   const removeMediaFile = (index: number) => {
     setMediaFiles(mediaFiles.filter((_, i) => i !== index))
   }
 
-  const removeDocumentFile = (index: number) => {
-    setDocumentFiles(documentFiles.filter((_, i) => i !== index))
+  const handleAddFilter = () => {
+    setSelectedFilters([...selectedFilters, { filterId: '', value: '' }])
+  }
+
+  const handleFilterChange = (index: number, field: 'filterId' | 'value', value: string) => {
+    const updated = [...selectedFilters]
+    updated[index] = { ...updated[index], [field]: value }
+    setSelectedFilters(updated)
+  }
+
+  const removeFilter = (index: number) => {
+    setSelectedFilters(selectedFilters.filter((_, i) => i !== index))
   }
 
 
@@ -208,6 +265,34 @@ export default function AddBiddingProduct() {
         mediaUrls.push('https://via.placeholder.com/400')
       }
 
+      // Convert document files to URLs with titles
+      const documentData: Array<{ url: string; title: string }> = []
+      for (const doc of documents) {
+        if (!doc.title.trim()) {
+          setError(`Document title is required for ${doc.file.name}`)
+          setIsSubmitting(false)
+          return
+        }
+        try {
+          const dataUrl = await convertFileToDataURL(doc.file)
+          documentData.push({ url: dataUrl, title: doc.title.trim() })
+        } catch (err) {
+          console.error('Error converting document:', err)
+        }
+      }
+
+      // Prepare filter values
+      const filterValues: Array<{ filterId: string; value: string }> = []
+      for (const filter of selectedFilters) {
+        if (!filter.filterId || !filter.value.trim()) {
+          continue // Skip incomplete filters
+        }
+        filterValues.push({
+          filterId: filter.filterId,
+          value: filter.value.trim(),
+        })
+      }
+
       // Convert prices to minor units (cents)
       const startingPriceMinor = Math.round(parseFloat(formData.startingPrice) * 100)
       const reservePriceMinor = formData.reservePrice ? Math.round(parseFloat(formData.reservePrice) * 100) : undefined
@@ -251,6 +336,8 @@ export default function AddBiddingProduct() {
         categoryIds: [formData.categoryId],
         attributes: attributes,
         mediaUrls: mediaUrls,
+        documents: documentData.length > 0 ? documentData : undefined,
+        filterValues: filterValues.length > 0 ? filterValues : undefined,
       })
 
       // Step 2: Create auction
@@ -496,54 +583,155 @@ export default function AddBiddingProduct() {
                 + Add Another Document
               </label>
             </div>
-            {documentFiles.length > 0 && (
-              <div className="mt-3 space-y-2">
+            {documents.length > 0 && (
+              <div className="mt-3 space-y-3">
                 <p className="text-sm font-medium text-gray-700">
-                  Selected Documents ({documentFiles.length}):
+                  Selected Documents ({documents.length}):
                 </p>
-                <div className="space-y-2">
-                  {documentFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                {documents.map((doc, index) => (
+                  <div key={index} className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-2">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
                         <svg className="h-8 w-8 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-700 truncate font-medium" title={file.name}>
-                            {file.name}
+                          <p className="text-sm text-gray-700 truncate font-medium" title={doc.file.name}>
+                            {doc.file.name}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                            {(doc.file.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeDocumentFile(index)}
+                        onClick={() => removeDocument(index)}
                         className="ml-3 text-red-600 hover:text-red-700 text-sm font-medium px-3 py-1 rounded hover:bg-red-50 transition-colors"
                       >
                         Remove
                       </button>
                     </div>
-                  ))}
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#888888] mb-2">
+                        Document Title <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter Document Title"
+                        value={doc.title}
+                        onChange={(e) => updateDocumentTitle(index, e.target.value)}
+                        className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2.5 text-sm outline-none placeholder:text-gray-400 focus:ring-1 focus:ring-[#F7931E]"
+                        required
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-            <div>
-              <label htmlFor="documentTitle" className="block text-sm font-medium text-[#888888] mb-2">
-                Add Document Title
-              </label>
-              <input
-                id="documentTitle"
-                name="documentTitle"
-                type="text"
-                placeholder="Enter Title"
-                value={formData.documentTitle}
-                onChange={handleChange}
-                className="w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm outline-none placeholder:text-gray-400 focus:ring-1 focus:ring-[#F7931E]"
-              />
-            </div>
           </div>
+          </div>
+
+          {/* Filters Section */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Filters</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Select filters from the category and set their values for this product
+            </p>
+            
+            {selectedFilters.map((filter, index) => {
+              const filterDetails = availableFilters.find((f: BackendFilter) => f.id === filter.filterId)
+              const filterOptions = filterDetails?.options?.values || []
+              const filterType = filterDetails?.type || 'text'
+              
+              return (
+                <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-700">Filter {index + 1}</h3>
+                    <button
+                      type="button"
+                      onClick={() => removeFilter(index)}
+                      className="text-red-600 hover:text-red-700 text-sm font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-[#888888] mb-2">
+                        Select Filter <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={filter.filterId}
+                        onChange={(e) => handleFilterChange(index, 'filterId', e.target.value)}
+                        className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-[#F7931E]"
+                        required
+                      >
+                        <option value="">-- Select Filter --</option>
+                        {availableFilters.map((f: BackendFilter) => (
+                          <option key={f.id} value={f.id}>
+                            {f.i18n?.en?.label || f.key}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {filter.filterId && (
+                      <div>
+                        <label className="block text-sm font-medium text-[#888888] mb-2">
+                          Filter Value <span className="text-red-500">*</span>
+                        </label>
+                        {filterType === 'number' ? (
+                          <input
+                            type="number"
+                            value={filter.value}
+                            onChange={(e) => handleFilterChange(index, 'value', e.target.value)}
+                            placeholder="Enter value"
+                            className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-[#F7931E]"
+                            required
+                          />
+                        ) : filterOptions.length > 0 ? (
+                          <select
+                            value={filter.value}
+                            onChange={(e) => handleFilterChange(index, 'value', e.target.value)}
+                            className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-[#F7931E]"
+                            required
+                          >
+                            <option value="">-- Select Value --</option>
+                            {filterOptions.map((opt: string) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={filter.value}
+                            onChange={(e) => handleFilterChange(index, 'value', e.target.value)}
+                            placeholder="Enter value"
+                            className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-[#F7931E]"
+                            required
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+            
+            <button
+              type="button"
+              onClick={handleAddFilter}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#F7931E] bg-[#FDF4EB] rounded-lg hover:bg-[#F9E8D3] transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Filter
+            </button>
           </div>
 
           {/* Auction Settings Section */}
