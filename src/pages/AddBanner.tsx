@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { CalendarIcon, CameraIcon, UploadIcon, PlusIcon, EditIcon, ClockIcon, ChevronDownIcon, XIcon } from '../components/icons/Icons'
 import { type StoryHighlightFormData } from '../components/marketing/AddStoryHighlightModal'
-import { bannersApi, filesToDataUrls } from '../services/banners.api'
+import { bannersApi, uploadMultipleFilesToS3 } from '../services/banners.api'
 
 interface BannerFormData extends StoryHighlightFormData {
   startTime: string
@@ -169,30 +169,26 @@ export default function AddBanner() {
       
       // Create previews for all files
       const newPreviews = await Promise.all(
-        fileArray.map((file) => {
-          return new Promise<{ file: File; preview: string; type: 'image' | 'video' }>((resolve) => {
-            const isVideo = file.type.startsWith('video/')
-            if (isVideo) {
-              // For videos, create object URL
-              const videoUrl = URL.createObjectURL(file)
-              resolve({
-                file,
-                preview: videoUrl,
-                type: 'video',
-              })
-            } else {
-              // For images, use FileReader
-              const reader = new FileReader()
-              reader.onloadend = () => {
-                resolve({
-                  file,
-                  preview: reader.result as string,
-                  type: 'image',
-                })
-              }
-              reader.readAsDataURL(file)
+        fileArray.map(async (file) => {
+          const isVideo = file.type.startsWith('video/')
+          if (isVideo) {
+            // For videos, create object URL
+            const videoUrl = URL.createObjectURL(file)
+            return {
+              file,
+              preview: videoUrl,
+              type: 'video' as const,
             }
-          })
+          } else {
+            // For images, create preview (Base64 for UI only)
+            const { fileToDataUrl } = await import('../services/upload.api')
+            const preview = await fileToDataUrl(file)
+            return {
+              file,
+              preview,
+              type: 'image' as const,
+            }
+          }
         })
       )
 
@@ -287,7 +283,7 @@ export default function AddBanner() {
         throw new Error('End date must be after start date')
       }
 
-      // Convert files to data URLs and combine with existing URLs
+      // Upload files to S3 and combine with existing URLs
       let mediaUrls: string[] = []
       
       // Get existing media URLs from preview files that don't have a file (from edit mode)
@@ -295,10 +291,14 @@ export default function AddBanner() {
         .filter((pf) => !pf.file && (pf as any).isExisting)
         .map((pf) => pf.preview)
       
-      // Convert new files to data URLs
+      // Upload new files to S3 (not Base64)
       if (formData.mediaFiles.length > 0) {
-        const newUrls = await filesToDataUrls(formData.mediaFiles)
-        mediaUrls = [...existingUrls, ...newUrls]
+        try {
+          const newUrls = await uploadMultipleFilesToS3(formData.mediaFiles, 'banners')
+          mediaUrls = [...existingUrls, ...newUrls]
+        } catch (err: any) {
+          throw new Error(`Failed to upload files to S3: ${err.message}`)
+        }
       } else {
         mediaUrls = existingUrls
       }

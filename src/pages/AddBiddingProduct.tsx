@@ -11,7 +11,8 @@ export default function AddBiddingProduct() {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     productTitle: '',
-    categoryId: '',
+    mainCategoryId: '', // Main category (parentId is null)
+    subcategoryId: '', // Subcategory (selected from main category's children)
     condition: '',
     productDescription: '',
     startingPrice: '',
@@ -21,6 +22,7 @@ export default function AddBiddingProduct() {
     auctionEndDate: '',
     auctionStartTime: '',
     auctionEndTime: '',
+    depositAmount: '', // Deposit amount required before bidding
     paymentAmount: 'By Percentage of the total winning bid',
     paymentValue: '', // The actual percentage or fixed amount value
     daysForPaymentSettlement: '',
@@ -32,40 +34,50 @@ export default function AddBiddingProduct() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [mediaFiles, setMediaFiles] = useState<File[]>([])
   const [documents, setDocuments] = useState<Array<{ file: File; title: string }>>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [mainCategories, setMainCategories] = useState<Category[]>([]) // Only main categories
+  const [subcategories, setSubcategories] = useState<Category[]>([]) // Subcategories of selected main category
   const [availableFilters, setAvailableFilters] = useState<any[]>([])
   const [selectedFilters, setSelectedFilters] = useState<Array<{ filterId: string; value: string }>>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  // Fetch categories
+  // Fetch main categories only
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         setLoadingCategories(true)
-        const tree = await categoriesApi.getTree()
-        // Flatten tree to get all categories
-        const flattenCategories = (cats: Category[]): Category[] => {
-          const result: Category[] = []
-          cats.forEach(cat => {
-            result.push(cat)
-            if (cat.children && cat.children.length > 0) {
-              result.push(...flattenCategories(cat.children))
-            }
-          })
-          return result
-        }
-        setCategories(flattenCategories(tree).filter(cat => cat.isActive))
+        setError(null)
+        const mainCats = await categoriesApi.getMain()
+        setMainCategories(mainCats.filter(cat => cat.isActive))
       } catch (err: any) {
         console.error('Error fetching categories:', err)
         setError('Failed to load categories')
+        setMainCategories([])
       } finally {
         setLoadingCategories(false)
       }
     }
     fetchCategories()
   }, [])
+
+  // Fetch subcategories when main category is selected
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      if (!formData.mainCategoryId) {
+        setSubcategories([])
+        return
+      }
+      try {
+        const subs = await categoriesApi.getSubcategories(formData.mainCategoryId)
+        setSubcategories(subs.filter(cat => cat.isActive))
+      } catch (err: any) {
+        console.error('Error fetching subcategories:', err)
+        setSubcategories([])
+      }
+    }
+    fetchSubcategories()
+  }, [formData.mainCategoryId])
 
   // Fetch available filters
   useEffect(() => {
@@ -80,26 +92,31 @@ export default function AddBiddingProduct() {
     fetchFilters()
   }, [])
 
-  // Load filters for selected category
+  // Load filters for selected category (use subcategory if selected, otherwise main category)
   useEffect(() => {
     const loadCategoryFilters = async () => {
-      if (!formData.categoryId) {
+      const categoryId = formData.subcategoryId || formData.mainCategoryId
+      if (!categoryId) {
         setAvailableFilters([])
+        setSelectedFilters([])
         return
       }
       try {
-        const categoryFilters = await categoriesApi.getCategoryFilters(formData.categoryId)
+        const categoryFilters = await categoriesApi.getCategoryFilters(categoryId)
         // Get full filter details
         const filterIds = categoryFilters.map((cf: any) => cf.filterId)
         const allFilters = await filtersApi.getAll()
         const relevantFilters = allFilters.filter((f: BackendFilter) => filterIds.includes(f.id))
         setAvailableFilters(relevantFilters)
+        // Reset selected filters if they're no longer valid
+        setSelectedFilters(prev => prev.filter(sf => filterIds.includes(sf.filterId)))
       } catch (err: any) {
         console.error('Error fetching category filters:', err)
+        setAvailableFilters([])
       }
     }
     loadCategoryFilters()
-  }, [formData.categoryId])
+  }, [formData.mainCategoryId, formData.subcategoryId])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -162,15 +179,13 @@ export default function AddBiddingProduct() {
   }
 
 
-  // Convert files to data URLs (for now - in production, upload to S3/DO Spaces first)
-  const convertFileToDataURL = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
+  // Upload file to S3 and get URL
+  const uploadFileToS3 = async (file: File, folder: 'products' | 'documents' = 'products'): Promise<string> => {
+    const { uploadFileToS3: uploadS3 } = await import('../services/upload.api')
+    return await uploadS3(file, folder)
   }
+
+  // Note: fileToDataUrl is imported inline where needed
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -188,11 +203,7 @@ export default function AddBiddingProduct() {
         return
       }
 
-      if (!formData.categoryId) {
-        setError('Category is required')
-        setIsSubmitting(false)
-        return
-      }
+      // Validation already done above for mainCategoryId
 
       if (!formData.startingPrice || parseFloat(formData.startingPrice) <= 0) {
         setError('Starting price must be greater than 0')
@@ -202,6 +213,12 @@ export default function AddBiddingProduct() {
 
       if (!formData.biddingMinimumAmount || parseFloat(formData.biddingMinimumAmount) <= 0) {
         setError('Bidding minimum amount is required')
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!formData.depositAmount || parseFloat(formData.depositAmount) <= 0) {
+        setError('Deposit amount is required and must be greater than 0')
         setIsSubmitting(false)
         return
       }
@@ -249,14 +266,17 @@ export default function AddBiddingProduct() {
         return
       }
 
-      // Convert media files to URLs (for now using data URLs - in production, upload to storage first)
+      // Upload media files to S3
       const mediaUrls: string[] = []
       for (const file of mediaFiles) {
         try {
-          const dataUrl = await convertFileToDataURL(file)
-          mediaUrls.push(dataUrl)
-        } catch (err) {
-          console.error('Error converting file:', err)
+          const s3Url = await uploadFileToS3(file, 'products')
+          mediaUrls.push(s3Url)
+        } catch (err: any) {
+          console.error('Error uploading file to S3:', err)
+          setError(`Failed to upload ${file.name}: ${err.message}`)
+          setIsSubmitting(false)
+          return
         }
       }
 
@@ -265,7 +285,7 @@ export default function AddBiddingProduct() {
         mediaUrls.push('https://via.placeholder.com/400')
       }
 
-      // Convert document files to URLs with titles
+      // Upload document files to S3
       const documentData: Array<{ url: string; title: string }> = []
       for (const doc of documents) {
         if (!doc.title.trim()) {
@@ -274,10 +294,13 @@ export default function AddBiddingProduct() {
           return
         }
         try {
-          const dataUrl = await convertFileToDataURL(doc.file)
-          documentData.push({ url: dataUrl, title: doc.title.trim() })
-        } catch (err) {
-          console.error('Error converting document:', err)
+          const s3Url = await uploadFileToS3(doc.file, 'documents')
+          documentData.push({ url: s3Url, title: doc.title.trim() })
+        } catch (err: any) {
+          console.error('Error uploading document to S3:', err)
+          setError(`Failed to upload document ${doc.file.name}: ${err.message}`)
+          setIsSubmitting(false)
+          return
         }
       }
 
@@ -299,18 +322,8 @@ export default function AddBiddingProduct() {
       const buyNowPriceMinor = formData.buyNowPrice ? Math.round(parseFloat(formData.buyNowPrice) * 100) : undefined
       const minIncrement = Math.round(parseFloat(formData.biddingMinimumAmount) * 100)
       
-      // Calculate deposit amount based on selected method
-      let depositAmount: number
-      if (formData.paymentAmount === 'By Percentage of the total winning bid') {
-        // Percentage method - use the entered percentage
-        const percentage = parseFloat(formData.paymentValue) || 10 // Default to 10% if not provided
-        const basePrice = reservePriceMinor || startingPriceMinor
-        depositAmount = Math.round(basePrice * (percentage / 100))
-      } else {
-        // Fixed Amount method - use the entered fixed amount
-        const fixedAmount = parseFloat(formData.paymentValue) || 0
-        depositAmount = Math.round(fixedAmount * 100) // Convert to minor units
-      }
+      // Deposit amount (required before bidding) - use direct field value
+      const depositAmount = Math.round(parseFloat(formData.depositAmount) * 100)
 
       // Create product attributes from form data
       // Mark this as a bidding product so we can exclude it from the e-commerce list
@@ -333,7 +346,8 @@ export default function AddBiddingProduct() {
         currency: 'QAR',
         stock: 1, // Auction items typically have stock of 1
         status: 'active',
-        categoryIds: [formData.categoryId],
+        // Use subcategory if selected, otherwise use main category
+        categoryIds: [formData.subcategoryId || formData.mainCategoryId],
         attributes: attributes,
         mediaUrls: mediaUrls,
         documents: documentData.length > 0 ? documentData : undefined,
@@ -412,10 +426,10 @@ export default function AddBiddingProduct() {
               />
             </div>
 
-            {/* Category */}
+            {/* Main Category */}
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-[#888888] mb-2">
-                Category <span className="text-red-500">*</span>
+              <label htmlFor="mainCategory" className="block text-sm font-medium text-[#888888] mb-2">
+                Main Category <span className="text-red-500">*</span>
               </label>
               {loadingCategories ? (
                 <div className="w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm text-gray-400">
@@ -423,16 +437,38 @@ export default function AddBiddingProduct() {
                 </div>
               ) : (
                 <SelectDropdown
-                  value={formData.categoryId}
-                  options={categories.map(cat => ({
+                  value={formData.mainCategoryId}
+                  options={mainCategories.map(cat => ({
                     value: cat.id,
                     label: cat.name,
                   }))}
-                  placeholder="Select Category"
-                  onChange={(value) => setFormData((prev) => ({ ...prev, categoryId: value }))}
+                  placeholder="Select Main Category"
+                  onChange={(value) => {
+                    setFormData((prev) => ({ ...prev, mainCategoryId: value, subcategoryId: '' }))
+                    // Reset subcategory when main category changes
+                    setSelectedFilters([])
+                  }}
                 />
               )}
             </div>
+
+            {/* Subcategory (only show if main category is selected and has subcategories) */}
+            {formData.mainCategoryId && subcategories.length > 0 && (
+              <div>
+                <label htmlFor="subcategory" className="block text-sm font-medium text-[#888888] mb-2">
+                  Subcategory <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <SelectDropdown
+                  value={formData.subcategoryId}
+                  options={subcategories.map(cat => ({
+                    value: cat.id,
+                    label: cat.name,
+                  }))}
+                  placeholder="Select Subcategory (Optional)"
+                  onChange={(value) => setFormData((prev) => ({ ...prev, subcategoryId: value }))}
+                />
+              </div>
+            )}
 
             {/* Condition */}
             <div>
@@ -922,6 +958,26 @@ export default function AddBiddingProduct() {
                 className="w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm outline-none placeholder:text-gray-400 focus:ring-1 focus:ring-[#F7931E]"
               />
               <p className="text-xs text-gray-500 mt-1">Minimum increment for each bid</p>
+            </div>
+
+            {/* Deposit Amount */}
+            <div>
+              <label htmlFor="depositAmount" className="block text-sm font-medium text-[#888888] mb-2">
+                Deposit Amount (QAR) <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="depositAmount"
+                name="depositAmount"
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                value={formData.depositAmount}
+                onChange={handleChange}
+                placeholder="e.g., 200, 500, 1000"
+                className="w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm outline-none placeholder:text-gray-400 focus:ring-1 focus:ring-[#F7931E]"
+              />
+              <p className="text-xs text-gray-500 mt-1">Amount verified users must pay before bidding</p>
             </div>
           </div>
           </div>

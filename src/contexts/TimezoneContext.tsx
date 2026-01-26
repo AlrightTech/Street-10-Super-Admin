@@ -33,7 +33,12 @@ export function TimezoneProvider({ children }: TimezoneProviderProps) {
   useEffect(() => {
     const loadTimezonePreference = async () => {
       try {
-        const token = localStorage.getItem('token')
+        // Skip if on login page
+        if (window.location.pathname === '/login' || window.location.pathname === '/reset-password') {
+          return
+        }
+        
+        const token = localStorage.getItem('authToken')
         if (!token) return
 
         // Try to load from backend
@@ -45,7 +50,7 @@ export function TimezoneProvider({ children }: TimezoneProviderProps) {
         // In the future: if (user.timezone) setTimezoneState(user.timezone)
       } catch (error) {
         // If backend call fails, use localStorage (already set in initial state)
-        console.error('Failed to load timezone preference:', error)
+        // Silently fail - don't log errors for unauthenticated requests
       }
     }
 

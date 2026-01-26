@@ -46,7 +46,12 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     const loadThemePreference = async () => {
       try {
-        const token = localStorage.getItem('token')
+        // Skip if on login page
+        if (window.location.pathname === '/login' || window.location.pathname === '/reset-password') {
+          return
+        }
+        
+        const token = localStorage.getItem('authToken')
         if (!token) return
 
         // Try to load from backend
@@ -58,7 +63,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         // In the future: if (user.darkMode !== undefined) setDarkModeState(user.darkMode)
       } catch (error) {
         // If backend call fails, use localStorage (already set in initial state)
-        console.error('Failed to load theme preference:', error)
+        // Silently fail - don't log errors for unauthenticated requests
       }
     }
 

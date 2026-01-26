@@ -97,5 +97,25 @@ export const categoriesApi = {
   removeFilterFromCategory: async (categoryId: string, filterId: string): Promise<void> => {
     await api.delete(`/categories/${categoryId}/filters/${filterId}`);
   },
+
+  // Get only main categories (categories with no parent)
+  getMain: async (): Promise<Category[]> => {
+    const response = await api.get<ApiResponse<{ categories: Category[] }>>('/categories/main');
+    return response.data.data.categories || [];
+  },
+
+  // Get subcategories of a category
+  getSubcategories: async (parentId: string): Promise<Category[]> => {
+    const response = await api.get<ApiResponse<{ subcategories: Category[] }>>(`/categories/${parentId}/subcategories`);
+    return response.data.data.subcategories || [];
+  },
+
+  // Get categories that have products (for category tabs)
+  getWithProducts: async (productType: 'bidding' | 'ecommerce' | 'vendor' | 'all' = 'all'): Promise<Category[]> => {
+    const response = await api.get<ApiResponse<{ categories: Category[] }>>('/categories/with-products', {
+      params: { productType },
+    });
+    return response.data.data.categories || [];
+  },
 };
 

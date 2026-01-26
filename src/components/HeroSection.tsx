@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
+import { loginScreensApi } from '../services/login-screens.api'
 
 /**
  * Hero section with background image, overlay, and text
@@ -7,17 +8,73 @@ import { useTranslation } from '../hooks/useTranslation'
 export default function HeroSection() {
   const { t } = useTranslation()
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null)
   const touchStartX = useRef<number | null>(null)
   const touchEndX = useRef<number | null>(null)
   
-  // Carousel images array
-  const images = [
+  // Default carousel images array
+  const defaultImages = [
     "/Images/header-bg.png",
     "/Images/header-bg.png",
     "/Images/header-bg.png",
   ]
+
+  // Helper function to normalize image URL
+  const normalizeImageUrl = (url: string | null | undefined): string => {
+    if (!url) return defaultImages[0];
+    // If it's already a full URL (http/https), return as is
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+      return url;
+    }
+    // If it's a relative path starting with /uploads or similar, prepend backend URL
+    if (url.startsWith('/uploads/') || url.startsWith('/public/')) {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
+      if (!API_BASE_URL) {
+        console.warn('Missing VITE_API_BASE_URL. Cannot resolve backend URL for image:', url);
+        return url; // Return as-is if we can't resolve
+      }
+      const backendUrl = API_BASE_URL.replace('/api/v1', '');
+      return `${backendUrl}${url}`;
+    }
+    // If it's a relative path starting with /, use it as is
+    if (url.startsWith('/')) {
+      return url;
+    }
+    // Otherwise, prepend / to make it a root-relative path
+    return `/${url}`;
+  };
+
+  // Fetch active login screen background image
+  useEffect(() => {
+    const fetchLoginScreen = async () => {
+      try {
+        console.log('Fetching active login screen for admin...');
+        const loginScreen = await loginScreensApi.getActive('admin');
+        console.log('Login screen response:', loginScreen);
+        if (loginScreen?.backgroundUrl) {
+          const normalizedUrl = normalizeImageUrl(loginScreen.backgroundUrl);
+          console.log('Setting background image URL:', normalizedUrl);
+          setBackgroundImageUrl(normalizedUrl);
+        } else {
+          console.log('No active login screen found or no backgroundUrl');
+        }
+      } catch (error) {
+        console.error('Failed to fetch login screen:', error);
+        // Keep default background image on error
+      }
+    };
+
+    fetchLoginScreen();
+  }, []);
+
+  // Use fetched background image or default images
+  const images = useMemo(() => {
+    return backgroundImageUrl 
+      ? [backgroundImageUrl, backgroundImageUrl, backgroundImageUrl]
+      : defaultImages
+  }, [backgroundImageUrl])
   
-  const slides = [
+  const slides = useMemo(() => [
     {
       title: t('heroTitle'),
       image: images[0],
@@ -30,7 +87,7 @@ export default function HeroSection() {
       title: t('heroTitle3'),
       image: images[2],
     },
-  ]
+  ], [images, t])
 
   // Auto-play carousel
   useEffect(() => {
@@ -39,7 +96,7 @@ export default function HeroSection() {
     }, 3500) // Change slide every 3.5 seconds
 
     return () => clearInterval(interval)
-  }, [slides.length])
+  }, [slides.length, backgroundImageUrl])
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index)

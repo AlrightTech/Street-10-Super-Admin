@@ -18,7 +18,10 @@ import { storyHighlightsApi, type StoryHighlight as ApiStoryHighlight } from '..
 import { bannersApi, type Banner as ApiBanner } from '../services/banners.api'
 import { popupsApi, type Popup as ApiPopup } from '../services/popups.api'
 import { featuredProductsApi, type FeaturedProduct as ApiFeaturedProduct } from '../services/featured-products.api'
+import { loginScreensApi, type LoginScreen as ApiLoginScreen } from '../services/login-screens.api'
 import { type MarketingStatus } from '../components/marketing/MarketingStatusBadge'
+import LoginScreensTable, { type LoginScreen } from '../components/marketing/LoginScreensTable'
+import { type LoginScreenActionType } from '../components/marketing/LoginScreensActionMenu'
 
 // Helper function to format date from ISO string to "DD MMM YYYY"
 const formatDate = (dateString: string): string => {
@@ -256,8 +259,8 @@ const STATUS_BADGE_CLASS: Record<MarketingFilterKey, { active: string; inactive:
 export default function Marketing() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const tabFromUrl = searchParams.get('tab') as 'story-highlight' | 'banners' | 'pop-up' | 'push-notifications' | 'product' | null
-  const [activeTab, setActiveTab] = useState<'story-highlight' | 'banners' | 'pop-up' | 'push-notifications' | 'product'>(
+  const tabFromUrl = searchParams.get('tab') as 'story-highlight' | 'banners' | 'pop-up' | 'push-notifications' | 'product' | 'login-screens' | null
+  const [activeTab, setActiveTab] = useState<'story-highlight' | 'banners' | 'pop-up' | 'push-notifications' | 'product' | 'login-screens'>(
     tabFromUrl || 'story-highlight'
   )
 
@@ -272,7 +275,7 @@ export default function Marketing() {
   // Update activeTab when URL changes
   useEffect(() => {
     const urlTab = searchParams.get('tab') as typeof activeTab | null
-    if (urlTab && urlTab !== activeTab && ['story-highlight', 'banners', 'pop-up', 'push-notifications', 'product'].includes(urlTab)) {
+    if (urlTab && urlTab !== activeTab && ['story-highlight', 'banners', 'pop-up', 'push-notifications', 'product', 'login-screens'].includes(urlTab)) {
       setActiveTab(urlTab)
     }
   }, [searchParams])
@@ -331,6 +334,19 @@ export default function Marketing() {
   const [popupStatusFilter, setPopupStatusFilter] = useState('All Status')
   const [popupDeviceFilter, setPopupDeviceFilter] = useState('All Devices')
   const [allPopupsForCounts, setAllPopupsForCounts] = useState<Popup[]>([])
+
+  // Login Screens state
+  const [loginScreens, setLoginScreens] = useState<LoginScreen[]>([])
+  const [isLoadingLoginScreens, setIsLoadingLoginScreens] = useState(false)
+  const [loginScreensError, setLoginScreensError] = useState<string | null>(null)
+  const [loginScreensPage, setLoginScreensPage] = useState(1)
+  const [_totalLoginScreens, setTotalLoginScreens] = useState(0)
+  const [totalLoginScreensPages, setTotalLoginScreensPages] = useState(1)
+  const [loginScreenActiveFilter, setLoginScreenActiveFilter] = useState<MarketingFilterKey>('all')
+  const [loginScreenSearchValue, setLoginScreenSearchValue] = useState('')
+  const [loginScreenSortBy, setLoginScreenSortBy] = useState('Sort By Date')
+  const [loginScreenStatusFilter, setLoginScreenStatusFilter] = useState('All Status')
+  const [loginScreenTargetFilter, setLoginScreenTargetFilter] = useState('All Targets')
 
   // Fetch story highlights
   useEffect(() => {
@@ -567,6 +583,69 @@ export default function Marketing() {
     fetchAllPopupsForCounts()
   }, [activeTab, popups])
 
+  // Fetch login screens
+  useEffect(() => {
+    const fetchLoginScreens = async () => {
+      if (activeTab !== 'login-screens') return
+
+      setIsLoadingLoginScreens(true)
+      setLoginScreensError(null)
+
+      try {
+        const filters: any = {
+          page: loginScreensPage,
+          limit: 10,
+          sortBy: loginScreenSortBy === 'Newest First' ? 'newest' : loginScreenSortBy === 'Oldest First' ? 'oldest' : 'newest',
+        }
+
+        if (loginScreenSearchValue.trim()) {
+          filters.search = loginScreenSearchValue.trim()
+        }
+
+        // Apply status filter - prioritize dropdown filter over tab filter
+        if (loginScreenStatusFilter !== 'All Status') {
+          filters.status = loginScreenStatusFilter.toLowerCase() as 'active' | 'scheduled' | 'expired'
+        } else if (loginScreenActiveFilter !== 'all') {
+          // Use tab filter if dropdown filter is not set
+          filters.status = loginScreenActiveFilter as 'active' | 'scheduled' | 'expired'
+        }
+
+        if (loginScreenTargetFilter !== 'All Targets') {
+          filters.target = loginScreenTargetFilter.toLowerCase() as 'vendor' | 'admin'
+        }
+
+        const response = await loginScreensApi.getAll(filters)
+        // Backend already calculates status correctly, so use it directly
+        const uiLoginScreens: LoginScreen[] = response.data.map((apiLoginScreen: ApiLoginScreen) => {
+          // Normalize backgroundUrl to ensure it's a valid URL
+          const thumbnail = normalizeImageUrl(apiLoginScreen.backgroundUrl) || ''
+          return {
+            id: apiLoginScreen.id,
+            thumbnail: thumbnail,
+            title: apiLoginScreen.title,
+            target: apiLoginScreen.target === 'vendor' ? 'Vendor' : 'Admin',
+            startDate: apiLoginScreen.startDate ? formatDate(apiLoginScreen.startDate) : '',
+            endDate: apiLoginScreen.endDate ? formatDate(apiLoginScreen.endDate) : '',
+            priority: apiLoginScreen.priority === 'high' ? 'High' : apiLoginScreen.priority === 'medium' ? 'Medium' : 'Low',
+            status: apiLoginScreen.status as MarketingStatus, // Backend already calculates this correctly
+          }
+        })
+
+        setLoginScreens(uiLoginScreens)
+        setTotalLoginScreens(response.pagination.total)
+        setTotalLoginScreensPages(response.pagination.totalPages)
+      } catch (error: any) {
+        console.error('Error fetching login screens:', error)
+        setLoginScreensError(error.response?.data?.message || 'Failed to load login screens')
+        setLoginScreens([])
+      } finally {
+        setIsLoadingLoginScreens(false)
+      }
+    }
+
+    fetchLoginScreens()
+  }, [activeTab, loginScreensPage, loginScreenSortBy, loginScreenSearchValue, loginScreenStatusFilter, loginScreenTargetFilter, loginScreenActiveFilter])
+
   const filterTabsWithCounts = useMemo(
     () => {
       const allCount = allHighlightsForCounts.length
@@ -668,6 +747,44 @@ export default function Marketing() {
       }
     } else if (action === 'explore-new-offer-banner') {
       navigate(`/marketing/banner/${banner.id}`)
+    }
+  }
+
+  const handleLoginScreenAction = async (loginScreen: LoginScreen, action: LoginScreenActionType) => {
+    if (action === 'edit-login-screen') {
+      navigate(`/marketing/login-screen/${loginScreen.id}`)
+    } else if (action === 'delete-login-screen') {
+      if (window.confirm(`Are you sure you want to delete "${loginScreen.title}"?`)) {
+        try {
+          await loginScreensApi.delete(loginScreen.id)
+          // Refresh login screens
+          const response = await loginScreensApi.getAll({
+            page: loginScreensPage,
+            limit: 10,
+            sortBy: loginScreenSortBy === 'Newest First' ? 'newest' : 'oldest',
+          })
+          // Backend already calculates status correctly, so use it directly
+          const uiLoginScreens: LoginScreen[] = response.data.map((apiLoginScreen: ApiLoginScreen) => {
+            // Normalize backgroundUrl to ensure it's a valid URL
+            let thumbnail = apiLoginScreen.backgroundUrl || ''
+            return {
+              id: apiLoginScreen.id,
+              thumbnail: thumbnail,
+              title: apiLoginScreen.title,
+              target: apiLoginScreen.target === 'vendor' ? 'Vendor' : 'Admin',
+              startDate: apiLoginScreen.startDate ? formatDate(apiLoginScreen.startDate) : '',
+              endDate: apiLoginScreen.endDate ? formatDate(apiLoginScreen.endDate) : '',
+              priority: apiLoginScreen.priority === 'high' ? 'High' : apiLoginScreen.priority === 'medium' ? 'Medium' : 'Low',
+              status: apiLoginScreen.status as MarketingStatus, // Backend already calculates this correctly
+            }
+          })
+          setLoginScreens(uiLoginScreens)
+          setTotalLoginScreens(response.pagination.total)
+          setTotalLoginScreensPages(response.pagination.totalPages)
+        } catch (error: any) {
+          alert(error.response?.data?.message || 'Failed to delete login screen')
+        }
+      }
     }
   }
 
@@ -1126,6 +1243,129 @@ export default function Marketing() {
     }
   }
 
+  // Filter login screens
+  const filteredLoginScreens = useMemo(() => {
+    let filtered = [...loginScreens]
+
+    if (loginScreenSearchValue.trim()) {
+      const query = loginScreenSearchValue.toLowerCase()
+      filtered = filtered.filter(
+        (ls) =>
+          ls.title.toLowerCase().includes(query) ||
+          ls.target.toLowerCase().includes(query)
+      )
+    }
+
+    if (loginScreenStatusFilter !== 'All Status') {
+      filtered = filtered.filter((ls) => {
+        const statusLower = loginScreenStatusFilter.toLowerCase()
+        return ls.status === statusLower
+      })
+    }
+
+    if (loginScreenTargetFilter !== 'All Targets') {
+      filtered = filtered.filter((ls) => ls.target === loginScreenTargetFilter)
+    }
+
+    if (loginScreenActiveFilter !== 'all') {
+      filtered = filtered.filter((ls) => {
+        if (loginScreenActiveFilter === 'active') {
+          return ls.status === 'active'
+        } else if (loginScreenActiveFilter === 'scheduled') {
+          return ls.status === 'scheduled'
+        } else if (loginScreenActiveFilter === 'expired') {
+          return ls.status === 'expired'
+        }
+        return true
+      })
+    }
+
+    return filtered
+  }, [loginScreens, loginScreenSearchValue, loginScreenStatusFilter, loginScreenTargetFilter, loginScreenActiveFilter])
+
+  // Pagination for login screens
+  const handleLoginScreenPageChange = (page: number) => {
+    if (page < 1 || page > totalLoginScreensPages) return
+    setLoginScreensPage(page)
+  }
+
+  const getLoginScreenPageNumbers = () => {
+    const totalPages = totalLoginScreensPages
+    const pages: (number | string)[] = []
+    const currentPage = loginScreensPage
+
+    if (totalPages <= 8) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      pages.push(1)
+
+      if (currentPage > 3) {
+        pages.push('...')
+      }
+
+      const start = Math.max(2, currentPage - 1)
+      const end = Math.min(totalPages - 1, currentPage + 1)
+
+      for (let i = start; i <= end; i++) {
+        if (i !== 1 && i !== totalPages) {
+          pages.push(i)
+        }
+      }
+
+      if (currentPage < totalPages - 2) {
+        pages.push('...')
+      }
+
+      if (totalPages > 1) {
+        pages.push(totalPages)
+      }
+    }
+
+    return pages
+  }
+
+  const handleLoginScreenFilterChange = (filter: MarketingFilterKey) => {
+    setLoginScreenActiveFilter(filter)
+    setLoginScreensPage(1)
+  }
+
+  // Login screen filter tabs with counts
+  const loginScreenFilterTabsWithCounts = useMemo(() => {
+    const allCount = loginScreens.length
+    const scheduledCount = loginScreens.filter((ls) => ls.status === 'scheduled').length
+    const activeCount = loginScreens.filter((ls) => ls.status === 'active').length
+    const expiredCount = loginScreens.filter((ls) => ls.status === 'expired').length
+
+    return [
+      {
+        key: 'all' as MarketingFilterKey,
+        label: 'All',
+        count: allCount,
+        badgeClassName: STATUS_BADGE_CLASS.all,
+      },
+      {
+        key: 'scheduled' as MarketingFilterKey,
+        label: 'Scheduled',
+        count: scheduledCount,
+        badgeClassName: STATUS_BADGE_CLASS.scheduled,
+      },
+      {
+        key: 'active' as MarketingFilterKey,
+        label: 'Active',
+        count: activeCount,
+        badgeClassName: STATUS_BADGE_CLASS.active,
+      },
+      {
+        key: 'expired' as MarketingFilterKey,
+        label: 'Expired',
+        count: expiredCount,
+        badgeClassName: STATUS_BADGE_CLASS.expired,
+      },
+    ]
+  }, [loginScreens])
+
   // Get breadcrumb text based on active tab
   const getBreadcrumbText = () => {
     switch (activeTab) {
@@ -1139,6 +1379,8 @@ export default function Marketing() {
         return 'Dashboard - Push Notifications'
       case 'product':
         return 'Dashboard - Products'
+      case 'login-screens':
+        return 'Dashboard - Login Screens'
       default:
         return 'Dashboard - Marketing'
     }
@@ -1224,6 +1466,20 @@ export default function Marketing() {
           }`}
         >
           Product
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('login-screens')
+            setSearchParams({ tab: 'login-screens' }, { replace: true })
+          }}
+          className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap cursor-pointer ${
+            activeTab === 'login-screens'
+              ? 'text-[#F7931E] border-b-2 border-[#F7931E]'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+          }`}
+        >
+          Login Screens
         </button>
       </nav>
 
@@ -1775,8 +2031,149 @@ export default function Marketing() {
         </div>
       )}
 
+      {/* Login Screens Section */}
+      {activeTab === 'login-screens' && (
+        <div className="space-y-4 md:space-y-6">
+          {/* Section Title */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Login Screens</h2>
+            <button
+              type="button"
+              onClick={() => navigate('/marketing/login-screen/add')}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8840D] whitespace-nowrap cursor-pointer"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Add New Login Screen
+            </button>
+          </div>
+
+          {/* Filtering and Search Controls */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto">
+              <FilterDropdown
+                label={loginScreenSortBy}
+                options={['Sort By Date', 'Newest First', 'Oldest First']}
+                onSelect={(value) => setLoginScreenSortBy(value)}
+                icon={<CalendarIcon className="h-4 w-4" />}
+                className="w-full sm:w-auto"
+              />
+              <FilterDropdown
+                label={loginScreenStatusFilter}
+                options={['All Status', 'Active', 'Scheduled', 'Expired']}
+                onSelect={(value) => setLoginScreenStatusFilter(value)}
+                className="w-full sm:w-auto"
+              />
+              <FilterDropdown
+                label={loginScreenTargetFilter}
+                options={['All Targets', 'Vendor', 'Admin']}
+                onSelect={(value) => setLoginScreenTargetFilter(value)}
+                className="w-full sm:w-auto"
+              />
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3 flex-shrink-0 w-full sm:w-auto">
+              <SearchBar
+                placeholder="Search Login Screen"
+                value={loginScreenSearchValue}
+                onChange={setLoginScreenSearchValue}
+                className="w-full sm:min-w-[220px] sm:min-w-[240px]"
+              />
+              <button
+                type="button"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-600 whitespace-nowrap cursor-pointer"
+              >
+                <FilterIcon className="h-4 w-4" />
+                Filter
+              </button>
+            </div>
+          </div>
+
+          {/* Data Table Section */}
+          <section className="rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-colors">
+            {/* Status Tabs */}
+            <header className="flex flex-col gap-4 border-b border-gray-100 dark:border-gray-700 px-4 pt-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1 w-full sm:w-auto">
+                <MarketingFilterTabs tabs={loginScreenFilterTabsWithCounts} activeTab={loginScreenActiveFilter} onTabChange={handleLoginScreenFilterChange} />
+              </div>
+            </header>
+
+            {/* Table Content */}
+            <div className="p-0">
+              {isLoadingLoginScreens ? (
+                <div className="flex items-center justify-center py-12">
+                  <p className="text-gray-600 dark:text-gray-400">Loading login screens...</p>
+                </div>
+              ) : loginScreensError ? (
+                <div className="flex items-center justify-center py-12">
+                  <p className="text-red-600 dark:text-red-400">{loginScreensError}</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <LoginScreensTable
+                    loginScreens={filteredLoginScreens}
+                    onActionSelect={handleLoginScreenAction}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {totalLoginScreensPages > 1 && (
+              <footer className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-4 sm:px-6 transition-colors">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleLoginScreenPageChange(loginScreensPage - 1)}
+                    disabled={loginScreensPage === 1}
+                    className="cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    &lt; Back
+                  </button>
+                  <div className="flex items-center gap-0.5 sm:gap-1">
+                    {getLoginScreenPageNumbers().map((page, index) => {
+                      if (page === '...') {
+                        return (
+                          <span key={`ellipsis-${index}`} className="px-2 text-gray-500 dark:text-gray-400">
+                            ...
+                          </span>
+                        )
+                      }
+                      
+                      const pageNum = page as number
+                      const isActive = pageNum === loginScreensPage
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => handleLoginScreenPageChange(pageNum)}
+                          className={`h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition cursor-pointer ${
+                            isActive
+                              ? 'bg-[#4C50A2] text-white'
+                              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleLoginScreenPageChange(loginScreensPage + 1)}
+                    disabled={loginScreensPage >= totalLoginScreensPages}
+                    className="cursor-pointer rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 transition hover:border-gray-900 dark:hover:border-gray-600 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next &gt;
+                  </button>
+                </div>
+              </footer>
+            )}
+          </section>
+        </div>
+      )}
+
       {/* Placeholder for other tabs */}
-      {activeTab !== 'story-highlight' && activeTab !== 'banners' && activeTab !== 'pop-up' && activeTab !== 'product' && activeTab !== 'push-notifications' && (
+      {activeTab !== 'story-highlight' && activeTab !== 'banners' && activeTab !== 'pop-up' && activeTab !== 'product' && activeTab !== 'push-notifications' && activeTab !== 'login-screens' && (
         <div className="rounded-xl bg-white dark:bg-gray-800 shadow-sm p-8 text-center transition-colors">
           <p className="text-gray-500 dark:text-gray-400">{String(activeTab).charAt(0).toUpperCase() + String(activeTab).slice(1)} section coming soon</p>
         </div>

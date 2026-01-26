@@ -282,31 +282,30 @@ export default function MainControl() {
       setUploadingLogo(type)
       setError(null)
       
-      // Convert file to base64 or data URL
-      const reader = new FileReader()
-      reader.onloadend = async () => {
-        try {
-          const dataUrl = reader.result as string
-          // For now, we'll use the data URL directly
-          // In production, you'd upload to a cloud storage service and get a URL
-          const updated = await mainControlApi.uploadLogo(type, dataUrl)
-          setLogos(updated)
-          setSuccessMessage(`${type === 'website' ? 'Website' : type === 'app' ? 'App' : 'Favicon'} logo uploaded successfully`)
-        } catch (err: any) {
-          console.error('Failed to upload logo:', err)
-          setError(err.response?.data?.message || 'Failed to upload logo')
-        } finally {
-          setUploadingLogo(null)
+      // Upload to S3 (not Base64)
+      try {
+        const { uploadFileToS3 } = await import('../services/upload.api')
+        const s3Url = await uploadFileToS3(file, 'banners') // Using banners folder for logos
+        console.log(`[handleLogoUpload] Uploaded ${type} logo to S3:`, s3Url)
+        
+        // Verify it's not Base64 before sending
+        if (s3Url.startsWith('data:')) {
+          throw new Error('S3 upload returned Base64 URL. This should not happen.')
         }
-      }
-      reader.onerror = () => {
-        setError('Failed to read file')
+        
+        const updated = await mainControlApi.uploadLogo(type, s3Url)
+        console.log(`[handleLogoUpload] Logo updated successfully:`, updated)
+        setLogos(updated)
+        setSuccessMessage(`${type === 'website' ? 'Website' : type === 'app' ? 'App' : 'Favicon'} logo uploaded successfully`)
+      } catch (err: any) {
+        console.error('Failed to upload logo:', err)
+        setError(err.response?.data?.message || err.message || 'Failed to upload logo')
+      } finally {
         setUploadingLogo(null)
       }
-      reader.readAsDataURL(file)
     } catch (err: any) {
       console.error('Failed to upload logo:', err)
-      setError(err.response?.data?.message || 'Failed to upload logo')
+      setError(err.response?.data?.message || err.message || 'Failed to upload logo')
       setUploadingLogo(null)
     }
   }
@@ -317,13 +316,20 @@ export default function MainControl() {
     try {
       setIsLoading(true)
       setError(null)
+      
+      // Filter out Base64 URLs from social media icons (only send S3 URLs)
+      const cleanedSocialMediaLinks = socialMediaLinks.map(link => ({
+        ...link,
+        icon: link.icon && link.icon.startsWith('data:') ? '' : link.icon // Remove Base64, keep S3 URLs only
+      }))
+      
       const contact: ContactData = {
         phoneNumbers,
         email: emailAddress,
         address,
         footerOneFeatures,
         footerTwoFeatures,
-        socialMediaLinks,
+        socialMediaLinks: cleanedSocialMediaLinks,
       }
       const updated = await mainControlApi.updateContact(contact)
       setPhoneNumbers(updated.phoneNumbers || [])
@@ -754,22 +760,32 @@ export default function MainControl() {
           try {
             setIsLoading(true)
             setError(null)
-            const reader = new FileReader()
-            reader.onloadend = () => {
-              const dataUrl = reader.result as string
-              setSocialMediaLinks((prev) =>
-                prev.map((item) => (item.id === id ? { ...item, icon: dataUrl } : item))
-              )
-              setIsLoading(false)
-            }
-            reader.onerror = () => {
-              setError('Failed to read file')
-              setIsLoading(false)
-            }
-            reader.readAsDataURL(file)
+            
+            // Show immediate Base64 preview (for UI feedback only)
+            const { fileToDataUrl } = await import('../services/upload.api')
+            const preview = await fileToDataUrl(file)
+            setSocialMediaLinks((prev) =>
+              prev.map((item) => (item.id === id ? { ...item, icon: preview } : item))
+            )
+            
+            // Upload to S3 - MUST complete before saving
+            const { uploadFileToS3 } = await import('../services/upload.api')
+            const s3Url = await uploadFileToS3(file, 'banners')
+            
+            // Update with S3 URL (replace Base64 preview)
+            setSocialMediaLinks((prev) =>
+              prev.map((item) => (item.id === id ? { ...item, icon: s3Url } : item))
+            )
+            
+            setSuccessMessage('Icon uploaded successfully')
+            setIsLoading(false)
           } catch (err: any) {
             console.error('Failed to upload icon:', err)
-            setError(err.response?.data?.message || 'Failed to upload icon')
+            setError(err.response?.data?.message || err.message || 'Failed to upload icon')
+            // Remove Base64 preview on error
+            setSocialMediaLinks((prev) =>
+              prev.map((item) => (item.id === id ? { ...item, icon: '' } : item))
+            )
             setIsLoading(false)
           }
         }

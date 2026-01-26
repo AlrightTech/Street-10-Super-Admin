@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { CalendarIcon, CameraIcon, UploadIcon, ChevronDownIcon, XIcon } from '../components/icons/Icons'
-import { popupsApi, fileToDataUrl } from '../services/popups.api'
+import { popupsApi, uploadFileToS3 } from '../services/popups.api'
 
 interface PopupFormData {
   title: string
@@ -139,6 +139,7 @@ export default function AddPopup() {
     }
 
     handleInputChange('imageFile', file)
+    const { fileToDataUrl } = await import('../services/upload.api')
     const dataUrl = await fileToDataUrl(file)
     setImagePreview(dataUrl)
   }
@@ -187,10 +188,10 @@ export default function AddPopup() {
         throw new Error('End date must be after start date')
       }
 
-      // Convert image file to data URL if new file uploaded
+      // Upload image file to S3 if new file uploaded
       let imageUrl = formData.imageUrl
       if (formData.imageFile) {
-        imageUrl = await fileToDataUrl(formData.imageFile)
+        imageUrl = await uploadFileToS3(formData.imageFile, 'banners')
       }
 
       // Helper function to combine date and time string into a Date object

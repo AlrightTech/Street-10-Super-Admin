@@ -1,9 +1,13 @@
 import axios, { type AxiosInstance, type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 
-// API base URL - adjust based on your environment
-// In development, use relative path to work with Vite proxy
-// In production, use full URL or environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api/v1' : 'http://localhost:3000/api/v1');
+// API base URL MUST come from environment.
+// Do not hardcode defaults here (local/prod/proxy) — configure in `.env`.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+if (!API_BASE_URL) {
+  throw new Error(
+    "Missing VITE_API_BASE_URL. Set it in Super-Admin .env (e.g. https://api.st10.info/api/v1)."
+  );
+}
 
 // Create axios instance
 const api: AxiosInstance = axios.create({

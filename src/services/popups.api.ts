@@ -45,15 +45,20 @@ export interface CreatePopupData {
 export interface UpdatePopupData extends Partial<CreatePopupData> {}
 
 /**
- * Convert File to base64 data URL
+ * Upload file to S3 and get URL
  */
-export const fileToDataUrl = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+export const uploadFileToS3 = async (file: File, folder: 'banners' | 'products' | 'documents' = 'banners'): Promise<string> => {
+  const { uploadFileToS3: uploadS3 } = await import('./upload.api');
+  return await uploadS3(file, folder);
+};
+
+/**
+ * Convert File to base64 data URL (for preview only - NOT sent to backend)
+ * @deprecated Use uploadFileToS3 for new uploads. This is kept for backward compatibility and previews only.
+ */
+export const fileToDataUrl = async (file: File): Promise<string> => {
+  const { fileToDataUrl: convertToDataUrl } = await import('./upload.api');
+  return await convertToDataUrl(file);
 };
 
 export const popupsApi = {

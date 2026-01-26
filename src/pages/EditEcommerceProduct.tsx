@@ -10,7 +10,8 @@ export default function EditEcommerceProduct() {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     productTitle: '',
-    categoryId: '',
+    mainCategoryId: '',
+    subcategoryId: '',
     condition: '',
     productDescription: '',
     metaTitle: '',
@@ -30,42 +31,44 @@ export default function EditEcommerceProduct() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [mediaFiles, setMediaFiles] = useState<string[]>([])
   const [documentFiles, setDocumentFiles] = useState<string[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [mainCategories, setMainCategories] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Category[]>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
 
-  // Fetch categories from API
+  // Fetch main categories only
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchMainCategories = async () => {
       try {
         setLoadingCategories(true)
-        const tree = await categoriesApi.getTree()
-        // Flatten tree to get all categories
-        const flattenCategories = (cats: Category[]): Category[] => {
-          const result: Category[] = []
-          cats.forEach(cat => {
-            result.push(cat)
-            if (cat.children && cat.children.length > 0) {
-              result.push(...flattenCategories(cat.children))
-            }
-          })
-          return result
-        }
-        setCategories(flattenCategories(tree).filter(cat => cat.isActive))
+        const mainCats = await categoriesApi.getMain()
+        setMainCategories(mainCats.filter(cat => cat.isActive))
       } catch (err: any) {
-        console.error('Error fetching categories:', err)
+        console.error('Error fetching main categories:', err)
         setError('Failed to load categories')
       } finally {
         setLoadingCategories(false)
       }
     }
-    fetchCategories()
+    fetchMainCategories()
   }, [])
 
-  // Convert category tree to dropdown options
-  const categoryOptions = categories.map(cat => ({
-    value: cat.id,
-    label: cat.name
-  }))
+  // Fetch subcategories when main category is selected
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      if (!formData.mainCategoryId) {
+        setSubcategories([])
+        return
+      }
+      try {
+        const subcats = await categoriesApi.getSubcategories(formData.mainCategoryId)
+        setSubcategories(subcats.filter(cat => cat.isActive))
+      } catch (err: any) {
+        console.error('Error fetching subcategories:', err)
+        setSubcategories([])
+      }
+    }
+    fetchSubcategories()
+  }, [formData.mainCategoryId])
 
   // Load existing product data for editing
   useEffect(() => {
@@ -78,11 +81,36 @@ export default function EditEcommerceProduct() {
         
         const price = parseFloat(product.priceMinor) / 100
         const attributes = product.attributes || {}
-        const categoryId = product.categories?.[0]?.category?.id || ''
+        
+        // Determine main category and subcategory from product categories
+        let mainCategoryId = ''
+        let subcategoryId = ''
+        if (product.categories && product.categories.length > 0) {
+          const productCategory = product.categories[0]?.category
+          if (productCategory) {
+            // Fetch full category details to get parentId
+            try {
+              const fullCategory = await categoriesApi.getById(productCategory.id)
+              // If category has a parent, it's a subcategory
+              if (fullCategory.parentId) {
+                subcategoryId = fullCategory.id
+                mainCategoryId = fullCategory.parentId
+              } else {
+                // It's a main category
+                mainCategoryId = fullCategory.id
+              }
+            } catch (err) {
+              console.error('Error fetching category details:', err)
+              // Fallback: use the category ID as main category
+              mainCategoryId = productCategory.id
+            }
+          }
+        }
         
         setFormData({
           productTitle: product.title,
-          categoryId: categoryId,
+          mainCategoryId,
+          subcategoryId,
           condition: attributes.condition || '',
           productDescription: product.description || '',
           metaTitle: attributes.metaTitle || '',
@@ -218,8 +246,8 @@ export default function EditEcommerceProduct() {
         setError('Product title is required')
         return
       }
-      if (!formData.categoryId) {
-        setError('Category is required')
+      if (!formData.mainCategoryId) {
+        setError('Main category is required')
         return
       }
       if (!formData.price || parseFloat(formData.price) <= 0) {
@@ -231,10 +259,31 @@ export default function EditEcommerceProduct() {
         return
       }
 
-      // Convert existing media URLs (keep them as-is if they're already URLs)
-      // For new files uploaded, we'd need to handle file uploads separately
-      // For now, we'll use the existing mediaFiles array which contains URLs
-      const mediaUrls = mediaFiles.filter(url => url.startsWith('http') || url.startsWith('data:'))
+      // Process media URLs - upload new Base64 files to S3, keep existing URLs
+      const mediaUrls: string[] = []
+      for (const url of mediaFiles) {
+        // If it's a Base64 data URL, upload to S3
+        if (url.startsWith('data:')) {
+          try {
+            const { uploadFileToS3 } = await import('../services/upload.api')
+            // Convert data URL to blob, then to file
+            const response = await fetch(url)
+            const blob = await response.blob()
+            const file = new File([blob], 'image.png', { type: blob.type })
+            const s3Url = await uploadFileToS3(file, 'products')
+            mediaUrls.push(s3Url)
+          } catch (err: any) {
+            console.error('Error uploading file to S3:', err)
+            setError(`Failed to upload image: ${err.message}`)
+            setIsSubmitting(false)
+            return
+          }
+        } else if (url.startsWith('http') || url.includes('s3.amazonaws.com')) {
+          // Keep existing URLs (S3, HTTP)
+          mediaUrls.push(url)
+        }
+        // Skip invalid URLs
+      }
 
       // Convert price to minor units (cents)
       const priceMinor = Math.round(parseFloat(formData.price) * 100)
@@ -260,7 +309,7 @@ export default function EditEcommerceProduct() {
         priceMinor: priceMinor,
         stock: stock,
         status: 'active',
-        categoryIds: [formData.categoryId],
+        categoryIds: [formData.subcategoryId || formData.mainCategoryId],
         attributes: attributes,
         mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
       })
@@ -337,9 +386,10 @@ export default function EditEcommerceProduct() {
               />
             </div>
 
+            {/* Main Category */}
             <div>
-              <label htmlFor="categoryId" className="block text-sm font-normal text-[#888888] mb-1.5">
-                Category
+              <label htmlFor="mainCategoryId" className="block text-sm font-normal text-[#888888] mb-1.5">
+                Main Category <span className="text-red-500">*</span>
               </label>
               {loadingCategories ? (
                 <div className="w-full rounded-lg bg-[#F3F5F6] px-4 py-2.5 text-sm text-gray-500">
@@ -347,14 +397,36 @@ export default function EditEcommerceProduct() {
                 </div>
               ) : (
                 <SelectDropdown
-                  value={formData.categoryId}
-                  options={categoryOptions}
-                  onChange={(value) => handleSelectChange('categoryId', value)}
-                  placeholder="Select Category"
+                  value={formData.mainCategoryId}
+                  options={mainCategories.map(cat => ({
+                    value: cat.id,
+                    label: cat.name,
+                  }))}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, mainCategoryId: value, subcategoryId: '' }))}
+                  placeholder="Select Main Category"
                   className="w-full"
                 />
               )}
             </div>
+
+            {/* Subcategory (only show if main category is selected and has subcategories) */}
+            {formData.mainCategoryId && subcategories.length > 0 && (
+              <div>
+                <label htmlFor="subcategoryId" className="block text-sm font-normal text-[#888888] mb-1.5">
+                  Subcategory <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <SelectDropdown
+                  value={formData.subcategoryId}
+                  options={subcategories.map(cat => ({
+                    value: cat.id,
+                    label: cat.name,
+                  }))}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, subcategoryId: value }))}
+                  placeholder="Select Subcategory (Optional)"
+                  className="w-full"
+                />
+              </div>
+            )}
 
             <div>
               <label htmlFor="condition" className="block text-sm font-normal text-[#888888] mb-1.5">

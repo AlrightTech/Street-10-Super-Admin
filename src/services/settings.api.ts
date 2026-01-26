@@ -31,7 +31,12 @@ export interface PublicSettings {
   contact: ContactData;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://street10backend.up.railway.app/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+if (!API_BASE_URL) {
+  throw new Error(
+    "Missing VITE_API_BASE_URL. Set it in Super-Admin .env (e.g. https://api.st10.info/api/v1)."
+  );
+}
 
 export const settingsApi = {
   /**

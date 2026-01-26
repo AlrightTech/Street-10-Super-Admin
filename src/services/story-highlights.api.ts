@@ -41,21 +41,36 @@ export interface CreateStoryHighlightData {
 export interface UpdateStoryHighlightData extends Partial<CreateStoryHighlightData> {}
 
 /**
- * Convert File to base64 data URL
+ * Upload file to S3 and get URL
  */
-export const fileToDataUrl = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+export const uploadFileToS3 = async (file: File, folder: 'banners' | 'products' | 'documents' = 'banners'): Promise<string> => {
+  const { uploadFileToS3: uploadS3 } = await import('./upload.api');
+  return await uploadS3(file, folder);
 };
 
 /**
- * Convert multiple Files to base64 data URLs
+ * Upload multiple files to S3 and get URLs
+ */
+export const uploadMultipleFilesToS3 = async (files: File[], folder: 'banners' | 'products' | 'documents' = 'banners'): Promise<string[]> => {
+  const { uploadMultipleFilesToS3: uploadMultipleS3 } = await import('./upload.api');
+  return await uploadMultipleS3(files, folder);
+};
+
+/**
+ * Convert File to base64 data URL (for preview only - NOT sent to backend)
+ * @deprecated Use uploadFileToS3 for new uploads. This is kept for backward compatibility and previews only.
+ */
+export const fileToDataUrl = async (file: File): Promise<string> => {
+  const { fileToDataUrl: convertToDataUrl } = await import('./upload.api');
+  return await convertToDataUrl(file);
+};
+
+/**
+ * Convert multiple Files to base64 data URLs (for preview only)
+ * @deprecated Use uploadMultipleFilesToS3 for new uploads. This is kept for backward compatibility and previews only.
  */
 export const filesToDataUrls = async (files: File[]): Promise<string[]> => {
+  const { fileToDataUrl } = await import('./upload.api');
   return Promise.all(files.map(fileToDataUrl));
 };
 

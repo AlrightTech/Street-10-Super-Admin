@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { XIcon } from '../components/icons/Icons'
+import SelectDropdown from '../components/ui/SelectDropdown'
 import { auctionsApi, type Auction } from '../services/auctions.api'
 import { productsApi } from '../services/products.api'
 import { categoriesApi, type Category } from '../services/categories.api'
@@ -13,12 +14,14 @@ export default function EditBiddingProduct() {
   const { id } = useParams<{ id: string }>()
   const [formData, setFormData] = useState({
     productTitle: '',
-    categoryId: '',
+    mainCategoryId: '', // Main category (parentId is null)
+    subcategoryId: '', // Subcategory (selected from main category's children)
     description: '',
     startingPrice: '',
     reservePrice: '',
     buyNowPrice: '',
     minIncrement: '',
+    depositAmount: '',
     auctionStartDate: '',
     auctionEndDate: '',
     auctionStartTime: '',
@@ -29,33 +32,42 @@ export default function EditBiddingProduct() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [auction, setAuction] = useState<Auction | null>(null)
-  const [categories, setCategories] = useState<Category[]>([])
+  const [mainCategories, setMainCategories] = useState<Category[]>([])
+  const [subcategories, setSubcategories] = useState<Category[]>([])
   const [documents, setDocuments] = useState<Array<{ file?: File; url: string; title: string }>>([])
   const [availableFilters, setAvailableFilters] = useState<BackendFilter[]>([])
   const [selectedFilters, setSelectedFilters] = useState<Array<{ filterId: string; value: string }>>([])
 
-  // Fetch categories
+  // Fetch main categories only
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchMainCategories = async () => {
       try {
-        const tree = await categoriesApi.getTree()
-        const flattenCategories = (cats: Category[]): Category[] => {
-          const result: Category[] = []
-          cats.forEach(cat => {
-            result.push(cat)
-            if (cat.children && cat.children.length > 0) {
-              result.push(...flattenCategories(cat.children))
-            }
-          })
-          return result
-        }
-        setCategories(flattenCategories(tree).filter(cat => cat.isActive))
+        const mainCats = await categoriesApi.getMain()
+        setMainCategories(mainCats.filter(cat => cat.isActive))
       } catch (err) {
-        console.error('Error fetching categories:', err)
+        console.error('Error fetching main categories:', err)
       }
     }
-    fetchCategories()
+    fetchMainCategories()
   }, [])
+
+  // Fetch subcategories when main category is selected
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      if (!formData.mainCategoryId) {
+        setSubcategories([])
+        return
+      }
+      try {
+        const subcats = await categoriesApi.getSubcategories(formData.mainCategoryId)
+        setSubcategories(subcats.filter(cat => cat.isActive))
+      } catch (err) {
+        console.error('Error fetching subcategories:', err)
+        setSubcategories([])
+      }
+    }
+    fetchSubcategories()
+  }, [formData.mainCategoryId])
 
   // Fetch available filters
   useEffect(() => {
@@ -70,24 +82,29 @@ export default function EditBiddingProduct() {
     fetchFilters()
   }, [])
 
-  // Load filters for selected category
+  // Load filters for selected category (use subcategory if selected, otherwise main category)
   useEffect(() => {
     const loadCategoryFilters = async () => {
-      if (!formData.categoryId) {
+      const categoryId = formData.subcategoryId || formData.mainCategoryId
+      if (!categoryId) {
+        setAvailableFilters([])
         return
       }
       try {
-        const categoryFilters = await categoriesApi.getCategoryFilters(formData.categoryId)
+        const categoryFilters = await categoriesApi.getCategoryFilters(categoryId)
         const filterIds = categoryFilters.map((cf: any) => cf.filterId)
         const allFilters = await filtersApi.getAll()
         const relevantFilters = allFilters.filter((f: BackendFilter) => filterIds.includes(f.id))
         setAvailableFilters(relevantFilters)
+        // Reset selected filters if they're no longer valid
+        setSelectedFilters(prev => prev.filter(sf => filterIds.includes(sf.filterId)))
       } catch (err: any) {
         console.error('Error fetching category filters:', err)
+        setAvailableFilters([])
       }
     }
     loadCategoryFilters()
-  }, [formData.categoryId])
+  }, [formData.mainCategoryId, formData.subcategoryId])
 
   // Load auction and product data
   useEffect(() => {
@@ -109,14 +126,41 @@ export default function EditBiddingProduct() {
         const startDate = new Date(auctionData.startAt)
         const endDate = new Date(auctionData.endAt)
         
+        // Determine main category and subcategory from product categories
+        let mainCategoryId = ''
+        let subcategoryId = ''
+        if ((product as any).categories && (product as any).categories.length > 0) {
+          const productCategory = (product as any).categories[0]?.category
+          if (productCategory) {
+            // Fetch full category details to get parentId
+            try {
+              const fullCategory = await categoriesApi.getById(productCategory.id)
+              // If category has a parent, it's a subcategory
+              if (fullCategory.parentId) {
+                subcategoryId = fullCategory.id
+                mainCategoryId = fullCategory.parentId
+              } else {
+                // It's a main category
+                mainCategoryId = fullCategory.id
+              }
+            } catch (err) {
+              console.error('Error fetching category details:', err)
+              // Fallback: use the category ID as main category
+              mainCategoryId = productCategory.id
+            }
+          }
+        }
+        
         setFormData({
           productTitle: product.title,
-          categoryId: (product as any).categories?.[0]?.category?.id || '',
+          mainCategoryId,
+          subcategoryId,
           description: product.description || '',
           startingPrice: (parseFloat(auctionData.reservePrice || auctionData.depositAmount) / 100).toString(),
           reservePrice: auctionData.reservePrice ? (parseFloat(auctionData.reservePrice) / 100).toString() : '',
           buyNowPrice: auctionData.buyNowPrice ? (parseFloat(auctionData.buyNowPrice) / 100).toString() : '',
           minIncrement: (parseFloat(auctionData.minIncrement) / 100).toString(),
+          depositAmount: auctionData.depositAmount ? (parseFloat(auctionData.depositAmount) / 100).toString() : '',
           auctionStartDate: startDate.toISOString().split('T')[0],
           auctionEndDate: endDate.toISOString().split('T')[0],
           auctionStartTime: startDate.toTimeString().slice(0, 5),
@@ -203,13 +247,10 @@ export default function EditBiddingProduct() {
     setSelectedFilters(selectedFilters.filter((_, i) => i !== index))
   }
 
-  const convertFileToDataURL = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
+  // Upload file to S3 and get URL
+  const uploadFileToS3 = async (file: File, folder: 'products' | 'documents' = 'products'): Promise<string> => {
+    const { uploadFileToS3: uploadS3 } = await import('../services/upload.api')
+    return await uploadS3(file, folder)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -233,6 +274,12 @@ export default function EditBiddingProduct() {
 
       if (!formData.startingPrice || parseFloat(formData.startingPrice) <= 0) {
         alert('Starting price must be greater than 0')
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!formData.depositAmount || parseFloat(formData.depositAmount) <= 0) {
+        alert('Deposit amount is required and must be greater than 0')
         setIsSubmitting(false)
         return
       }
@@ -270,10 +317,13 @@ export default function EditBiddingProduct() {
         let url = doc.url
         if (doc.file) {
           try {
-            url = await convertFileToDataURL(doc.file)
-          } catch (err) {
-            console.error('Error converting document:', err)
-            continue
+            // Upload new file to S3 (not Base64)
+            url = await uploadFileToS3(doc.file, 'documents')
+          } catch (err: any) {
+            console.error('Error uploading document to S3:', err)
+            setError(`Failed to upload document: ${err.message}`)
+            setIsSubmitting(false)
+            return
           }
         }
         documentData.push({ url, title: doc.title.trim() })
@@ -296,7 +346,8 @@ export default function EditBiddingProduct() {
         title: formData.productTitle,
         description: formData.description || undefined,
         priceMinor: startingPriceMinor,
-        categoryIds: formData.categoryId ? [formData.categoryId] : undefined,
+        // Use subcategory if selected, otherwise use main category
+        categoryIds: (formData.subcategoryId || formData.mainCategoryId) ? [formData.subcategoryId || formData.mainCategoryId] : undefined,
         documents: documentData.length > 0 ? documentData : undefined,
         filterValues: filterValues.length > 0 ? filterValues : undefined,
       })
@@ -311,7 +362,7 @@ export default function EditBiddingProduct() {
         startAt: startDateTime.toISOString(),
         endAt: endDateTime.toISOString(),
         minIncrement: formData.minIncrement ? Math.round(parseFloat(formData.minIncrement) * 100) : undefined,
-        depositAmount: startingPriceMinor, // Use starting price as deposit
+        depositAmount: formData.depositAmount ? Math.round(parseFloat(formData.depositAmount) * 100) : undefined,
       }
 
       // Only include state if it has changed
@@ -343,7 +394,7 @@ export default function EditBiddingProduct() {
         id: id,
         productId: auction.productId,
         name: formData.productTitle,
-        category: categories.find(c => c.id === formData.categoryId)?.name || '',
+        category: mainCategories.find(c => c.id === formData.mainCategoryId)?.name || subcategories.find(c => c.id === formData.subcategoryId)?.name || '',
         startingPrice: formData.startingPrice,
         currentBid: '',
         bids: 0,
@@ -368,7 +419,7 @@ export default function EditBiddingProduct() {
         id: id,
         productId: auction.productId,
         name: formData.productTitle,
-        category: categories.find(c => c.id === formData.categoryId)?.name || '',
+        category: mainCategories.find(c => c.id === formData.mainCategoryId)?.name || subcategories.find(c => c.id === formData.subcategoryId)?.name || '',
         startingPrice: formData.startingPrice,
         currentBid: '',
         bids: 0,
@@ -450,24 +501,39 @@ export default function EditBiddingProduct() {
               />
             </div>
 
-            {/* Category */}
+            {/* Main Category */}
             <div>
-              <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-2">
-                Category
+              <label htmlFor="mainCategoryId" className="block text-sm font-medium text-gray-700 mb-2">
+                Main Category <span className="text-red-500">*</span>
               </label>
-              <select
-                id="categoryId"
-                name="categoryId"
-                value={formData.categoryId}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm outline-none focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E]"
-              >
-                <option value="">Select Category</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+              <SelectDropdown
+                value={formData.mainCategoryId}
+                options={mainCategories.map(cat => ({
+                  value: cat.id,
+                  label: cat.name,
+                }))}
+                placeholder="Select Main Category"
+                onChange={(value) => setFormData((prev) => ({ ...prev, mainCategoryId: value, subcategoryId: '' }))}
+              />
             </div>
+
+            {/* Subcategory (only show if main category is selected and has subcategories) */}
+            {formData.mainCategoryId && subcategories.length > 0 && (
+              <div>
+                <label htmlFor="subcategoryId" className="block text-sm font-medium text-gray-700 mb-2">
+                  Subcategory <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <SelectDropdown
+                  value={formData.subcategoryId}
+                  options={subcategories.map(cat => ({
+                    value: cat.id,
+                    label: cat.name,
+                  }))}
+                  placeholder="Select Subcategory (Optional)"
+                  onChange={(value) => setFormData((prev) => ({ ...prev, subcategoryId: value }))}
+                />
+              </div>
+            )}
 
             {/* Description */}
             <div>
@@ -560,7 +626,7 @@ export default function EditBiddingProduct() {
             </div>
 
             {/* Filters Section */}
-            {formData.categoryId && (
+            {(formData.mainCategoryId || formData.subcategoryId) && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Filters</h2>
                 <p className="text-sm text-gray-600 mb-4">
@@ -733,6 +799,26 @@ export default function EditBiddingProduct() {
                 onChange={handleChange}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm outline-none placeholder:text-gray-400 focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E]"
               />
+            </div>
+
+            {/* Deposit Amount */}
+            <div>
+              <label htmlFor="depositAmount" className="block text-sm font-medium text-gray-700 mb-2">
+                Deposit Amount (QAR) <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="depositAmount"
+                name="depositAmount"
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                placeholder="0.00"
+                value={formData.depositAmount}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-sm outline-none placeholder:text-gray-400 focus:border-[#F7931E] focus:ring-1 focus:ring-[#F7931E]"
+              />
+              <p className="text-xs text-gray-500 mt-1">Amount verified users must pay before bidding</p>
             </div>
 
             {/* Auction Start Date */}

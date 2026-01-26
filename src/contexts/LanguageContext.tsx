@@ -39,7 +39,12 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   useEffect(() => {
     const loadLanguagePreference = async () => {
       try {
-        const token = localStorage.getItem('token')
+        // Skip if on login page
+        if (window.location.pathname === '/login' || window.location.pathname === '/reset-password') {
+          return
+        }
+        
+        const token = localStorage.getItem('authToken')
         if (!token) return
 
         // Try to load from backend
@@ -55,7 +60,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
         }
       } catch (error) {
         // If backend call fails, use localStorage (already set in initial state)
-        console.error('Failed to load language preference:', error)
+        // Silently fail - don't log errors for unauthenticated requests
       }
     }
 

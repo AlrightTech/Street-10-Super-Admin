@@ -144,6 +144,23 @@ export default function AddCategoryFilter() {
         setIsLoading(true)
         setError(null)
 
+        // Upload icon to S3 if new file uploaded (Base64 data URL)
+        let iconUrl = iconPreview
+        if (iconPreview && iconPreview.startsWith('data:')) {
+          // This is a new Base64 upload - convert to S3
+          try {
+            const { uploadFileToS3 } = await import('../services/upload.api')
+            // Convert data URL to blob, then to file
+            const response = await fetch(iconPreview)
+            const blob = await response.blob()
+            const file = new File([blob], 'icon.png', { type: blob.type })
+            iconUrl = await uploadFileToS3(file, 'categories')
+          } catch (err: any) {
+            console.error('Error uploading icon to S3:', err)
+            throw new Error(`Failed to upload icon: ${err.message}`)
+          }
+        }
+
         const payload: Partial<BackendFilter> = {
           key: filterName.trim().toLowerCase().replace(/\s+/g, '_'),
           type:
@@ -160,7 +177,7 @@ export default function AddCategoryFilter() {
               label: filterName.trim(),
             },
           },
-          iconUrl: iconPreview || undefined,
+          iconUrl: iconUrl || undefined,
           isIndexed: inputType === 'number',
         }
 

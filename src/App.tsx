@@ -48,6 +48,7 @@ const AddProduct = lazy(() => import('./pages/AddProduct'))
 const ProductActiveDetail = lazy(() => import('./pages/ProductActiveDetail'))
 const ProductScheduledDetail = lazy(() => import('./pages/ProductScheduledDetail'))
 const ProductExpiredDetail = lazy(() => import('./pages/ProductExpiredDetail'))
+const AddLoginScreen = lazy(() => import('./pages/AddLoginScreen'))
 const Analytics = lazy(() => import('./pages/Analytics'))
 const TopPerformerDetail = lazy(() => import('./pages/TopPerformerDetail'))
 const AnalyticsOrderDetail = lazy(() => import('./pages/AnalyticsOrderDetail'))
@@ -156,6 +157,8 @@ function App() {
             <Route path="marketing/product/active/:id" element={<ProductActiveDetail />} />
             <Route path="marketing/product/scheduled/:id" element={<ProductScheduledDetail />} />
             <Route path="marketing/product/expired/:id" element={<ProductExpiredDetail />} />
+            <Route path="marketing/login-screen/add" element={<AddLoginScreen />} />
+            <Route path="marketing/login-screen/:id" element={<AddLoginScreen />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="analytics/top-performer-detail" element={<TopPerformerDetail />} />
             <Route path="analytics/order-detail/:userId" element={<AnalyticsOrderDetail />} />

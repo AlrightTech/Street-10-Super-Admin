@@ -275,6 +275,7 @@ function EditProductModal({ product, onClose, onSave }: EditProductModalProps) {
     media: [product.image],
   })
 
+  const [mediaFiles, setMediaFiles] = useState<Map<number, File>>(new Map())
   const [productType, setProductType] = useState('Normal Product')
 
   const toggleEdit = (field: string) => {
@@ -314,7 +315,7 @@ function EditProductModal({ product, onClose, onSave }: EditProductModalProps) {
     input.click()
   }
 
-  const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) {
       return
@@ -327,56 +328,84 @@ function EditProductModal({ product, onClose, onSave }: EditProductModalProps) {
       return
     }
     
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const result = reader.result
-      if (result && typeof result === 'string') {
-        console.log('Image loaded, updating state...')
-        setFormData((prev) => {
-          console.log('Previous media:', prev.media)
-          // Replace the first image with the new one
-          const newMedia: string[] = [result]
-          // Keep other media items if they exist
-          if (prev.media.length > 1) {
-            const remainingMedia = prev.media.slice(1).filter((item): item is string => typeof item === 'string')
-            newMedia.push(...remainingMedia)
-          }
-          console.log('New media:', newMedia)
-          return {
-            ...prev,
-            media: newMedia,
-          }
-        })
+    // Create preview (Base64 for UI only)
+    const { fileToDataUrl } = await import('../services/upload.api')
+    const preview = await fileToDataUrl(file)
+    
+    setFormData((prev) => {
+      // Replace the first image with the new preview
+      const newMedia: string[] = [preview]
+      // Keep other media items if they exist
+      if (prev.media.length > 1) {
+        const remainingMedia = prev.media.slice(1).filter((item): item is string => typeof item === 'string')
+        newMedia.push(...remainingMedia)
       }
-    }
-    reader.onerror = () => {
-      alert('Error reading file. Please try again.')
-      e.target.value = ''
-    }
-    reader.readAsDataURL(file)
+      return {
+        ...prev,
+        media: newMedia,
+      }
+    })
+    // Track file for S3 upload
+    setMediaFiles((prev) => {
+      const updated = new Map(prev)
+      updated.set(0, file)
+      return updated
+    })
   }
 
-  const handleMediaAdd = () => {
+  const handleMediaAdd = async () => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*,video/*'
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          setFormData((prev) => ({
-            ...prev,
-            media: [...prev.media, reader.result as string],
-          }))
-        }
-        reader.readAsDataURL(file)
+        // Create preview (Base64 for UI only)
+        const { fileToDataUrl } = await import('../services/upload.api')
+        const preview = await fileToDataUrl(file)
+        setFormData((prev) => ({
+          ...prev,
+          media: [...prev.media, preview],
+        }))
+        // Track file for S3 upload
+        setMediaFiles((prev) => {
+          const updated = new Map(prev)
+          updated.set(prev.size, file)
+          return updated
+        })
       }
     }
     input.click()
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Upload new media files to S3
+    let imageUrl = formData.media[0] || product.image
+    
+    // If there's a new file for index 0, upload to S3
+    const newFile = mediaFiles.get(0)
+    if (newFile) {
+      try {
+        const { uploadFileToS3 } = await import('../services/upload.api')
+        imageUrl = await uploadFileToS3(newFile, 'products')
+      } catch (err: any) {
+        alert(`Failed to upload image: ${err.message}`)
+        return
+      }
+    } else if (formData.media[0]?.startsWith('data:')) {
+      // Fallback: if Base64 but no file tracked, convert data URL to file and upload
+      try {
+        const { uploadFileToS3 } = await import('../services/upload.api')
+        const response = await fetch(formData.media[0])
+        const blob = await response.blob()
+        const file = new File([blob], 'image.png', { type: blob.type })
+        imageUrl = await uploadFileToS3(file, 'products')
+      } catch (err: any) {
+        alert(`Failed to upload image: ${err.message}`)
+        return
+      }
+    }
+    
     // Convert formData to product format
     const updatedProduct = {
       name: formData.productName,
@@ -384,7 +413,7 @@ function EditProductModal({ product, onClose, onSave }: EditProductModalProps) {
       salePrice: `$${formData.price}`,
       descriptionLong: formData.description,
       additionalDocuments: formData.documents,
-      image: formData.media[0] || product.image,
+      image: imageUrl,
     }
     onSave(updatedProduct)
   }

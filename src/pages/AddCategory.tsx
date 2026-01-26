@@ -109,7 +109,7 @@ export default function AddCategory() {
     }
   }
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
@@ -117,27 +117,21 @@ export default function AddCategory() {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0]
       if (file.type.startsWith('image/')) {
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          if (typeof reader.result === 'string') {
-            setIconDataUrl(reader.result)
-          }
-        }
-        reader.readAsDataURL(file)
+        // Create preview (Base64 for UI only)
+        const { fileToDataUrl } = await import('../services/upload.api')
+        const preview = await fileToDataUrl(file)
+        setIconDataUrl(preview)
       }
     }
   }
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setIconDataUrl(reader.result)
-        }
-      }
-      reader.readAsDataURL(file)
+      // Create preview (Base64 for UI only)
+      const { fileToDataUrl } = await import('../services/upload.api')
+      const preview = await fileToDataUrl(file)
+      setIconDataUrl(preview)
     }
   }
 
@@ -156,11 +150,28 @@ export default function AddCategory() {
         setIsSubmitting(true)
         setError(null)
 
+        // Upload icon to S3 if new file uploaded (Base64 data URL)
+        let iconUrl = iconDataUrl
+        if (iconDataUrl && iconDataUrl.startsWith('data:')) {
+          // This is a new Base64 upload - convert to S3
+          try {
+            const { uploadFileToS3 } = await import('../services/upload.api')
+            // Convert data URL to blob, then to file
+            const response = await fetch(iconDataUrl)
+            const blob = await response.blob()
+            const file = new File([blob], 'icon.png', { type: blob.type })
+            iconUrl = await uploadFileToS3(file, 'categories')
+          } catch (err: any) {
+            console.error('Error uploading icon to S3:', err)
+            throw new Error(`Failed to upload icon: ${err.message}`)
+          }
+        }
+
         const langData = {
           en: {
             name: categoryName.trim(),
             description: description.trim() || undefined,
-            iconUrl: iconDataUrl || undefined,
+            iconUrl: iconUrl || undefined,
           },
         }
 
