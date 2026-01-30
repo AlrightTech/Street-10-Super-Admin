@@ -4,6 +4,43 @@ import type { BiddingProduct } from '../../components/bidding/BiddingProductsTab
 import { auctionsApi, type Auction } from '../../services/auctions.api'
 import { productsApi } from '../../services/products.api'
 
+// Live countdown timer hook
+function useLiveCountdown(endAt: string | null | undefined) {
+  const [timeRemaining, setTimeRemaining] = useState<string>('')
+
+  useEffect(() => {
+    if (!endAt) {
+      setTimeRemaining('N/A')
+      return
+    }
+
+    const updateCountdown = () => {
+      const endDate = new Date(endAt)
+      const now = new Date()
+      const diff = endDate.getTime() - now.getTime()
+
+      if (diff <= 0) {
+        setTimeRemaining('Ended')
+        return
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+      
+      setTimeRemaining(`${days}d : ${hours}h : ${minutes}m : ${seconds}s`)
+    }
+
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 1000)
+
+    return () => clearInterval(interval)
+  }, [endAt])
+
+  return timeRemaining
+}
+
 interface LiveDetailProps {
   product: BiddingProduct
   auction: Auction | null // Full auction data for timeline and bidding history
@@ -33,6 +70,9 @@ export default function LiveDetail({ product, auction, mediaUrls, onClose: _onCl
   const [isProcessing, setIsProcessing] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
+  
+  // Use live countdown hook
+  const timeRemaining = useLiveCountdown(auction?.endAt || null)
 
   // Fetch bids if auction is available
   useEffect(() => {
@@ -40,24 +80,39 @@ export default function LiveDetail({ product, auction, mediaUrls, onClose: _onCl
       const fetchBids = async () => {
         try {
           setLoadingBids(true)
+          console.log('🔍 Fetching bids for live auction:', auction.id)
           const bidsData = await auctionsApi.getBids(auction.id, 1, 50)
+          console.log('✅ Bids fetched:', bidsData.bids?.length || 0, 'bids')
           setBids(bidsData.bids || [])
         } catch (error) {
-          console.error('Error fetching bids:', error)
+          console.error('❌ Error fetching bids:', error)
           // Use bids from auction object if available
-          if (auction.bids) {
+          if (auction.bids && Array.isArray(auction.bids)) {
+            console.log('📦 Using bids from auction object:', auction.bids.length)
             setBids(auction.bids)
+          } else {
+            setBids([])
           }
         } finally {
           setLoadingBids(false)
         }
       }
       fetchBids()
-    } else if (auction?.bids) {
+      
+      // Refresh bids every 5 seconds for live auctions
+      const interval = setInterval(() => {
+        fetchBids()
+      }, 5000)
+      
+      return () => clearInterval(interval)
+    } else if (auction?.bids && Array.isArray(auction.bids)) {
       // Use bids from auction object if available
+      console.log('📦 Using bids from auction object (no ID):', auction.bids.length)
       setBids(auction.bids)
+    } else {
+      setBids([])
     }
-  }, [auction])
+  }, [auction?.id])
 
   // Extract product attributes (if available)
   const attributes = (auction?.product as any)?.attributes || {}
@@ -99,17 +154,22 @@ export default function LiveDetail({ product, auction, mediaUrls, onClose: _onCl
     return `${durationDays} Day${durationDays !== 1 ? 's' : ''}`
   }
 
-  // Get winning bid (highest bid)
-  const winningBid = bids.find(bid => bid.isWinning) || bids[0]
-  const currentHighestBid = winningBid ? formatPrice(winningBid.amountMinor, auction?.product?.currency || 'QAR') : 'No bids yet'
+  // Get highest bid (not necessarily winning - winner determined at auction end)
+  const highestBid = bids.length > 0 
+    ? bids.reduce((highest, bid) => 
+        parseFloat(bid.amountMinor) > parseFloat(highest.amountMinor) ? bid : highest
+      )
+    : null
+  const currentHighestBid = highestBid ? formatPrice(highestBid.amountMinor, auction?.product?.currency || 'QAR') : 'No bids yet'
 
-  // Format bids for display
-  const formattedBids: BidHistoryItem[] = bids.map((bid) => {
+  // Format bids for display (sorted by amount descending)
+  const sortedBids = [...bids].sort((a, b) => parseFloat(b.amountMinor) - parseFloat(a.amountMinor))
+  const formattedBids: BidHistoryItem[] = sortedBids.map((bid) => {
     return {
       id: bid.id,
       bidderName: bid.user?.name || bid.user?.email?.split('@')[0] || 'Unknown',
       bidderEmail: bid.user?.email || 'N/A',
-      status: bid.isWinning ? 'Winning' : 'Bidding',
+      status: bid.isWinning ? 'Winning' : 'Bidding', // isWinning only set at settlement
       date: formatDate(bid.placedAt),
       time: formatTime(bid.placedAt),
       amount: formatPrice(bid.amountMinor, auction?.product?.currency || 'QAR'),
@@ -491,7 +551,7 @@ export default function LiveDetail({ product, auction, mediaUrls, onClose: _onCl
 
                 <div className="bg-blue-600 text-white rounded-lg p-4">
                   <p className="text-sm font-medium mb-1">Auction Live</p>
-                  <p className="text-xs text-gray-200">Time Remaining: {getTimeRemaining()}</p>
+                  <p className="text-xs text-gray-200">Time Remaining: {timeRemaining || getTimeRemaining()}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

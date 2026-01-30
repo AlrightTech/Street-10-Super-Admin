@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import BiddingProductsActionMenu from './BiddingProductsActionMenu'
 
 export type BiddingProductStatus = 'ended-unsold' | 'payment-requested' | 'fully-paid-sold' | 'scheduled' | 'live'
@@ -15,6 +15,7 @@ export interface BiddingProduct {
   timeLeft: string
   status: BiddingProductStatus
   imageUrl?: string
+  endAt?: string // End date/time for live countdown
 }
 
 interface BiddingProductsTableProps {
@@ -22,6 +23,49 @@ interface BiddingProductsTableProps {
   emptyState?: React.ReactNode
   onView?: (product: BiddingProduct) => void
   onDelete?: (product: BiddingProduct) => void
+}
+
+// Live countdown timer component
+function LiveCountdown({ endAt, initialTimeLeft }: { endAt?: string; initialTimeLeft: string }) {
+  const [timeLeft, setTimeLeft] = useState(initialTimeLeft)
+
+  useEffect(() => {
+    if (!endAt) {
+      // If no endAt, use initialTimeLeft (for ended auctions showing "Ended DD/MM/YYYY")
+      setTimeLeft(initialTimeLeft)
+      return
+    }
+
+    const updateCountdown = () => {
+      const endDate = new Date(endAt)
+      const now = new Date()
+      const diff = endDate.getTime() - now.getTime()
+
+      if (diff <= 0) {
+        setTimeLeft('Ended')
+        return
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+      
+      // Show seconds for live auctions (less than 1 day remaining)
+      if (days === 0) {
+        setTimeLeft(`${hours}h : ${minutes}m : ${seconds}s`)
+      } else {
+        setTimeLeft(`${days}d : ${hours}h : ${minutes}m`)
+      }
+    }
+
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 1000)
+
+    return () => clearInterval(interval)
+  }, [endAt, initialTimeLeft])
+
+  return <span>{timeLeft}</span>
 }
 
 export default function BiddingProductsTable({ products, emptyState, onView, onDelete }: BiddingProductsTableProps) {
@@ -92,7 +136,9 @@ export default function BiddingProductsTable({ products, emptyState, onView, onD
                   <TableCell className="text-sm text-gray-900 dark:text-gray-100 font-normal py-2 whitespace-nowrap">{product.startingPrice}</TableCell>
                   <TableCell className="text-sm text-gray-900 dark:text-gray-100 font-normal py-2 whitespace-nowrap">{product.currentBid}</TableCell>
                   <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-normal py-2 whitespace-nowrap">{product.bids}</TableCell>
-                  <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-normal py-2 whitespace-nowrap">{product.timeLeft}</TableCell>
+                  <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-normal py-2 whitespace-nowrap">
+                    <LiveCountdown endAt={product.endAt} initialTimeLeft={product.timeLeft} />
+                  </TableCell>
                   <TableCell className="py-2 max-w-[140px] text-xs">
                     <div className="flex items-center  justify-start">
                       <BiddingProductStatusBadge status={product.status} />

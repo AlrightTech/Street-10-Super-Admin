@@ -1,8 +1,52 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { BiddingProduct } from '../../components/bidding/BiddingProductsTable'
 import { auctionsApi, type Auction } from '../../services/auctions.api'
 import { productsApi } from '../../services/products.api'
+
+// Format price helper
+const formatPrice = (amountMinor: string | number | null | undefined, currency = 'QAR'): string => {
+  if (!amountMinor) return 'N/A'
+  const amount = typeof amountMinor === 'string' ? parseFloat(amountMinor) / 100 : Number(amountMinor) / 100
+  return `${amount.toLocaleString()} ${currency}`
+}
+
+// Live countdown timer hook
+function useLiveCountdown(endAt: string | null | undefined) {
+  const [timeRemaining, setTimeRemaining] = useState<string>('')
+
+  useEffect(() => {
+    if (!endAt) {
+      setTimeRemaining('N/A')
+      return
+    }
+
+    const updateCountdown = () => {
+      const endDate = new Date(endAt)
+      const now = new Date()
+      const diff = endDate.getTime() - now.getTime()
+
+      if (diff <= 0) {
+        setTimeRemaining('Ended')
+        return
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+      
+      setTimeRemaining(`${days}d : ${hours}h : ${minutes}m : ${seconds}s`)
+    }
+
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 1000)
+
+    return () => clearInterval(interval)
+  }, [endAt])
+
+  return timeRemaining
+}
 
 interface ScheduledDetailProps {
   product: BiddingProduct
@@ -21,6 +65,9 @@ export default function ScheduledDetail({ product, auction, mediaUrls, onClose: 
   const [isStarting, setIsStarting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [statusError, setStatusError] = useState<string | null>(null)
+  
+  // Live countdown timer
+  const timeRemaining = useLiveCountdown(auction?.endAt || null)
 
   const handleEditProduct = () => {
     navigate(`/building-products/${product.id}/edit`)
@@ -144,6 +191,12 @@ export default function ScheduledDetail({ product, auction, mediaUrls, onClose: 
     window.open('https://example.com/review.pdf', '_blank')
   }
 
+  // Extract product attributes (if available)
+  const attributes = (auction?.product as any)?.attributes || {}
+  const condition = attributes?.condition || 'N/A'
+  const dimensions = attributes?.dimensions || 'N/A'
+  const weight = attributes?.weight || 'N/A'
+
   // Use provided mediaUrls or fallback to single imageUrl, or placeholder
   const productImages = mediaUrls && mediaUrls.length > 0 
     ? mediaUrls 
@@ -247,15 +300,15 @@ export default function ScheduledDetail({ product, auction, mediaUrls, onClose: 
                   <div className="space-y-3 pt-4 border-t border-gray-200">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">Condition:</span>
-                      <span className="text-sm font-medium text-gray-900">Excellent</span>
+                      <span className="text-sm font-medium text-gray-900 capitalize">{condition}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">Dimensions:</span>
-                      <span className="text-sm font-medium text-gray-900">46mm case diameter</span>
+                      <span className="text-sm font-medium text-gray-900">{dimensions}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">Weight:</span>
-                      <span className="text-sm font-medium text-gray-900">155 grams</span>
+                      <span className="text-sm font-medium text-gray-900">{weight}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">Starting Price:</span>
@@ -263,7 +316,9 @@ export default function ScheduledDetail({ product, auction, mediaUrls, onClose: 
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">Reserve Price:</span>
-                      <span className="text-sm font-medium text-blue-600">$7,500</span>
+                      <span className="text-sm font-medium text-blue-600">
+                        {auction?.reservePrice ? formatPrice(auction.reservePrice, auction?.product?.currency || 'QAR') : 'N/A'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -332,11 +387,11 @@ export default function ScheduledDetail({ product, auction, mediaUrls, onClose: 
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">0</p>
+                    <p className="text-xs text-gray-500 mb-1">{product.bids || 0}</p>
                     <p className="text-xs font-medium text-gray-700">Total Bids</p>
                   </div>
                   <div className="border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">0</p>
+                    <p className="text-xs text-gray-500 mb-1">{product.bids || 0}</p>
                     <p className="text-xs font-medium text-gray-700">Bidders</p>
                   </div>
                   <div className="border border-gray-200 rounded-lg p-3 text-center">
@@ -415,14 +470,15 @@ export default function ScheduledDetail({ product, auction, mediaUrls, onClose: 
                     ? `${daysUntilStart}d : ${hoursUntilStart}h : ${minutesUntilStart}m`
                     : 'Started'
 
-                  // Calculate time until end
-                  const timeUntilEnd = endDate.getTime() - now.getTime()
-                  const daysUntilEnd = Math.floor(timeUntilEnd / (1000 * 60 * 60 * 24))
-                  const hoursUntilEnd = Math.floor((timeUntilEnd % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-                  const minutesUntilEnd = Math.floor((timeUntilEnd % (1000 * 60 * 60)) / (1000 * 60))
-                  const scheduledEnd = timeUntilEnd > 0
-                    ? `${daysUntilEnd}d : ${hoursUntilEnd}h : ${minutesUntilEnd}m`
-                    : 'Ended'
+                  // Calculate time until end - use live countdown
+                  const scheduledEnd = timeRemaining || (() => {
+                    const timeUntilEnd = endDate.getTime() - now.getTime()
+                    if (timeUntilEnd <= 0) return 'Ended'
+                    const daysUntilEnd = Math.floor(timeUntilEnd / (1000 * 60 * 60 * 24))
+                    const hoursUntilEnd = Math.floor((timeUntilEnd % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+                    const minutesUntilEnd = Math.floor((timeUntilEnd % (1000 * 60 * 60)) / (1000 * 60))
+                    return `${daysUntilEnd}d : ${hoursUntilEnd}h : ${minutesUntilEnd}m`
+                  })()
 
                   // Calculate duration in days
                   const durationMs = endDate.getTime() - startDate.getTime()

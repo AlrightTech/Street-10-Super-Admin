@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { BiddingProduct } from '../../components/bidding/BiddingProductsTable'
+import { auctionsApi, type Auction } from '../../services/auctions.api'
 
 interface EndedUnsoldDetailProps {
   product: BiddingProduct
+  auction: Auction | null // Full auction data
   mediaUrls?: string[] // All product media URLs
   onClose: () => void
 }
@@ -18,52 +20,173 @@ interface BidHistoryItem {
   amount: string
 }
 
-// Sample bidding history data
-const BIDDING_HISTORY: BidHistoryItem[] = [
-  {
-    id: '1',
-    bidderName: 'Michael Johnson',
-    bidderEmail: 'michael.j@mail.com',
-    status: 'Ended',
-    date: '10/02/2024',
-    time: '19:30:00',
-    amount: '$530',
-  },
-  {
-    id: '2',
-    bidderName: 'Michael Johnson',
-    bidderEmail: 'michael.j@mail.com',
-    status: 'Ended',
-    date: '10/02/2024',
-    time: '19:30:00',
-    amount: '$530',
-  },
-  {
-    id: '3',
-    bidderName: 'Michael Johnson',
-    bidderEmail: 'michael.j@mail.com',
-    status: 'Ended',
-    date: '10/02/2024',
-    time: '19:30:00',
-    amount: '$530',
-  },
-  {
-    id: '4',
-    bidderName: 'Michael Johnson',
-    bidderEmail: 'michael.j@mail.com',
-    status: 'Ended',
-    date: '10/02/2024',
-    time: '19:30:00',
-    amount: '$530',
-  },
-]
-
 /**
  * Ended Unsold Product Detail page
  */
-export default function EndedUnsoldDetail({ product, mediaUrls, onClose: _onClose }: EndedUnsoldDetailProps) {
+export default function EndedUnsoldDetail({ product, auction, mediaUrls, onClose: _onClose }: EndedUnsoldDetailProps) {
   const navigate = useNavigate()
   const [selectedImage, setSelectedImage] = useState(0)
+  const [bids, setBids] = useState<any[]>([])
+  const [loadingBids, setLoadingBids] = useState(false)
+  const [fullAuction, setFullAuction] = useState<Auction | null>(auction)
+
+  // Debug: Log auction prop when component mounts
+  useEffect(() => {
+    console.log('📋 EndedUnsoldDetail - Auction prop:', auction)
+    console.log('📋 EndedUnsoldDetail - Product prop:', product)
+    console.log('📋 FullAuction state:', fullAuction)
+  }, [])
+
+  // Update fullAuction when auction prop changes
+  useEffect(() => {
+    if (auction) {
+      setFullAuction(auction)
+    }
+  }, [auction])
+
+  // Fetch full auction data if not provided
+  useEffect(() => {
+    if (!fullAuction && product.id) {
+      const fetchAuction = async () => {
+        try {
+          console.log('🔍 Fetching full auction data for product:', product.id)
+          const auctionData = await auctionsApi.getById(product.id)
+          console.log('✅ Auction fetched:', auctionData?.id)
+          setFullAuction(auctionData)
+        } catch (error) {
+          console.error('❌ Error fetching auction:', error)
+        }
+      }
+      fetchAuction()
+    }
+  }, [product.id, fullAuction])
+
+  // Fetch bids - use auction.id or fullAuction.id
+  useEffect(() => {
+    const auctionId = auction?.id || fullAuction?.id
+    
+    console.log('🔄 Bid fetching effect triggered:', { 
+      auctionId, 
+      hasAuction: !!auction, 
+      hasFullAuction: !!fullAuction,
+      auctionBids: auction?.bids?.length,
+      fullAuctionBids: fullAuction?.bids?.length
+    })
+    
+    if (auctionId) {
+      const fetchBids = async () => {
+        try {
+          setLoadingBids(true)
+          console.log('🔍 Fetching bids for ended-unsold auction:', auctionId)
+          const bidsData = await auctionsApi.getBids(auctionId, 1, 50)
+          console.log('✅ Bids API response:', bidsData)
+          
+          // API returns { bids: [...], pagination: {...} } or just the array
+          let bidsArray: any[] = []
+          if (bidsData?.bids && Array.isArray(bidsData.bids)) {
+            bidsArray = bidsData.bids
+          } else if (Array.isArray(bidsData)) {
+            bidsArray = bidsData
+          } else if (bidsData?.data && Array.isArray(bidsData.data)) {
+            bidsArray = bidsData.data
+          }
+          
+          console.log('✅ Bids fetched:', bidsArray.length, 'bids')
+          setBids(bidsArray)
+        } catch (error: any) {
+          console.error('❌ Error fetching bids:', error)
+          console.error('Error response:', error.response?.data)
+          console.error('Error status:', error.response?.status)
+          console.error('Error message:', error.message)
+          
+          // Try to use bids from auction object if available
+          const auctionBids = auction?.bids || fullAuction?.bids
+          if (auctionBids && Array.isArray(auctionBids)) {
+            console.log('📦 Using bids from auction object as fallback:', auctionBids.length)
+            setBids(auctionBids)
+          } else {
+            console.log('⚠️ No bids available from API or auction object')
+            setBids([])
+          }
+        } finally {
+          setLoadingBids(false)
+        }
+      }
+      fetchBids()
+    } else {
+      // Try to use bids from auction object if no ID available
+      const auctionBids = auction?.bids || fullAuction?.bids
+      if (auctionBids && Array.isArray(auctionBids)) {
+        console.log('📦 Using bids from auction object (no ID):', auctionBids.length)
+        setBids(auctionBids)
+      } else {
+        console.log('⚠️ No auction ID and no bids in auction object')
+        setBids([])
+      }
+    }
+  }, [auction?.id, fullAuction?.id, auction?.bids, fullAuction?.bids])
+
+  // Format price helper
+  const formatPrice = (priceMinor: string | null | undefined, currency: string = 'QAR') => {
+    if (!priceMinor) return 'N/A'
+    const amount = parseFloat(priceMinor) / 100
+    return `${currency} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
+  // Format date helper (DD/MM/YYYY)
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
+  }
+
+  // Format time helper (HH:MM:SS)
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    return `${hours}:${minutes}:${seconds}`
+  }
+
+  // Calculate duration in days
+  const calculateDuration = (startDate: string, endDate: string) => {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const durationMs = end.getTime() - start.getTime()
+    const durationDays = Math.ceil(durationMs / (1000 * 60 * 60 * 24))
+    return `${durationDays} Day${durationDays !== 1 ? 's' : ''}`
+  }
+
+  // Extract product attributes
+  const attributes = (fullAuction?.product as any)?.attributes || {}
+  const condition = attributes?.condition || 'N/A'
+  const dimensions = attributes?.dimensions || 'N/A'
+  const weight = attributes?.weight || 'N/A'
+
+  // Get highest bid
+  const highestBid = bids.length > 0 
+    ? bids.reduce((highest, bid) => 
+        parseFloat(bid.amountMinor) > parseFloat(highest.amountMinor) ? bid : highest
+      )
+    : null
+  const currentHighestBid = highestBid ? formatPrice(highestBid.amountMinor, fullAuction?.product?.currency || 'QAR') : 'No bids'
+
+  // Format bids for display (sorted by amount descending)
+  const sortedBids = [...bids].sort((a, b) => parseFloat(b.amountMinor) - parseFloat(a.amountMinor))
+  const formattedBids: BidHistoryItem[] = sortedBids.map((bid) => {
+    return {
+      id: bid.id,
+      bidderName: bid.user?.name || bid.user?.email?.split('@')[0] || 'Unknown',
+      bidderEmail: bid.user?.email || 'N/A',
+      status: 'Ended',
+      date: formatDate(bid.placedAt),
+      time: formatTime(bid.placedAt),
+      amount: formatPrice(bid.amountMinor, fullAuction?.product?.currency || 'QAR'),
+    }
+  })
 
   const handleEditProduct = () => {
     navigate(`/building-products/${product.id}/edit`)
@@ -160,15 +283,15 @@ export default function EndedUnsoldDetail({ product, mediaUrls, onClose: _onClos
                 <div className="space-y-3 pt-4 border-t border-gray-200">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">Condition:</span>
-                    <span className="text-sm font-medium text-gray-900">Excellent</span>
+                    <span className="text-sm font-medium text-gray-900">{condition}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">Dimensions:</span>
-                    <span className="text-sm font-medium text-gray-900">46mm case diameter</span>
+                    <span className="text-sm font-medium text-gray-900">{dimensions}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">Weight:</span>
-                    <span className="text-sm font-medium text-gray-900">155 grams</span>
+                    <span className="text-sm font-medium text-gray-900">{weight}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">Starting Price:</span>
@@ -176,7 +299,9 @@ export default function EndedUnsoldDetail({ product, mediaUrls, onClose: _onClos
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">Reserve Price:</span>
-                    <span className="text-sm font-medium text-blue-600">$7,500</span>
+                    <span className="text-sm font-medium text-blue-600">
+                      {fullAuction?.reservePrice ? formatPrice(fullAuction.reservePrice.toString(), fullAuction?.product?.currency || 'QAR') : 'N/A'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -205,11 +330,16 @@ export default function EndedUnsoldDetail({ product, mediaUrls, onClose: _onClos
             <div className="border border-gray-200 rounded-lg p-4 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
               <h3 className="text-lg font-bold text-gray-900">Bidding History</h3>
-              <span className="text-sm text-gray-600">23 total bids</span>
+              <span className="text-sm text-gray-600">{bids.length} total bids</span>
             </div>
 
+            {loadingBids ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Loading bids...</p>
+              </div>
+            ) : formattedBids.length > 0 ? (
             <div className="space-y-3 sm:space-y-4">
-              {BIDDING_HISTORY.map((bid) => (
+              {formattedBids.map((bid) => (
                 <div key={bid.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 border border-gray-200 rounded-lg">
                   <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                     <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
@@ -248,6 +378,11 @@ export default function EndedUnsoldDetail({ product, mediaUrls, onClose: _onClos
                 </div>
               ))}
             </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No bids placed</p>
+              </div>
+            )}
 
             <div className="mt-4 flex justify-end">
               <button
@@ -268,31 +403,25 @@ export default function EndedUnsoldDetail({ product, mediaUrls, onClose: _onClos
               
               <div className="space-y-4">
                 <div className="bg-green-50 rounded-lg p-4">
-                  <p className="text-2xl font-bold text-[#118D57] mb-2">$8,750</p>
+                  <p className="text-2xl font-bold text-[#118D57] mb-2">{currentHighestBid}</p>
                   <p className="text-sm text-gray-500">Highest Bid</p>
                 </div>
 
                 <div className="bg-black text-white rounded-lg p-4">
-                  <p className="text-sm font-medium mb-1">Auction Ended - unsold</p>
-                  <p className="text-xs text-gray-300">Time Remaining</p>
+                  <p className="text-sm font-medium mb-1">Auction Ended - Unsold</p>
+                  <p className="text-xs text-gray-300">
+                    {fullAuction?.endAt ? formatDate(fullAuction.endAt) : 'N/A'}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">23</p>
+                    <p className="text-xs text-gray-500 mb-1">{bids.length}</p>
                     <p className="text-xs font-medium text-gray-700">Total Bids</p>
                   </div>
                   <div className="border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">5</p>
-                    <p className="text-xs font-medium text-gray-700">Matches</p>
-                  </div>
-                  <div className="border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">23</p>
+                    <p className="text-xs text-gray-500 mb-1">{new Set(bids.map(b => b.userId)).size}</p>
                     <p className="text-xs font-medium text-gray-700">Bidders</p>
-                  </div>
-                  <div className="border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">23</p>
-                    <p className="text-xs font-medium text-gray-700">Saved</p>
                   </div>
                 </div>
 
@@ -327,26 +456,36 @@ export default function EndedUnsoldDetail({ product, mediaUrls, onClose: _onClos
               <h3 className="text-lg font-bold text-gray-900 mb-4">Auction Timeline</h3>
               
               <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Start Date:</span>
-                  <span className="text-sm font-medium text-gray-900">28/01/2024</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">End Date:</span>
-                  <span className="text-sm font-medium text-gray-900">15/02/2024</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Duration:</span>
-                  <span className="text-sm font-medium text-gray-900">18 Days</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Starting Time:</span>
-                  <span className="text-sm font-medium text-gray-900">03:30:45</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">End Time:</span>
-                  <span className="text-sm font-medium text-gray-900">06:45:10</span>
-                </div>
+                {fullAuction?.startAt && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Start Date:</span>
+                      <span className="text-sm font-medium text-gray-900">{formatDate(fullAuction.startAt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Start Time:</span>
+                      <span className="text-sm font-medium text-gray-900">{formatTime(fullAuction.startAt)}</span>
+                    </div>
+                  </>
+                )}
+                {fullAuction?.endAt && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">End Date:</span>
+                      <span className="text-sm font-medium text-gray-900">{formatDate(fullAuction.endAt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">End Time:</span>
+                      <span className="text-sm font-medium text-gray-900">{formatTime(fullAuction.endAt)}</span>
+                    </div>
+                    {fullAuction?.startAt && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Duration:</span>
+                        <span className="text-sm font-medium text-gray-900">{calculateDuration(fullAuction.startAt, fullAuction.endAt)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>

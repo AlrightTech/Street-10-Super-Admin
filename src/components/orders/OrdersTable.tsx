@@ -56,7 +56,10 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                 return (
                   <tr 
                     key={order.id} 
-                    onClick={() => navigate(`/orders/${order.id.replace('#', '')}`)}
+                    onClick={() => {
+                      const orderId = (order as any).orderId || order.id.replace('#', '')
+                      navigate(`/orders/${orderId}`)
+                    }}
                     className={`${isHighlighted ? 'bg-gray-50 dark:bg-gray-700' : ''} 
                     hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer
                      ${!isLastRow ? 'border-b border-gray-200 dark:border-gray-700' : ''}`}
@@ -68,7 +71,7 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2.5">
-                        <Avatar name={order.customerName} />
+                        <Avatar name={order.customerName} imageUrl={(order as any).customerImageUrl} />
                         <span
                           role={onNameClick ? 'button' : undefined}
                           tabIndex={onNameClick ? 0 : undefined}
@@ -85,15 +88,32 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>{order.product}</TableCell>
-                    <TableCell align="right" className="whitespace-nowrap">{order.amount}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {(order as any).productImage && (
+                          <img 
+                            src={(order as any).productImage} 
+                            alt={order.product}
+                            className="h-8 w-8 rounded object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none'
+                            }}
+                          />
+                        )}
+                        <span>{order.product}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell align="right" className="whitespace-nowrap">{order.amountFormatted || `$${order.amount.toLocaleString()}`}</TableCell>
                     <TableCell>{order.paymentMethod}</TableCell>
                     <TableCell>
                       <OrderStatusBadge status={order.status} />
                     </TableCell>
                     <TableCell align="right">{order.orderDate}</TableCell>
                     <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                      <OrdersActionMenu onSelect={(action) => onActionSelect?.(order, action)} />
+                      <OrdersActionMenu 
+                        onSelect={(action) => onActionSelect?.(order, action)} 
+                        orderStatus={order.status}
+                      />
                     </TableCell>
                   </tr>
                 )
@@ -160,7 +180,18 @@ function TableCell({ children, className = '', align = 'left', onClick }: TableC
   )
 }
 
-function Avatar({ name }: { name: string }) {
-  const url = `https://i.pravatar.cc/48?img=${(name.length % 70) + 1}`
-  return <img src={url} alt={name} className="h-9 w-9 rounded-full object-cover" />
+function Avatar({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
+  // Use product image if available, otherwise use placeholder
+  const url = imageUrl || `https://i.pravatar.cc/48?img=${(name.length % 70) + 1}`
+  return (
+    <img 
+      src={url} 
+      alt={name} 
+      className="h-9 w-9 rounded-full object-cover"
+      onError={(e) => {
+        // Fallback to placeholder if image fails to load
+        (e.target as HTMLImageElement).src = `https://i.pravatar.cc/48?img=${(name.length % 70) + 1}`
+      }}
+    />
+  )
 }

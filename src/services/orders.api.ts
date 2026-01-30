@@ -17,17 +17,35 @@ export interface Order {
   user: {
     id: string;
     email: string;
+    name?: string;
+    profileImageUrl?: string | null;
   };
   vendor: {
     id: string;
     email: string;
   };
-  items: any[];
+  items: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    priceMinor: string;
+    product?: {
+      id: string;
+      title: string;
+      priceMinor: string;
+      media?: Array<{
+        id: string;
+        url: string;
+        type: string;
+      }>;
+    };
+  }>;
 }
 
 export interface OrderDetails extends Order {
   items: Array<{
     id: string;
+    productId: string;
     quantity: number;
     priceMinor: string;
     product: {

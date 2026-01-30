@@ -36,24 +36,32 @@ export default function PaymentRequestedDetail({ product, auction, mediaUrls, on
       const fetchBids = async () => {
         try {
           setLoadingBids(true)
+          console.log('🔍 Fetching bids for auction:', auction.id)
           const bidsData = await auctionsApi.getBids(auction.id, 1, 50)
+          console.log('✅ Bids fetched:', bidsData.bids?.length || 0, 'bids')
           setBids(bidsData.bids || [])
         } catch (error) {
-          console.error('Error fetching bids:', error)
+          console.error('❌ Error fetching bids:', error)
           // Use bids from auction object if available
-          if (auction.bids) {
+          if (auction.bids && Array.isArray(auction.bids)) {
+            console.log('📦 Using bids from auction object:', auction.bids.length)
             setBids(auction.bids)
+          } else {
+            setBids([])
           }
         } finally {
           setLoadingBids(false)
         }
       }
       fetchBids()
-    } else if (auction?.bids) {
+    } else if (auction?.bids && Array.isArray(auction.bids)) {
       // Use bids from auction object if available
+      console.log('📦 Using bids from auction object (no ID):', auction.bids.length)
       setBids(auction.bids)
+    } else {
+      setBids([])
     }
-  }, [auction])
+  }, [auction?.id])
 
   // Extract product attributes (if available)
   const attributes = (auction?.product as any)?.attributes || {}
@@ -95,12 +103,17 @@ export default function PaymentRequestedDetail({ product, auction, mediaUrls, on
     return `${durationDays} Day${durationDays !== 1 ? 's' : ''}`
   }
 
-  // Get winning bid (highest bid)
-  const winningBid = bids.find(bid => bid.isWinning) || bids[0]
-  const currentHighestBid = winningBid ? formatPrice(winningBid.amountMinor, auction?.product?.currency || 'QAR') : 'No bids yet'
+  // Get highest bid (winning bid if exists, otherwise highest amount)
+  const highestBid = bids.length > 0
+    ? (bids.find(bid => bid.isWinning) || bids.reduce((highest, bid) => 
+        parseFloat(bid.amountMinor) > parseFloat(highest.amountMinor) ? bid : highest
+      ))
+    : null
+  const currentHighestBid = highestBid ? formatPrice(highestBid.amountMinor, auction?.product?.currency || 'QAR') : 'No bids yet'
 
-  // Format bids for display
-  const formattedBids: BidHistoryItem[] = bids.map((bid) => {
+  // Format bids for display (sorted by amount descending)
+  const sortedBids = [...bids].sort((a, b) => parseFloat(b.amountMinor) - parseFloat(a.amountMinor))
+  const formattedBids: BidHistoryItem[] = sortedBids.map((bid) => {
     return {
       id: bid.id,
       bidderName: bid.user?.name || bid.user?.email?.split('@')[0] || 'Unknown',

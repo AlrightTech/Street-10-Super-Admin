@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
-import { mockOrders } from '../data/mockOrders'
+import { ordersApi, type OrderDetails } from '../services/orders.api'
 import type { OrderRecord } from './Orders'
 import OrderStatusBadge from '../components/orders/OrderStatusBadge'
 import { ShoppingBagIcon, CheckCircleIcon, XCircleIcon, RefreshCwIcon, PhoneIcon, MailIcon, CalendarIcon, MapPinIcon, CheckIcon, PlusIcon, UserIcon } from '../components/icons/Icons'
@@ -19,6 +19,7 @@ export default function OrderDetail() {
   const location = useLocation()
   const isDetailRoute = location.pathname.includes('/detail')
   const [order, setOrder] = useState<OrderRecord | null>(null)
+  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null) // Store full order details from API
   const [customerOrders, setCustomerOrders] = useState<OrderRecord[]>([])
   const [filteredOrders, setFilteredOrders] = useState<OrderRecord[]>([])
   const [timeFilter, setTimeFilter] = useState('All Time')
@@ -35,17 +36,95 @@ export default function OrderDetail() {
   ]
 
   useEffect(() => {
-    // Find the order by ID
-    const foundOrder = mockOrders.find(o => o.id.replace('#', '') === orderId || o.id === orderId || o.id === `#${orderId}`)
-    
-    if (foundOrder) {
-      setOrder(foundOrder)
-      // Get all orders for this customer
-      const allCustomerOrders = mockOrders.filter(o => o.customerName === foundOrder.customerName)
-      setCustomerOrders(allCustomerOrders)
-    } else {
-      navigate('/orders')
+    const fetchOrder = async () => {
+      try {
+        if (!orderId) {
+          navigate('/orders')
+          return
+        }
+
+        // Fetch order from API
+        const orderData = await ordersApi.getById(orderId)
+        
+        // Debug: Log the user data to see what we're getting
+        console.log('Order data user:', orderData.user)
+        console.log('User name:', (orderData.user as any)?.name)
+        console.log('User profileImageUrl:', (orderData.user as any)?.profileImageUrl)
+        
+        // Store full order details
+        setOrderDetails(orderData)
+        
+        // Transform to OrderRecord format
+        const total = parseFloat(orderData.totalMinor) / 100
+        const firstItem = orderData.items?.[0]
+        const productName = firstItem?.product?.title || 'N/A'
+        // Get customer name - use name if available, otherwise use email prefix
+        const customerName = (orderData.user as any)?.name 
+          ? (orderData.user as any).name 
+          : (orderData.user?.email?.split('@')[0] || 'Unknown')
+        const customerImageUrl = (orderData.user as any)?.profileImageUrl || null
+        
+        const transformedOrder: OrderRecord = {
+          id: `#${orderData.orderNumber || orderData.id.slice(-8)}`,
+          customerName: customerName,
+          customerEmail: orderData.user?.email,
+          customerImageUrl: customerImageUrl,
+          product: productName,
+          productImage: firstItem?.product?.media?.[0]?.url,
+          amount: total,
+          amountFormatted: `${orderData.currency} ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          paymentMethod: orderData.paymentMethod || 'N/A',
+          status: orderData.status as any,
+          orderDate: new Date(orderData.createdAt).toLocaleDateString('en-GB'),
+          orderNumber: orderData.orderNumber,
+          orderId: orderData.id,
+        }
+        
+        setOrder(transformedOrder)
+        
+        // Fetch all orders for this customer
+        try {
+          const customerOrdersResponse = await ordersApi.getAll({
+            user_id: orderData.userId,
+            limit: 100,
+          })
+          
+          const transformedCustomerOrders: OrderRecord[] = (customerOrdersResponse.data || []).map((o: any) => {
+            const oTotal = parseFloat(o.totalMinor) / 100
+            const oFirstItem = o.items?.[0]
+            const oProductName = oFirstItem?.product?.title || 'N/A'
+            const oCustomerName = (o.user as any)?.name || o.user?.email?.split('@')[0] || 'Unknown'
+            const oCustomerImageUrl = (o.user as any)?.profileImageUrl || null
+            
+            return {
+              id: `#${o.orderNumber || o.id.slice(-8)}`,
+              customerName: oCustomerName,
+              customerEmail: o.user?.email,
+              customerImageUrl: oCustomerImageUrl,
+              product: oProductName,
+              productImage: oFirstItem?.product?.media?.[0]?.url,
+              amount: oTotal,
+              amountFormatted: `${o.currency} ${oTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              paymentMethod: o.paymentMethod || 'N/A',
+              status: o.status as any,
+              orderDate: new Date(o.createdAt).toLocaleDateString('en-GB'),
+              orderNumber: o.orderNumber,
+              orderId: o.id,
+            }
+          })
+          
+          setCustomerOrders(transformedCustomerOrders)
+        } catch (error) {
+          console.error('Error fetching customer orders:', error)
+        }
+      } catch (error: any) {
+        console.error('Error fetching order:', error)
+        alert(`Failed to load order: ${error?.message || 'Unknown error'}`)
+        navigate('/orders')
+      }
     }
+
+    fetchOrder()
   }, [orderId, navigate])
 
   // Filter orders by time period
@@ -100,27 +179,56 @@ export default function OrderDetail() {
     .filter(o => o.status === 'inactive')
     .reduce((sum, o) => sum + o.amount, 0)
 
-  // Mock customer data
-  const customerSince = 'March 15, 2023'
-  const customerLocation = 'New York, NY'
-  const customerEmail = `${order.customerName.toLowerCase().replace(/\s+/g, '.')}@email.com`
-  const customerPhone = '+1 (555) 123-4567'
-  const customerAvatar = `https://i.pravatar.cc/100?img=${order.customerName.length % 70}`
+  // Get real customer data from orderDetails (prioritize orderDetails over order)
+  const customerEmail = orderDetails?.user?.email || order.customerEmail || 'N/A'
+  const customerPhone = (orderDetails?.user as any)?.phone || orderDetails?.shippingAddress?.phone || 'N/A'
+  
+  // Get customer name - ALWAYS prioritize orderDetails.user.name (from API) over order.customerName
+  let customerName = 'Unknown'
+  if (orderDetails?.user) {
+    const user = orderDetails.user as any
+    // Use name from API if available, otherwise fallback to email prefix
+    customerName = user.name || user.email?.split('@')[0] || 'Unknown'
+  } else if (order?.customerName) {
+    // Fallback to order.customerName if orderDetails is not loaded yet
+    customerName = order.customerName.includes('@') 
+      ? order.customerName.split('@')[0] 
+      : order.customerName
+  } else if (order?.customerEmail) {
+    customerName = order.customerEmail.split('@')[0]
+  }
+  
+  // Use profile image from orderDetails (API) - this should have the real profile image
+  const customerProfileImageUrl = orderDetails?.user ? (orderDetails.user as any)?.profileImageUrl : null
+  // Also check order.customerImageUrl as fallback (from the table data)
+  const finalProfileImageUrl = customerProfileImageUrl || (order as any)?.customerImageUrl || null
+  const customerAvatar = finalProfileImageUrl 
+    ? finalProfileImageUrl 
+    : `https://i.pravatar.cc/100?img=${customerName.length % 70}`
 
-  // Mock addresses
+  // Get real addresses from orderDetails
+  const shippingAddressData = orderDetails?.shippingAddress || {}
   const shippingAddress = {
-    street: '123 Main Street',
-    apartment: 'Apartment 4B',
-    city: 'New York, NY 10001',
-    country: 'United States'
+    street: shippingAddressData.street || shippingAddressData.addressLine1 || '',
+    apartment: shippingAddressData.apartment || shippingAddressData.addressLine2 || '',
+    city: shippingAddressData.city || '',
+    state: shippingAddressData.state || shippingAddressData.province || '',
+    postalCode: shippingAddressData.postalCode || shippingAddressData.zipCode || '',
+    country: shippingAddressData.country || ''
   }
 
-  const billingAddress = {
-    street: '123 Main Street',
-    apartment: 'Apartment 4B',
-    city: 'New York, NY 10001',
-    country: 'United States'
-  }
+  // Calculate customer since date (use order creation date as fallback, or could fetch user.createdAt from API)
+  const customerSince = orderDetails?.createdAt 
+    ? new Date(orderDetails.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : 'N/A'
+
+  // Get customer location from shipping address
+  const customerLocation = shippingAddress.city && shippingAddress.country
+    ? `${shippingAddress.city}, ${shippingAddress.country}`
+    : shippingAddress.country || 'N/A'
+
+  // Billing address (usually same as shipping, or could be separate field)
+  const billingAddress = shippingAddress // For now, use shipping address as billing
 
   // Mock customer notes
   const customerNotes: CustomerNote[] = [
@@ -178,33 +286,22 @@ export default function OrderDetail() {
 
   // If on detail route, show order detail view matching reference image
   if (isDetailRoute) {
-    // Mock products for order detail view
-    const orderProducts = [
-      {
-        id: '1',
-        name: 'Wireless Bluetooth Headphones',
-        sku: 'MSH-30',
-        quantity: 2,
-        unitPrice: 89.99,
-        subtotal: 179.98,
-      },
-      {
-        id: '2',
-        name: 'Protective Phone Case',
-        sku: 'PPC-021',
-        quantity: 1,
-        unitPrice: 24.99,
-        subtotal: 24.99,
-      },
-      {
-        id: '3',
-        name: 'Wireless Charging Pad',
-        sku: 'WCP-003',
-        quantity: 1,
-        unitPrice: 39.99,
-        subtotal: 39.99,
-      },
-    ]
+    // Calculate totals from real order items - define orderItems first
+    const orderItems = orderDetails?.items || []
+    
+    // Real products from order items
+    const orderProducts = orderItems.map((item: any) => {
+      const unitPrice = parseFloat(item.priceMinor || '0') / 100
+      const quantity = item.quantity || 1
+      return {
+        id: item.id || item.productId,
+        name: item.product?.title || 'Unknown Product',
+        sku: item.product?.id?.slice(0, 8).toUpperCase() || 'N/A',
+        quantity: quantity,
+        unitPrice: unitPrice,
+        subtotal: unitPrice * quantity,
+      }
+    })
 
     const orderTimeline = [
       { status: 'Order Placed', date: 'Dec 15, 2024', time: '2:30 PM', completed: true },
@@ -214,39 +311,48 @@ export default function OrderDetail() {
       { status: 'Delivered', date: '', time: '', completed: false },
     ]
 
-    // Format order ID
-    const formatOrderId = (id: string) => {
-      const numMatch = id.match(/\d+/)
-      if (numMatch) {
-        return `#${numMatch[0]}`
-      }
-      return id.startsWith('#') ? id : `#${id}`
-    }
-    const formattedOrderId = formatOrderId(order.id)
+    // Use actual order number from API
+    const formattedOrderId = orderDetails?.orderNumber || order.orderNumber || order.id
     
-    // Format order date
+    // Format order date from real order data
     const parseDate = (dateStr: string) => {
       try {
         const date = new Date(dateStr)
-        if (isNaN(date.getTime())) return { formatted: 'Dec 15, 2024', time: '1:30 PM' }
+        if (isNaN(date.getTime())) {
+          const fallback = new Date()
+          return {
+            formatted: fallback.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: fallback.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          }
+        }
         const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        return { formatted, time: '1:30 PM' }
+        const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        return { formatted, time }
       } catch {
-        return { formatted: 'Dec 15, 2024', time: '1:30 PM' }
+        const fallback = new Date()
+        return {
+          formatted: fallback.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: fallback.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        }
       }
     }
     
-    const { formatted: formattedDate, time: orderTime } = parseDate(order.orderDate)
+    const orderDateStr = orderDetails?.createdAt || order.orderDate
+    const { formatted: formattedDate, time: orderTime } = parseDate(orderDateStr)
     
-    // Calculate totals
-    const subtotal = orderProducts.reduce((sum, p) => sum + p.subtotal, 0)
-    const shipping = 2.54
-    const total = subtotal + shipping
+    // Calculate totals from real order items (already defined above)
+    const subtotal = orderItems.reduce((sum: number, item: any) => {
+      const itemPrice = parseFloat(item.priceMinor || '0') / 100
+      return sum + (itemPrice * (item.quantity || 1))
+    }, 0)
+    const discount = parseFloat(orderDetails?.discountMinor || '0') / 100
+    const shipping = 0 // Shipping might be in order data, for now 0
+    const total = parseFloat(orderDetails?.totalMinor || '0') / 100
 
-    // Customer data
-    const detailCustomerName = order.customerName === 'Sarah Johnson' ? 'Sarah Johnson' : order.customerName
-    const detailCustomerEmail = 'sarah.johnson@email.com'
-    const detailCustomerPhone = '+1 (240) 123-4567'
+    // Customer data from real order
+    const detailCustomerName = customerName
+    const detailCustomerEmail = customerEmail
+    const detailCustomerPhone = customerPhone
 
     const handleUpdateStatus = () => {
       console.log('Update status clicked')
@@ -301,7 +407,7 @@ export default function OrderDetail() {
             {/* Total Amount Card - Light Purple */}
             <div className="rounded-lg bg-purple-50 border border-purple-200 p-3 sm:p-4">
               <p className="text-xs sm:text-sm text-purple-800 mb-1">Total Amount</p>
-              <p className="text-base sm:text-lg font-semibold text-purple-800">${total.toFixed(2)}</p>
+              <p className="text-base sm:text-lg font-semibold text-purple-800">{orderDetails?.currency || 'QAR'} {total.toFixed(2)}</p>
             </div>
           </div>
           </div>
@@ -341,9 +447,16 @@ export default function OrderDetail() {
                 <p className="text-xs sm:text-sm font-medium text-gray-900">Shipping Address</p>
               </div>
               <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                <p>23 Main Street, Apt 4B</p>
-                <p>New York, NY 10012</p>
-                <p>United States</p>
+                {shippingAddress.street && <p>{shippingAddress.street}{shippingAddress.apartment ? `, ${shippingAddress.apartment}` : ''}</p>}
+                {(shippingAddress.city || shippingAddress.state || shippingAddress.postalCode) && (
+                  <p>
+                    {[shippingAddress.city, shippingAddress.state, shippingAddress.postalCode].filter(Boolean).join(', ')}
+                  </p>
+                )}
+                {shippingAddress.country && <p>{shippingAddress.country}</p>}
+                {!shippingAddress.street && !shippingAddress.city && !shippingAddress.country && (
+                  <p className="text-gray-400 italic">No address provided</p>
+                )}
               </div>
             </div>
           </div>
@@ -389,20 +502,23 @@ export default function OrderDetail() {
             </table>
 
             <div className='px-4 sm:block hidden pt-3 pb-3 bg-gray-100'>
-
-
+            <div className='flex justify-between'>
+              <div className='semi-bold'>Subtotal:</div>
+              <div>${subtotal.toFixed(2)}</div>
+            </div>
+            {discount > 0 && (
+              <div className='flex justify-between'>
+                <div className='semi-bold'>Discount:</div>
+                <div>-${discount.toFixed(2)}</div>
+              </div>
+            )}
             <div className='flex justify-between'>
               <div className='semi-bold'>Shipping:</div>
-              <div>${total.toFixed(2)}</div>
+              <div>${shipping.toFixed(2)}</div>
             </div>
             <div className='flex justify-between'>
-
-            <div className='semi-bold'>
-            Total:
-            </div>
-            <div>
-            ${total.toFixed(2)} 
-            </div>
+              <div className='semi-bold'>Total:</div>
+              <div>${total.toFixed(2)}</div>
             </div>
             </div>
           </div>
@@ -567,14 +683,21 @@ export default function OrderDetail() {
           <div className="flex-shrink-0">
             <img
               src={customerAvatar}
-              alt={order.customerName}
+              alt={customerName}
               className="h-16 w-16 rounded-full object-cover"
+              onError={(e) => {
+                // Fallback to placeholder if image fails to load
+                const target = e.target as HTMLImageElement
+                if (target.src !== `https://i.pravatar.cc/100?img=${customerName.length % 70}`) {
+                  target.src = `https://i.pravatar.cc/100?img=${customerName.length % 70}`
+                }
+              }}
             />
           </div>
 
           {/* Center-Left: Name and Contact Info */}
           <div className="flex-1">
-            <h2 className="text-lg font-semibold text-gray-900">{order.customerName}</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{customerName}</h2>
             <div className="mt-2 space-y-1.5">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <PhoneIcon className="h-4 w-4 text-gray-400" />
@@ -686,22 +809,36 @@ export default function OrderDetail() {
       {/* Addresses Section */}
       <div className="rounded-xl border border-gray-200 bg-white p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-base font-semibold text-gray-900 mb-3">Shipping Address</h3>
-            <div className="space-y-1 text-sm text-gray-600">
-              <p>{shippingAddress.street}</p>
-              <p>{shippingAddress.apartment}</p>
-              <p>{shippingAddress.city}</p>
-              <p>{shippingAddress.country}</p>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 mb-3">Shipping Address</h3>
+              <div className="space-y-1 text-sm text-gray-600">
+                {shippingAddress.street && <p>{shippingAddress.street}</p>}
+                {shippingAddress.apartment && <p>{shippingAddress.apartment}</p>}
+                {(shippingAddress.city || shippingAddress.state || shippingAddress.postalCode) && (
+                  <p>
+                    {[shippingAddress.city, shippingAddress.state, shippingAddress.postalCode].filter(Boolean).join(', ')}
+                  </p>
+                )}
+                {shippingAddress.country && <p>{shippingAddress.country}</p>}
+                {!shippingAddress.street && !shippingAddress.city && !shippingAddress.country && (
+                  <p className="text-gray-400 italic">No shipping address provided</p>
+                )}
+              </div>
             </div>
-          </div>
           <div>
             <h3 className="text-base font-semibold text-gray-900 mb-3">Billing Address</h3>
             <div className="space-y-1 text-sm text-gray-600">
-              <p>{billingAddress.street}</p>
-              <p>{billingAddress.apartment}</p>
-              <p>{billingAddress.city}</p>
-              <p>{billingAddress.country}</p>
+              {billingAddress.street && <p>{billingAddress.street}</p>}
+              {billingAddress.apartment && <p>{billingAddress.apartment}</p>}
+              {(billingAddress.city || billingAddress.state || billingAddress.postalCode) && (
+                <p>
+                  {[billingAddress.city, billingAddress.state, billingAddress.postalCode].filter(Boolean).join(', ')}
+                </p>
+              )}
+              {billingAddress.country && <p>{billingAddress.country}</p>}
+              {!billingAddress.street && !billingAddress.city && !billingAddress.country && (
+                <p className="text-gray-400 italic">No billing address provided</p>
+              )}
             </div>
           </div>
         </div>

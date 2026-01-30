@@ -7,16 +7,17 @@ interface OrdersActionMenuProps {
   onSelect?: (action: OrderActionType) => void
   className?: string
   align?: 'left' | 'right'
+  orderStatus?: string // Order status to conditionally show/hide actions
 }
 
 const ACTIONS: { key: OrderActionType; label: string }[] = [
   { key: 'view', label: 'View' },
   { key: 'edit', label: 'Edit Order' },
   { key: 'block', label: 'Block Order' },
-  { key: 'delete', label: 'Delete Order' },
+  { key: 'delete', label: 'Cancel Order' }, // Changed from "Delete Order" to "Cancel Order"
 ]
 
-export default function OrdersActionMenu({ onSelect, className = '', align = 'right' }: OrdersActionMenuProps) {
+export default function OrdersActionMenu({ onSelect, className = '', align = 'right', orderStatus }: OrdersActionMenuProps) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -61,7 +62,13 @@ export default function OrdersActionMenu({ onSelect, className = '', align = 'ri
             align === 'right' ? 'right-0 origin-top-right' : 'left-0 origin-top-left'
           }`}
         >
-          {ACTIONS.map((action) => (
+          {ACTIONS.filter((action) => {
+            // Hide "Cancel Order" action if order is already cancelled
+            if (action.key === 'delete' && orderStatus === 'cancelled') {
+              return false
+            }
+            return true
+          }).map((action) => (
             <button
               key={action.key}
               type="button"

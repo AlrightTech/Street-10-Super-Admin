@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CalendarIcon } from '../components/icons/Icons'
 import FilterDropdown from '../components/finance/FilterDropdown'
@@ -118,6 +118,7 @@ export default function BiddingProducts() {
   const [error, setError] = useState<string | null>(null)
   const [auctions, setAuctions] = useState<any[]>([])
   const [totalPages, setTotalPages] = useState(1)
+  const socketRef = useRef<any>(null) // Store socket reference for joining rooms
 
   // Fetch auctions from API
   useEffect(() => {
@@ -158,6 +159,194 @@ export default function BiddingProducts() {
 
     fetchAuctions()
   }, [currentPage, statusFilter])
+
+  // WebSocket connection for real-time status updates
+  useEffect(() => {
+    let socket: any = null
+
+    const connectWebSocket = async () => {
+      try {
+        // Dynamically import socket.io-client
+        const { io } = await import('socket.io-client')
+        const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+        const wsURL = baseURL.replace('/api/v1', '')
+
+        socket = io(wsURL, {
+          transports: ['websocket'],
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: 5,
+        })
+        
+        socketRef.current = socket // Store socket reference
+
+        const joinAllRooms = () => {
+          // Use current auctions from state
+          setAuctions((currentAuctions) => {
+            currentAuctions.forEach((auction) => {
+              if (auction.id && socketRef.current) {
+                socketRef.current.emit('join_auction', auction.id)
+                console.log(`✅ Joined auction room: ${auction.id}`)
+              }
+            })
+            return currentAuctions // Return unchanged to avoid re-render
+          })
+        }
+
+        socket.on('connect', () => {
+          console.log('✅ Super Admin WebSocket connected')
+          socketRef.current = socket
+          joinAllRooms()
+        })
+
+        socket.on('reconnect', () => {
+          console.log('✅ Super Admin WebSocket reconnected')
+          socketRef.current = socket
+          joinAllRooms()
+        })
+
+        // Listen for auction status changes
+        socket.on('auction_status_changed', async (data: any) => {
+          console.log('📢 Super Admin received auction_status_changed:', data)
+          if (data.auctionId) {
+            // Fetch full auction data to get order, reservePriceMet, etc. for correct status mapping
+            try {
+              const updatedAuctionData = await auctionsApi.getById(data.auctionId)
+              // Update the auction in the list with full data
+              setAuctions((prevAuctions) =>
+                prevAuctions.map((auction) => {
+                  if (auction.id === data.auctionId) {
+                    return updatedAuctionData
+                  }
+                  return auction
+                })
+              )
+            } catch (error) {
+              console.error('Error fetching updated auction data:', error)
+              // Fallback: just update state if fetch fails
+              setAuctions((prevAuctions) =>
+                prevAuctions.map((auction) => {
+                  if (auction.id === data.auctionId) {
+                    return {
+                      ...auction,
+                      state: data.state,
+                      ...(data.reservePriceMet !== undefined && { reservePriceMet: data.reservePriceMet }),
+                    }
+                  }
+                  return auction
+                })
+              )
+            }
+          }
+        })
+
+        // Listen for auction ended events
+        socket.on('auction_ended', async (data: any) => {
+          console.log('🏁 Super Admin received auction_ended:', data)
+          if (data.auctionId) {
+            // Fetch full auction data to get order status for correct status mapping
+            try {
+              const updatedAuctionData = await auctionsApi.getById(data.auctionId)
+              // Update the auction in the list with full data
+              setAuctions((prevAuctions) =>
+                prevAuctions.map((auction) => {
+                  if (auction.id === data.auctionId) {
+                    return updatedAuctionData
+                  }
+                  return auction
+                })
+              )
+            } catch (error) {
+              console.error('Error fetching updated auction data:', error)
+              // Fallback: just update state if fetch fails
+              setAuctions((prevAuctions) =>
+                prevAuctions.map((auction) => {
+                  if (auction.id === data.auctionId) {
+                    return {
+                      ...auction,
+                      state: 'ended',
+                      ...(data.reservePriceMet !== undefined && { reservePriceMet: data.reservePriceMet }),
+                      ...(data.orderId && { order: { id: data.orderId, status: 'created' } }),
+                    }
+                  }
+                  return auction
+                })
+              )
+            }
+          }
+        })
+
+        socket.on('disconnect', () => {
+          console.log('⚠️ Super Admin WebSocket disconnected')
+        })
+
+        socket.on('connect_error', (error: any) => {
+          console.error('❌ Super Admin WebSocket connection error:', error)
+        })
+      } catch (error) {
+        console.error('Error setting up Super Admin WebSocket:', error)
+      }
+    }
+
+    // Connect WebSocket
+    connectWebSocket()
+
+    return () => {
+      if (socket) {
+        socket.removeAllListeners()
+        socket.disconnect()
+        socketRef.current = null
+      }
+    }
+  }, []) // Only connect once on mount
+
+  // Join rooms when auctions are loaded or updated
+  useEffect(() => {
+    // Join rooms for new auctions when they're loaded
+    if (socketRef.current && socketRef.current.connected && auctions.length > 0) {
+      auctions.forEach((auction) => {
+        if (auction.id) {
+          socketRef.current.emit('join_auction', auction.id)
+          console.log(`✅ Joined auction room: ${auction.id}`)
+        }
+      })
+    }
+  }, [auctions]) // Rejoin when auctions list changes
+
+  // Periodic refresh for ended auctions to detect order payment status changes
+  useEffect(() => {
+    // Only refresh ended auctions that might have orders
+    const endedAuctionIds = auctions
+      .filter((auction) => auction.state === 'ended' && (auction as any).order)
+      .map((auction) => auction.id)
+
+    if (endedAuctionIds.length === 0) return
+
+    const refreshEndedAuctions = async () => {
+      try {
+        // Fetch updated data for ended auctions
+        const updatedAuctions = await Promise.all(
+          endedAuctionIds.map((id) => auctionsApi.getById(id).catch(() => null))
+        )
+
+        // Update auctions with new data
+        setAuctions((prevAuctions) =>
+          prevAuctions.map((auction) => {
+            const updated = updatedAuctions.find((a) => a && a.id === auction.id)
+            return updated || auction
+          })
+        )
+      } catch (error) {
+        console.error('Error refreshing ended auctions:', error)
+      }
+    }
+
+    // Refresh every 5 seconds for ended auctions
+    const interval = setInterval(refreshEndedAuctions, 5000)
+
+    return () => clearInterval(interval)
+  }, [auctions]) // Re-run when auctions change
 
   // Parse date from timeLeft string (e.g., "Ended 15/02/2024")
   const parseDate = (timeLeft: string): Date => {

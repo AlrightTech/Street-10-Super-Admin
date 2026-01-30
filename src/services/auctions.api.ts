@@ -135,7 +135,22 @@ export const auctionsApi = {
     const response = await api.get(`/auctions/${auctionId}/bids`, {
       params: { page, limit },
     });
-    return response.data.data;
+    // API returns { success: true, data: [...bids], pagination: {...} }
+    // response.data.data is the bids array directly
+    // Normalize to always return { bids: [...], pagination: {...} }
+    const data = response.data.data;
+    const pagination = response.data.pagination;
+    
+    if (Array.isArray(data)) {
+      return { bids: data, pagination };
+    } else if (data && typeof data === 'object' && data.bids) {
+      // Already in the correct format
+      return data;
+    } else {
+      // Fallback: return empty array
+      console.warn('Unexpected bids API response structure:', response.data);
+      return { bids: [], pagination: pagination || { page, limit, total: 0, totalPages: 0 } };
+    }
   },
 
   // Pause a live auction

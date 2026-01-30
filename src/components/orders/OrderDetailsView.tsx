@@ -409,11 +409,14 @@ export default function OrderDetailsView({ order, onViewOrder }: OrderDetailsVie
                           type="button"
                           onClick={() => {
                             // Create a temporary order record from history order for viewing
+                            const amount = parseFloat(historyOrder.amount.replace('$', '').replace(',', ''))
                             const tempOrder: OrderRecord = {
                               id: historyOrder.id,
                               customerName: order.customerName,
                               product: historyOrder.paymentType,
-                              amount: parseFloat(historyOrder.amount.replace('$', '').replace(',', '')),
+                              amount: amount,
+                              amountFormatted: amount.toFixed(2),
+                              orderNumber: historyOrder.id,
                               paymentMethod: historyOrder.paymentType,
                               status: historyOrder.status as OrderRecord['status'],
                               orderDate: historyOrder.date,

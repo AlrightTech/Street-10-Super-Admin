@@ -7,24 +7,33 @@ import SearchBar from '../components/ui/SearchBar'
 import Pagination from '../components/ui/Pagination'
 import OrderDetailsView from '../components/orders/OrderDetailsView'
 import OrderDetailView from '../components/orders/OrderDetailView'
-import { mockOrders } from '../data/mockOrders'
+import { ordersApi, type Order } from '../services/orders.api'
 
-export type OrderStatus = 'active' | 'inactive'
+export type OrderStatus = 'active' | 'inactive' | 'created' | 'paid' | 'fulfillment_pending' | 'shipped' | 'delivered' | 'closed' | 'cancelled'
 
 export interface OrderRecord {
   id: string
   customerName: string
+  customerEmail?: string
+  customerImageUrl?: string
   product: string
+  productImage?: string
   amount: number
+  amountFormatted: string
   paymentMethod: string
   status: OrderStatus
   orderDate: string
+  orderNumber: string
+  orderId?: string // UUID for navigation
 }
 
 const TAB_OPTIONS: { key: 'all' | OrderStatus; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'active', label: 'Active' },
-  { key: 'inactive', label: 'Inactive' },
+  { key: 'created', label: 'Created' },
+  { key: 'paid', label: 'Paid' },
+  { key: 'fulfillment_pending', label: 'Fulfillment Pending' },
+  { key: 'shipped', label: 'Shipped' },
+  { key: 'delivered', label: 'Delivered' },
 ]
 
 const STATUS_BADGE_CLASS: Record<'all' | OrderStatus, { active: string; inactive: string }> = {
@@ -32,11 +41,39 @@ const STATUS_BADGE_CLASS: Record<'all' | OrderStatus, { active: string; inactive
     active: 'bg-[#4C50A2] text-white',
     inactive: 'bg-[#4C50A2] text-white',
   },
+  created: {
+    active: 'bg-yellow-100 text-yellow-800',
+    inactive: 'bg-yellow-100 text-yellow-800',
+  },
+  paid: {
+    active: 'bg-[#DCF6E5] text-[#118D57]',
+    inactive: 'bg-[#DCF6E5] text-[#118D57]',
+  },
+  fulfillment_pending: {
+    active: 'bg-blue-100 text-blue-800',
+    inactive: 'bg-blue-100 text-blue-800',
+  },
+  shipped: {
+    active: 'bg-purple-100 text-purple-800',
+    inactive: 'bg-purple-100 text-purple-800',
+  },
+  delivered: {
+    active: 'bg-green-100 text-green-800',
+    inactive: 'bg-green-100 text-green-800',
+  },
   active: {
     active: 'bg-[#DCF6E5] text-[#118D57]',
     inactive: 'bg-[#DCF6E5] text-[#118D57]',
   },
   inactive: {
+    active: 'bg-[#FFE4DE] text-[#B71D18]',
+    inactive: 'bg-[#FFE4DE] text-[#B71D18]',
+  },
+  closed: {
+    active: 'bg-gray-100 text-gray-800',
+    inactive: 'bg-gray-100 text-gray-800',
+  },
+  cancelled: {
     active: 'bg-[#FFE4DE] text-[#B71D18]',
     inactive: 'bg-[#FFE4DE] text-[#B71D18]',
   },
@@ -54,38 +91,73 @@ export default function Orders() {
   const [orders, setOrders] = useState<OrderRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [totalPages, setTotalPages] = useState(1)
-  const [orderCounts, setOrderCounts] = useState({ all: 0, active: 0, inactive: 0 })
+  const [orderCounts, setOrderCounts] = useState({ all: 0, created: 0, paid: 0, fulfillment_pending: 0, shipped: 0, delivered: 0 })
 
-  // Load mock orders data
+  // Load orders from API
   useEffect(() => {
-    const loadOrders = () => {
+    const loadOrders = async () => {
       setLoading(true)
       
       try {
-        // Filter orders by active tab
-        let filtered = [...mockOrders]
-        
+        // Map frontend tab to backend status filter
+        let statusFilter: string | undefined
         if (activeTab !== 'all') {
-          filtered = filtered.filter(order => order.status === activeTab)
+          statusFilter = activeTab
         }
+
+        const response = await ordersApi.getAll({
+          status: statusFilter,
+          page: currentPage,
+          limit: PAGE_SIZE,
+        })
+
+        // Transform API orders to OrderRecord format
+        const transformedOrders: OrderRecord[] = (response.data || []).map((order: Order) => {
+          const total = parseFloat(order.totalMinor) / 100
+          const firstItem = order.items?.[0]
+          const productName = firstItem?.product?.title || 'N/A'
+          const productImage = firstItem?.product?.media?.[0]?.url || null
+          const customerName = (order.user as any)?.name || order.user?.email?.split('@')[0] || 'Unknown'
+          const customerImageUrl = (order.user as any)?.profileImageUrl || null
+          
+          return {
+            id: `#${order.orderNumber || order.id.slice(-8)}`,
+            customerName: customerName,
+            customerEmail: order.user?.email,
+            customerImageUrl: customerImageUrl,
+            product: productName,
+            productImage: productImage,
+            amount: total,
+            amountFormatted: `${order.currency} ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            paymentMethod: order.paymentMethod || 'N/A',
+            status: order.status as OrderStatus,
+            orderDate: new Date(order.createdAt).toLocaleDateString('en-GB'),
+            orderNumber: order.orderNumber,
+            orderId: order.id, // Store actual UUID for navigation
+          } as OrderRecord & { orderId: string }
+        })
         
-        // Calculate pagination
-        const total = filtered.length
-        const totalPagesCount = Math.ceil(total / PAGE_SIZE)
-        const startIndex = (currentPage - 1) * PAGE_SIZE
-        const endIndex = startIndex + PAGE_SIZE
-        const paginated = filtered.slice(startIndex, endIndex)
+        setOrders(transformedOrders)
+        setTotalPages(response.pagination?.totalPages || 1)
         
-        setOrders(paginated)
-        setTotalPages(totalPagesCount)
+        // Fetch counts for all statuses
+        const allResponse = await ordersApi.getAll({ limit: 1 })
+        const countsResponse = await Promise.all([
+          ordersApi.getAll({ status: 'created', limit: 1 }),
+          ordersApi.getAll({ status: 'paid', limit: 1 }),
+          ordersApi.getAll({ status: 'fulfillment_pending', limit: 1 }),
+          ordersApi.getAll({ status: 'shipped', limit: 1 }),
+          ordersApi.getAll({ status: 'delivered', limit: 1 }),
+        ])
         
-        // Calculate counts for tabs
-        const counts = {
-          all: mockOrders.length,
-          active: mockOrders.filter(o => o.status === 'active').length,
-          inactive: mockOrders.filter(o => o.status === 'inactive').length,
-        }
-        setOrderCounts(counts)
+        setOrderCounts({
+          all: allResponse.pagination?.total || 0,
+          created: countsResponse[0].pagination?.total || 0,
+          paid: countsResponse[1].pagination?.total || 0,
+          fulfillment_pending: countsResponse[2].pagination?.total || 0,
+          shipped: countsResponse[3].pagination?.total || 0,
+          delivered: countsResponse[4].pagination?.total || 0,
+        })
       } catch (error) {
         console.error('Error loading orders:', error)
         setOrders([])
@@ -101,7 +173,7 @@ export default function Orders() {
     () =>
       TAB_OPTIONS.map((tab) => ({
         ...tab,
-        count: orderCounts[tab.key] || 0,
+        count: orderCounts[tab.key as keyof typeof orderCounts] || 0,
         badgeClassName: STATUS_BADGE_CLASS[tab.key],
       })),
     [orderCounts],
@@ -142,23 +214,90 @@ export default function Orders() {
     setCurrentPage(page)
   }
 
-  const handleOrderAction = (order: OrderRecord, action: OrderActionType) => {
-    if (action === 'view') {
+  const handleOrderAction = async (order: OrderRecord, action: OrderActionType) => {
+    const orderId = (order as any).orderId || order.id.replace('#', '')
+    
+    if (action === 'view' || action === 'view-order') {
       // Navigate to order details page
-      navigate(`/orders/${order.id.replace('#', '')}`)
-    } else if (action === 'view-order') {
-      // Navigate to order details page
-      navigate(`/orders/${order.id.replace('#', '')}`)
-    } else {
-      // Placeholder callback for other actions
-      // eslint-disable-next-line no-console
-      console.log(`Action "${action}" selected for order ${order.id}`)
+      navigate(`/orders/${orderId}`)
+    } else if (action === 'edit') {
+      // Navigate to order edit page (if exists) or detail page
+      navigate(`/orders/${orderId}/detail`)
+    } else if (action === 'delete') {
+      // Check if order is already cancelled
+      if (order.status === 'cancelled') {
+        alert('This order is already cancelled.')
+        return
+      }
+
+      // Show confirmation and cancel order (not delete - just change status)
+      const confirmed = window.confirm(`Are you sure you want to cancel order ${order.orderNumber}? This action cannot be undone.`)
+      if (confirmed) {
+        try {
+          // Update order status to 'cancelled' (not actually deleting the order)
+          await ordersApi.updateStatus(orderId, 'cancelled')
+          alert('Order cancelled successfully')
+          // Refresh orders list
+          const response = await ordersApi.getAll({
+            status: activeTab !== 'all' ? activeTab : undefined,
+            page: currentPage,
+            limit: PAGE_SIZE,
+          })
+          const transformedOrders: OrderRecord[] = (response.data || []).map((order: Order) => {
+            const total = parseFloat(order.totalMinor) / 100
+            const firstItem = order.items?.[0]
+            const productName = firstItem?.product?.title || 'N/A'
+            const productImage = firstItem?.product?.media?.[0]?.url || null
+            const customerName = (order.user as any)?.name || order.user?.email?.split('@')[0] || 'Unknown'
+            const customerImageUrl = (order.user as any)?.profileImageUrl || null
+            
+            return {
+              id: `#${order.orderNumber || order.id.slice(-8)}`,
+              customerName: customerName,
+              customerEmail: order.user?.email,
+              customerImageUrl: customerImageUrl,
+              product: productName,
+              productImage: productImage,
+              amount: total,
+              amountFormatted: `${order.currency} ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+              paymentMethod: order.paymentMethod || 'N/A',
+              status: order.status as OrderStatus,
+              orderDate: new Date(order.createdAt).toLocaleDateString('en-GB'),
+              orderNumber: order.orderNumber,
+              orderId: order.id,
+            } as OrderRecord & { orderId: string }
+          })
+          setOrders(transformedOrders)
+        } catch (error: any) {
+          // Handle error gracefully - check if it's a validation error about status transition
+          const errorMessage = error?.response?.data?.message || error?.message || 'Unknown error'
+          if (errorMessage.includes('status') || errorMessage.includes('transition') || errorMessage.includes('cancelled')) {
+            alert(`Cannot cancel order: ${errorMessage}`)
+          } else {
+            alert(`Failed to cancel order: ${errorMessage}`)
+          }
+        }
+      }
+    } else if (action === 'block') {
+      // Block order (update status to cancelled or add block flag)
+      const confirmed = window.confirm(`Are you sure you want to block order ${order.orderNumber}?`)
+      if (confirmed) {
+        try {
+          await ordersApi.updateStatus(orderId, 'cancelled')
+          alert('Order blocked successfully')
+          // Refresh orders list
+          window.location.reload()
+        } catch (error: any) {
+          alert(`Failed to block order: ${error?.message || 'Unknown error'}`)
+        }
+      }
     }
   }
 
   const handleNameClick = (order: OrderRecord) => {
-    // Navigate to order details page
-    navigate(`/orders/${order.id.replace('#', '')}`)
+    // Navigate to order details page using order ID (UUID)
+    const orderId = (order as any).orderId || order.id.replace('#', '')
+    navigate(`/orders/${orderId}`)
   }
 
   // If viewing order detail, show order detail view instead of the table

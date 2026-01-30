@@ -55,14 +55,69 @@ const mapAuctionStateToStatus = (state: string): BiddingProduct['status'] => {
  * Convert backend Auction to frontend BiddingProduct
  */
 export const mapAuctionToBiddingProduct = (auction: Auction): BiddingProduct => {
-  const currentBid = auction.bids && auction.bids.length > 0 
-    ? formatPrice(auction.bids[0].amountMinor)
-    : formatPrice(auction.reservePrice) || 'No bids'
+  // Current bid: Use currentBid from backend if available (for live auctions with highest bid)
+  // Otherwise, find highest bid from bids array, or show "No bids"
+  let currentBid: string
+  if ((auction as any).currentBid?.amountMinor) {
+    // Use currentBid from backend (highest bid for live auctions)
+    currentBid = formatPrice((auction as any).currentBid.amountMinor)
+  } else if (auction.bids && auction.bids.length > 0) {
+    // Find highest bid from bids array (sorted by amount descending)
+    const highestBid = auction.bids.reduce((highest: any, bid: any) => 
+      parseFloat(bid.amountMinor) > parseFloat(highest.amountMinor) ? bid : highest
+    )
+    currentBid = formatPrice(highestBid.amountMinor)
+  } else {
+    // No bids yet
+    currentBid = 'No bids'
+  }
   
-  const startingPrice = formatPrice(auction.reservePrice || auction.depositAmount)
-  const bidsCount = auction.bids?.length || 0
+  // Starting price: reservePrice OR product.priceMinor (from backend startingPrice field)
+  const startingPrice = formatPrice((auction as any).startingPrice || auction.reservePrice || auction.product?.priceMinor)
+  // Use bidCount from backend if available, otherwise use bids array length
+  const bidsCount = (auction as any).bidCount !== undefined ? (auction as any).bidCount : (auction.bids?.length || 0)
   const timeLeft = formatTimeLeft(auction.endAt)
-  const status = mapAuctionStateToStatus(auction.state)
+  
+  // Determine status based on auction state, reserve price, and order status
+  let status = mapAuctionStateToStatus(auction.state)
+  
+  if (auction.state === 'ended') {
+    // Use reservePriceMet from backend if available (more reliable than recalculating)
+    const reservePriceMet = (auction as any).reservePriceMet !== undefined 
+      ? (auction as any).reservePriceMet 
+      : (() => {
+          // Fallback: calculate from bids if reservePriceMet not provided
+          const highestBid = auction.bids && auction.bids.length > 0
+            ? auction.bids.reduce((highest: any, bid: any) => 
+                parseFloat(bid.amountMinor) > parseFloat(highest.amountMinor) ? bid : highest
+              )
+            : null
+          const bidAmount = highestBid ? parseFloat(highestBid.amountMinor) : 0
+          const reserveAmount = auction.reservePrice ? parseFloat(auction.reservePrice) : 0
+          return reserveAmount === 0 || bidAmount >= reserveAmount
+        })()
+    
+    // If reserve price exists and wasn't met, it's unsold
+    if (!reservePriceMet) {
+      status = 'ended-unsold'
+    } else {
+      // Reserve price met (or no reserve) - check order status
+      const order = (auction as any).order
+      if (order) {
+        // If order status is 'paid', it's fully-paid-sold
+        // Otherwise, it's payment-requested
+        status = order.status === 'paid' ? 'fully-paid-sold' : 'payment-requested'
+      } else {
+        // Ended with winner but no order yet (shouldn't happen, but handle it)
+        status = 'payment-requested'
+      }
+    }
+  } else if (auction.state === 'settled') {
+    // Settled auctions should check order status
+    // Note: Auctions now stay as ENDED until order is paid, but handle settled for backward compatibility
+    const order = (auction as any).order
+    status = order && order.status === 'paid' ? 'fully-paid-sold' : 'payment-requested'
+  }
   
   // Get category from product categories or default
   const category = (auction.product as any).categories?.[0]?.category?.name || 'Uncategorized'
@@ -79,6 +134,7 @@ export const mapAuctionToBiddingProduct = (auction: Auction): BiddingProduct => 
     timeLeft: timeLeft,
     status: status,
     imageUrl: auction.product.media?.[0]?.url || undefined,
+    endAt: auction.endAt, // Include endAt for live countdown
   }
 }
 
