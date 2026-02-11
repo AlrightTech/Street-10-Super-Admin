@@ -7,6 +7,7 @@ import OrderHistoryTable from "../components/users/OrderHistoryTable";
 import ActivityHistoryCard from "../components/kyc/ActivityHistoryCard";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { usersApi } from "../services/users.api";
+import { convertNumericIdToUuid } from "../utils/userIdMapper";
 import type {
   UserDetails as UserDetailsType,
   BiddingItem,
@@ -63,58 +64,16 @@ export default function UserDetails() {
           console.log("Processing user ID:", { id, isNumericId });
 
           if (isNumericId) {
-            // This is a numeric ID, we need to convert it to UUID
-            // Fetch users list to build the mapping
+            // This is a numeric ID, we need to convert it to UUID using cached mapping
             console.log(
-              "Numeric ID detected, fetching users list to find UUID...",
+              "Numeric ID detected, converting to UUID...",
               id
             );
 
             try {
-              const usersResult = await usersApi.getAll({
-                page: 1,
-                limit: 1000,
-              });
-              console.log(
-                "Fetched users for mapping:",
-                usersResult.data?.length || 0
-              );
-
-              if (!usersResult.data || usersResult.data.length === 0) {
-                throw new Error("No users found in the system");
-              }
-
-              const userIdMap = new Map<number, string>();
-              usersResult.data.forEach((user: any) => {
-                try {
-                  if (user.id && typeof user.id === "string") {
-                    const numericId =
-                      parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
-                      1000000;
-                    userIdMap.set(numericId, user.id);
-                  }
-                } catch (e) {
-                  console.error("Error converting user ID:", user.id, e);
-                }
-              });
-
-              console.log("User ID map built with", userIdMap.size, "entries");
-              console.log(
-                "Sample mapping entries:",
-                Array.from(userIdMap.entries()).slice(0, 5)
-              );
-
-              const numericId = parseInt(id);
-              const uuid = userIdMap.get(numericId);
-
+              const uuid = await convertNumericIdToUuid(id);
+              
               if (!uuid) {
-                console.error(
-                  `User with numeric ID ${id} not found in mapping.`
-                );
-                console.error(
-                  "Available numeric IDs:",
-                  Array.from(userIdMap.keys())
-                );
                 throw new Error(
                   `User with ID ${id} not found. The user may not exist or the ID mapping failed.`
                 );

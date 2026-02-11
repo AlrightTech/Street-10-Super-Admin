@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { usersApi } from '../services/users.api'
 import { kycApi } from '../services/kyc.api'
+import { convertNumericIdToUuid } from '../utils/userIdMapper'
 import type { UserDetails } from '../types/userDetails'
 import type { KYCData, KYCStatus } from '../types/kyc'
 import UserProfileCard from '../components/kyc/UserProfileCard'
@@ -40,50 +41,16 @@ export default function ViewKYC() {
           console.log("Processing KYC user ID:", { id, isNumericId })
 
           if (isNumericId) {
-            // This is a numeric ID, we need to convert it to UUID
-            // Fetch users list to build the mapping
+            // This is a numeric ID, we need to convert it to UUID using cached mapping
             console.log(
-              "Numeric ID detected, fetching users list to find UUID...",
+              "Numeric ID detected, converting to UUID...",
               id
             )
 
             try {
-              const usersResult = await usersApi.getAll({
-                page: 1,
-                limit: 1000,
-              })
-              console.log(
-                "Fetched users for mapping:",
-                usersResult.data?.length || 0
-              )
-
-              if (!usersResult.data || usersResult.data.length === 0) {
-                throw new Error("No users found in the system")
-              }
-
-              const userIdMap = new Map<number, string>()
-              usersResult.data.forEach((user: any) => {
-                try {
-                  if (user.id && typeof user.id === "string") {
-                    const numericId =
-                      parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
-                      1000000
-                    userIdMap.set(numericId, user.id)
-                  }
-                } catch (e) {
-                  console.error("Error converting user ID for mapping:", user.id, e)
-                }
-              })
-
-              console.log("User ID map built with", userIdMap.size, "entries")
-
-              const numericId = parseInt(id)
-              const uuid = userIdMap.get(numericId)
-
+              const uuid = await convertNumericIdToUuid(id)
+              
               if (!uuid) {
-                console.error(
-                  `User with numeric ID ${id} not found in mapping.`
-                )
                 throw new Error(
                   `User with ID ${id} not found. The user may not exist or the ID mapping failed.`
                 )

@@ -355,18 +355,20 @@ export default function OrderDetail() {
     const detailCustomerPhone = customerPhone
 
     const handleUpdateStatus = () => {
-      console.log('Update status clicked')
+      if (orderId) {
+        navigate(`/orders/${orderId}/shipping`)
+      }
     }
 
     const handleIssueRefund = () => {
       if (orderId) {
-        navigate(`/orders/${orderId}/process-refund`)
+        navigate(`/orders/${orderId}/refund`)
       }
     }
 
     const handleDownloadInvoice = () => {
       if (orderId) {
-        navigate(`/orders/${orderId}/invoice`)
+        navigate(`/orders/${orderId}/invoice-new`)
       }
     }
 
@@ -415,7 +417,15 @@ export default function OrderDetail() {
 
         {/* Customer Information Section */}
         <div>
-          <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Customer Information</h2>
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">Customer Information</h2>
+            <button
+              onClick={() => navigate(`/users/${orderDetails?.userId || (order as any)?.userId}`)}
+              className="px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors"
+            >
+              View Profile
+            </button>
+          </div>
           <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
@@ -462,6 +472,41 @@ export default function OrderDetail() {
           </div>
           </div>
         </div>
+
+        {/* Vendor Information Section - Only for vendor orders */}
+        {orderDetails?.orderType === 'vendor' && orderDetails?.vendor && (
+          <div>
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Vendor Information</h2>
+            <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="flex-shrink-0">
+                    <img
+                      src={(orderDetails.vendor as any)?.profileImageUrl || `https://i.pravatar.cc/100?img=${(orderDetails.vendor as any)?.name?.length || 0}`}
+                      alt={(orderDetails.vendor as any)?.name || 'Vendor'}
+                      className="h-12 w-12 sm:h-16 sm:w-16 rounded-full object-cover border-2 border-orange-200"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://i.pravatar.cc/100?img=${(orderDetails.vendor as any)?.name?.length || 0}`;
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm sm:text-base font-semibold text-gray-900">
+                      {(orderDetails.vendor as any)?.name || orderDetails.vendor?.email || 'Vendor'}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-600">{orderDetails.vendor?.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate(`/vendors/${orderDetails.vendor?.id}`)}
+                  className="px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors"
+                >
+                  View Vendor
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Order Items Section */}
         <div>

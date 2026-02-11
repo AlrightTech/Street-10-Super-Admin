@@ -223,24 +223,26 @@ export default function AddBiddingProduct() {
         return
       }
 
-      // Validate payment value
-      if (!formData.paymentValue || parseFloat(formData.paymentValue) <= 0) {
-        setError(
-          formData.paymentAmount === 'By Percentage of the total winning bid'
-            ? 'Payment percentage is required and must be greater than 0'
-            : 'Payment fixed amount is required and must be greater than 0'
-        )
-        setIsSubmitting(false)
-        return
-      }
-
-      // Validate percentage range (0-100)
-      if (formData.paymentAmount === 'By Percentage of the total winning bid') {
-        const percentage = parseFloat(formData.paymentValue)
-        if (percentage < 0 || percentage > 100) {
-          setError('Percentage must be between 0 and 100')
+      // Validate payment value only if full payment is disabled (down payment mode)
+      if (!formData.allowFullPayment) {
+        if (!formData.paymentValue || parseFloat(formData.paymentValue) <= 0) {
+          setError(
+            formData.paymentAmount === 'By Percentage of the total winning bid'
+              ? 'Down payment percentage is required and must be greater than 0'
+              : 'Down payment fixed amount is required and must be greater than 0'
+          )
           setIsSubmitting(false)
           return
+        }
+
+        // Validate percentage range (0-100)
+        if (formData.paymentAmount === 'By Percentage of the total winning bid') {
+          const percentage = parseFloat(formData.paymentValue)
+          if (percentage < 0 || percentage > 100) {
+            setError('Percentage must be between 0 and 100')
+            setIsSubmitting(false)
+            return
+          }
         }
       }
 
@@ -989,7 +991,7 @@ export default function AddBiddingProduct() {
             {/* Payment Amount */}
             <div>
               <label htmlFor="paymentAmount" className="block text-sm font-medium text-[#888888] mb-2">
-                Payment Amount
+                Down Payment Amount
               </label>
               <div className="relative">
                 <select
@@ -997,7 +999,10 @@ export default function AddBiddingProduct() {
                   name="paymentAmount"
                   value={formData.paymentAmount}
                   onChange={handleChange}
-                  className="w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm outline-none appearance-none focus:ring-1 focus:ring-[#F7931E]"
+                  disabled={formData.allowFullPayment}
+                  className={`w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm outline-none appearance-none focus:ring-1 focus:ring-[#F7931E] ${
+                    formData.allowFullPayment ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   <option value="By Percentage of the total winning bid">By Percentage of the total winning bid</option>
                   <option value="Fixed Amount">Fixed Amount</option>
@@ -1015,8 +1020,8 @@ export default function AddBiddingProduct() {
               <div>
                 <label htmlFor="paymentValue" className="block text-sm font-medium text-[#888888] mb-2">
                   {formData.paymentAmount === 'By Percentage of the total winning bid' 
-                    ? 'Percentage (%)' 
-                    : 'Fixed Amount (QAR)'}
+                    ? 'Down Payment Percentage (%)' 
+                    : 'Down Payment Fixed Amount (QAR)'}
                 </label>
                 <input
                   id="paymentValue"
@@ -1031,7 +1036,10 @@ export default function AddBiddingProduct() {
                   }
                   value={formData.paymentValue}
                   onChange={handleChange}
-                  className="w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm outline-none placeholder:text-gray-400 focus:ring-1 focus:ring-[#F7931E]"
+                  disabled={formData.allowFullPayment}
+                  className={`w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm outline-none placeholder:text-gray-400 focus:ring-1 focus:ring-[#F7931E] ${
+                    formData.allowFullPayment ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 />
               </div>
             )}
@@ -1055,9 +1063,9 @@ export default function AddBiddingProduct() {
             {/* Full Payment Toggle */}
             <div className="flex flex-col">
               <label className="block text-sm font-medium text-[#888888] mb-2">
-                Open the option to make Full payment at the end of the bidding
+                Payment Type
               </label>
-              <div className="flex items-center h-[42px]">
+              <div className="flex items-center gap-3 mb-2">
                 <button
                   type="button"
                   onClick={() => handleToggle('allowFullPayment')}
@@ -1071,7 +1079,15 @@ export default function AddBiddingProduct() {
                     }`}
                   />
                 </button>
+                <span className="text-sm font-medium text-gray-700">
+                  {formData.allowFullPayment ? 'Full Payment' : 'Down Payment'}
+                </span>
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.allowFullPayment 
+                  ? 'Winner pays the full amount at once after auction ends'
+                  : 'Winner pays a down payment first, then the remaining amount later'}
+              </p>
             </div>
           </div>
           </div>

@@ -1,7 +1,7 @@
 import { Fragment, useState, useEffect } from 'react'
 import BiddingProductsActionMenu from './BiddingProductsActionMenu'
 
-export type BiddingProductStatus = 'ended-unsold' | 'payment-requested' | 'fully-paid-sold' | 'scheduled' | 'live'
+export type BiddingProductStatus = 'ended-unsold' | 'payment-requested' | 'down-payment-required' | 'final-payment-required' | 'full-payment-required' | 'fully-paid-sold' | 'settlement-missed' | 'scheduled' | 'live'
 
 export interface BiddingProduct {
   id: string // Auction ID
@@ -105,7 +105,7 @@ export default function BiddingProductsTable({ products, emptyState, onView, onD
                 <TableHeader>Current Bid</TableHeader>
                 <TableHeader>Bids</TableHeader>
                 <TableHeader>Time Left</TableHeader>
-                <TableHeader>Status</TableHeader>
+                <TableHeader align="center">Status</TableHeader>
                 <TableHeader align="center">Action</TableHeader>
               </tr>
             </thead>
@@ -139,8 +139,8 @@ export default function BiddingProductsTable({ products, emptyState, onView, onD
                   <TableCell className="text-sm text-gray-600 dark:text-gray-400 font-normal py-2 whitespace-nowrap">
                     <LiveCountdown endAt={product.endAt} initialTimeLeft={product.timeLeft} />
                   </TableCell>
-                  <TableCell className="py-2 max-w-[140px] text-xs">
-                    <div className="flex items-center  justify-start">
+                  <TableCell align="center" className="py-2 max-w-[140px] text-xs">
+                    <div className="flex items-center justify-center">
                       <BiddingProductStatusBadge status={product.status} />
                     </div>
                   </TableCell>
@@ -165,7 +165,11 @@ function BiddingProductStatusBadge({ status }: { status: BiddingProductStatus })
   const statusStyles: Record<BiddingProductStatus, string> = {
     'ended-unsold': 'bg-black text-white',
     'payment-requested': 'bg-[#F7931E] text-white',
+    'down-payment-required': 'bg-[#F7931E] text-white',
+    'final-payment-required': 'bg-[#F7931E] text-white',
+    'full-payment-required': 'bg-[#F7931E] text-white',
     'fully-paid-sold': 'bg-[#FF6B6B] text-white',
+    'settlement-missed': 'bg-red-800 text-white',
     'scheduled': 'bg-[#118D57] text-white',
     'live': 'bg-blue-600 text-white',
   }
@@ -173,13 +177,17 @@ function BiddingProductStatusBadge({ status }: { status: BiddingProductStatus })
   const statusLabels: Record<BiddingProductStatus, string> = {
     'ended-unsold': 'Ended - Unsold',
     'payment-requested': 'Payment Requested',
+    'down-payment-required': 'Down Payment Required',
+    'final-payment-required': 'Final Payment Required',
+    'full-payment-required': 'Full Payment Required',
     'fully-paid-sold': 'Fully Paid - Sold',
+    'settlement-missed': 'Settlement Missed',
     'scheduled': 'Scheduled',
     'live': 'Live',
   }
 
   // Reduce padding for longer status text to prevent overflow
-  const isLongText = status === 'payment-requested' || status === 'fully-paid-sold'
+  const isLongText = status === 'payment-requested' || status === 'fully-paid-sold' || status === 'down-payment-required' || status === 'final-payment-required' || status === 'full-payment-required'
   const paddingClass = isLongText ? 'px-1.5 py-1' : 'px-2 py-1'
   
   return (

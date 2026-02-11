@@ -114,7 +114,11 @@ export const getProductDetailRoute = (product: BiddingProduct): string => {
   const statusRoutes: Record<BiddingProduct['status'], string> = {
     'ended-unsold': 'ended-unsold',
     'payment-requested': 'payment-requested',
+    'down-payment-required': 'down-payment-required',
+    'final-payment-required': 'final-payment-required',
+    'full-payment-required': 'full-payment-required',
     'fully-paid-sold': 'fully-paid-sold',
+    'settlement-missed': 'payment-requested', // Fallback to payment-requested for now
     'scheduled': 'scheduled',
     'live': 'live',
   }

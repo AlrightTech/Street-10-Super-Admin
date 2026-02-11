@@ -1,6 +1,7 @@
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { usersApi } from '../services/users.api'
+import { convertNumericIdToUuid } from '../utils/userIdMapper'
 import type { UserDetails } from '../types/userDetails'
 
 /**
@@ -55,30 +56,10 @@ export default function EditUser() {
             const isNumericId = !id.includes("-") && /^\d+$/.test(id)
             if (isNumericId) {
               try {
-                const usersResult = await usersApi.getAll({
-                  page: 1,
-                  limit: 1000,
-                })
-                if (usersResult.data && usersResult.data.length > 0) {
-                  const userIdMap = new Map<number, string>()
-                  usersResult.data.forEach((user: any) => {
-                    try {
-                      if (user.id && typeof user.id === "string") {
-                        const numericId =
-                          parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
-                          1000000
-                        userIdMap.set(numericId, user.id)
-                      }
-                    } catch (e) {
-                      console.error("Error converting user ID:", user.id, e)
-                    }
-                  })
-                  const numericId = parseInt(id)
-                  const uuid = userIdMap.get(numericId)
-                  if (uuid) {
-                    userIdToFetch = uuid
-                    console.log(`Successfully converted numeric ID ${id} to UUID: ${uuid}`)
-                  }
+                const uuid = await convertNumericIdToUuid(id)
+                if (uuid) {
+                  userIdToFetch = uuid
+                  console.log(`Successfully converted numeric ID ${id} to UUID: ${uuid}`)
                 }
               } catch (error) {
                 console.error("Error converting numeric ID to UUID:", error)
@@ -96,41 +77,13 @@ export default function EditUser() {
           console.log("Processing user ID:", { id, isNumericId })
           
           if (isNumericId) {
-            // This is a numeric ID, we need to convert it to UUID
-            console.log("Numeric ID detected, fetching users list to find UUID...", id)
+            // This is a numeric ID, we need to convert it to UUID using cached mapping
+            console.log("Numeric ID detected, converting to UUID...", id)
             
             try {
-              const usersResult = await usersApi.getAll({
-                page: 1,
-                limit: 1000,
-              })
-              console.log("Fetched users for mapping:", usersResult.data?.length || 0)
-              
-              if (!usersResult.data || usersResult.data.length === 0) {
-                throw new Error("No users found in the system")
-              }
-              
-              const userIdMap = new Map<number, string>()
-              usersResult.data.forEach((user: any) => {
-                try {
-                  if (user.id && typeof user.id === "string") {
-                    const numericId =
-                      parseInt(user.id.replace(/-/g, "").substring(0, 10), 16) %
-                      1000000
-                    userIdMap.set(numericId, user.id)
-                  }
-                } catch (e) {
-                  console.error("Error converting user ID:", user.id, e)
-                }
-              })
-              
-              console.log("User ID map built with", userIdMap.size, "entries")
-              
-              const numericId = parseInt(id)
-              const uuid = userIdMap.get(numericId)
+              const uuid = await convertNumericIdToUuid(id)
               
               if (!uuid) {
-                console.error(`User with numeric ID ${id} not found in mapping.`)
                 throw new Error(`User with ID ${id} not found. The user may not exist or the ID mapping failed.`)
               }
               

@@ -20,6 +20,9 @@ const OrderDetailView = lazy(() => import('./pages/OrderDetailView'))
 const ProcessRefundOrder = lazy(() => import('./pages/ProcessRefundOrder'))
 const StartRefundProcess = lazy(() => import('./pages/StartRefundProcess'))
 const Invoice = lazy(() => import('./pages/Invoice'))
+const OrderShipping = lazy(() => import('./pages/OrderShipping'))
+const OrderRefund = lazy(() => import('./pages/OrderRefund'))
+const OrderInvoice = lazy(() => import('./pages/OrderInvoice'))
 const EcommerceOrderView = lazy(() => import('./pages/EcommerceOrderView'))
 const BidDetailPage = lazy(() => import('./pages/BidDetailPage'))
 const ViewKYC = lazy(() => import('./pages/ViewKYC'))
@@ -68,6 +71,9 @@ const EditEcommerceProduct = lazy(() => import('./pages/EditEcommerceProduct'))
 const EcommerceProductDetail = lazy(() => import('./pages/EcommerceProductDetail'))
 const EndedUnsoldDetailRoute = lazy(() => import('./pages/bidding/EndedUnsoldDetailRoute'))
 const PaymentRequestedDetailRoute = lazy(() => import('./pages/bidding/PaymentRequestedDetailRoute'))
+const DownPaymentRequiredDetailRoute = lazy(() => import('./pages/bidding/DownPaymentRequiredDetailRoute'))
+const FinalPaymentRequiredDetailRoute = lazy(() => import('./pages/bidding/FinalPaymentRequiredDetailRoute'))
+const FullPaymentRequiredDetailRoute = lazy(() => import('./pages/bidding/FullPaymentRequiredDetailRoute'))
 const FullyPaidSoldDetailRoute = lazy(() => import('./pages/bidding/FullyPaidSoldDetailRoute'))
 const ScheduledDetailRoute = lazy(() => import('./pages/bidding/ScheduledDetailRoute'))
 const LiveDetailRoute = lazy(() => import('./pages/bidding/LiveDetailRoute'))
@@ -130,6 +136,9 @@ function App() {
             <Route path="orders/:orderId/process-refund" element={<ProcessRefundOrder />} />
             <Route path="orders/:orderId/start-refund-process" element={<StartRefundProcess />} />
             <Route path="orders/:orderId/invoice" element={<Invoice />} />
+            <Route path="orders/:orderId/shipping" element={<OrderShipping />} />
+            <Route path="orders/:orderId/refund" element={<OrderRefund />} />
+            <Route path="orders/:orderId/invoice-new" element={<OrderInvoice />} />
             <Route path="orders/:orderId" element={<OrderDetail />} />
             <Route path="biddings/:bidId" element={<BidDetailPage />} />
             <Route path="view-kyc/:id" element={<ViewKYC />} />
@@ -181,6 +190,9 @@ function App() {
             <Route path="building-products/:id/history" element={<BiddingHistory />} />
             <Route path="building-products/:id/ended-unsold" element={<EndedUnsoldDetailRoute />} />
             <Route path="building-products/:id/payment-requested" element={<PaymentRequestedDetailRoute />} />
+            <Route path="building-products/:id/down-payment-required" element={<DownPaymentRequiredDetailRoute />} />
+            <Route path="building-products/:id/final-payment-required" element={<FinalPaymentRequiredDetailRoute />} />
+            <Route path="building-products/:id/full-payment-required" element={<FullPaymentRequiredDetailRoute />} />
             <Route path="building-products/:id/fully-paid-sold" element={<FullyPaidSoldDetailRoute />} />
             <Route path="building-products/:id/scheduled" element={<ScheduledDetailRoute />} />
             <Route path="building-products/:id/live" element={<LiveDetailRoute />} />

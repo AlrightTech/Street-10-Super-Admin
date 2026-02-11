@@ -56,7 +56,11 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                 return (
                   <tr 
                     key={order.id} 
-                    onClick={() => {
+                    onClick={(e) => {
+                      // Only navigate if clicking on the row itself, not on action menu or name
+                      if ((e.target as HTMLElement).closest('button, [role="menuitem"], .cursor-pointer')) {
+                        return
+                      }
                       const orderId = (order as any).orderId || order.id.replace('#', '')
                       navigate(`/orders/${orderId}`)
                     }}
@@ -89,31 +93,41 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {(order as any).productImage && (
-                          <img 
-                            src={(order as any).productImage} 
-                            alt={order.product}
-                            className="h-8 w-8 rounded object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none'
-                            }}
-                          />
-                        )}
-                        <span>{order.product}</span>
-                      </div>
+                      {(() => {
+                        const orderType = (order as any).orderType || 'admin-ecommerce';
+                        const typeLabels: Record<string, { label: string; bg: string; text: string }> = {
+                          'auction': { label: 'Auction', bg: 'bg-purple-100 dark:bg-purple-900', text: 'text-purple-700 dark:text-purple-300' },
+                          'admin-ecommerce': { label: 'Admin E-commerce', bg: 'bg-blue-100 dark:bg-blue-900', text: 'text-blue-700 dark:text-blue-300' },
+                          'vendor': { label: 'Vendor Order', bg: 'bg-orange-100 dark:bg-orange-900', text: 'text-orange-700 dark:text-orange-300' },
+                        };
+                        const typeInfo = typeLabels[orderType] || typeLabels['admin-ecommerce'];
+                        return (
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${typeInfo.bg} ${typeInfo.text}`}>
+                            {typeInfo.label}
+                          </span>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell align="right" className="whitespace-nowrap">{order.amountFormatted || `$${order.amount.toLocaleString()}`}</TableCell>
                     <TableCell>{order.paymentMethod}</TableCell>
                     <TableCell>
-                      <OrderStatusBadge status={order.status} />
+                      <OrderStatusBadge 
+                        status={order.status} 
+                        paymentStage={(order as any).paymentStage}
+                        auctionId={(order as any).auctionId}
+                      />
                     </TableCell>
                     <TableCell align="right">{order.orderDate}</TableCell>
                     <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                      <OrdersActionMenu 
-                        onSelect={(action) => onActionSelect?.(order, action)} 
-                        orderStatus={order.status}
-                      />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <OrdersActionMenu 
+                          onSelect={(action) => {
+                            // Action menu click should not trigger row navigation
+                            onActionSelect?.(order, action)
+                          }} 
+                          orderStatus={order.status}
+                        />
+                      </div>
                     </TableCell>
                   </tr>
                 )

@@ -170,5 +170,14 @@ export const auctionsApi = {
     const response = await api.post<ApiResponse<{ auction: Auction }>>(`/auctions/${id}/cancel`, { reason });
     return response.data.data.auction;
   },
+
+  // Relist an ended auction
+  relist: async (id: string, startAt: Date, endAt: Date): Promise<Auction> => {
+    const response = await api.post<ApiResponse<{ auction: Auction }>>(`/auctions/${id}/relist`, {
+      startAt: startAt.toISOString(),
+      endAt: endAt.toISOString(),
+    });
+    return response.data.data.auction;
+  },
 };
 

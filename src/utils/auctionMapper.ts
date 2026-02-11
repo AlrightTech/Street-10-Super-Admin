@@ -35,21 +35,22 @@ const formatTimeLeft = (endAt: string): string => {
 
 /**
  * Map backend auction state to frontend status
+ * @deprecated This function is currently unused
  */
-const mapAuctionStateToStatus = (state: string): BiddingProduct['status'] => {
-  switch (state) {
-    case 'ended':
-      return 'payment-requested' // Ended auctions show as payment requested
-    case 'settled':
-      return 'fully-paid-sold'
-    case 'scheduled':
-      return 'scheduled'
-    case 'live':
-      return 'live' // Live auctions show as "Live" (started)
-    default:
-      return 'scheduled'
-  }
-}
+// const mapAuctionStateToStatus = (state: string): BiddingProduct['status'] => {
+//   switch (state) {
+//     case 'ended':
+//       return 'payment-requested' // Ended auctions show as payment requested
+//     case 'settled':
+//       return 'fully-paid-sold'
+//     case 'scheduled':
+//       return 'scheduled'
+//     case 'live':
+//       return 'live' // Live auctions show as "Live" (started)
+//     default:
+//       return 'scheduled'
+//   }
+// }
 
 /**
  * Convert backend Auction to frontend BiddingProduct
@@ -79,9 +80,27 @@ export const mapAuctionToBiddingProduct = (auction: Auction): BiddingProduct => 
   const timeLeft = formatTimeLeft(auction.endAt)
   
   // Determine status based on auction state, reserve price, and order status
-  let status = mapAuctionStateToStatus(auction.state)
+  // Also check time to ensure status is correct even if backend state hasn't updated yet
+  const now = new Date()
+  const startDate = new Date(auction.startAt)
+  const endDate = new Date(auction.endAt)
+  let effectiveState = auction.state
   
-  if (auction.state === 'ended') {
+  // Override state based on time if backend hasn't updated yet
+  if (effectiveState === 'scheduled' && now >= startDate) {
+    effectiveState = 'live' // Should be live if start time passed
+  }
+  if (effectiveState === 'live' && now >= endDate) {
+    effectiveState = 'ended' // Should be ended if end time passed
+  }
+  
+  let status: BiddingProduct['status'] = 'scheduled' // Default
+  
+  if (effectiveState === 'live') {
+    status = 'live'
+  } else if (effectiveState === 'scheduled') {
+    status = 'scheduled'
+  } else if (effectiveState === 'ended') {
     // Use reservePriceMet from backend if available (more reliable than recalculating)
     const reservePriceMet = (auction as any).reservePriceMet !== undefined 
       ? (auction as any).reservePriceMet 
@@ -101,22 +120,54 @@ export const mapAuctionToBiddingProduct = (auction: Auction): BiddingProduct => 
     if (!reservePriceMet) {
       status = 'ended-unsold'
     } else {
-      // Reserve price met (or no reserve) - check order status
+      // Reserve price met (or no reserve) - check order payment stage
       const order = (auction as any).order
-      if (order) {
-        // If order status is 'paid', it's fully-paid-sold
-        // Otherwise, it's payment-requested
-        status = order.status === 'paid' ? 'fully-paid-sold' : 'payment-requested'
+      if (order && order.paymentStage) {
+        // Use new payment stage logic - prioritize paymentStage over old status
+        switch (order.paymentStage) {
+          case 'down_payment_required':
+            status = 'down-payment-required'
+            break
+          case 'final_payment_required':
+            status = 'final-payment-required'
+            break
+          case 'full_payment_required':
+            status = 'full-payment-required'
+            break
+          case 'fully_paid':
+            status = 'fully-paid-sold'
+            break
+          case 'settlement_missed':
+            status = 'settlement-missed'
+            break
+          default:
+            // Default to down-payment-required for ended auctions with order (new flow)
+            status = 'down-payment-required'
+        }
+      } else if (order) {
+        // Order exists but no paymentStage - check order.status (backward compatibility)
+        // If order.status is 'down_payment_paid', it means down payment was paid, so show final payment required
+        if (order.status === 'down_payment_paid') {
+          status = 'final-payment-required'
+        } else if (order.status === 'paid') {
+          status = 'fully-paid-sold'
+        } else {
+          status = 'down-payment-required'
+        }
       } else {
-        // Ended with winner but no order yet (shouldn't happen, but handle it)
-        status = 'payment-requested'
+        // Ended with winner but no order yet - settlement might be in progress
+        // Show as down-payment-required (will be updated when order is created)
+        status = 'down-payment-required'
       }
     }
   } else if (auction.state === 'settled') {
-    // Settled auctions should check order status
-    // Note: Auctions now stay as ENDED until order is paid, but handle settled for backward compatibility
+    // Settled auctions - check order payment stage
     const order = (auction as any).order
-    status = order && order.status === 'paid' ? 'fully-paid-sold' : 'payment-requested'
+    if (order?.paymentStage === 'fully_paid') {
+      status = 'fully-paid-sold'
+    } else {
+      status = order && order.status === 'paid' ? 'fully-paid-sold' : 'fully-paid-sold'
+    }
   }
   
   // Get category from product categories or default

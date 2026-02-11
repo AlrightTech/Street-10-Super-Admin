@@ -156,7 +156,7 @@ export default function EditBiddingProduct() {
           mainCategoryId,
           subcategoryId,
           description: product.description || '',
-          startingPrice: (parseFloat(auctionData.reservePrice || auctionData.depositAmount) / 100).toString(),
+          startingPrice: product.priceMinor ? (parseFloat(product.priceMinor) / 100).toString() : '',
           reservePrice: auctionData.reservePrice ? (parseFloat(auctionData.reservePrice) / 100).toString() : '',
           buyNowPrice: auctionData.buyNowPrice ? (parseFloat(auctionData.buyNowPrice) / 100).toString() : '',
           minIncrement: (parseFloat(auctionData.minIncrement) / 100).toString(),
@@ -198,13 +198,15 @@ export default function EditBiddingProduct() {
   const mapAuctionStateToStatus = (state: string): BiddingProduct['status'] => {
     switch (state) {
       case 'ended':
-        return 'payment-requested' // Ended auctions show as payment requested
+        return 'ended-unsold' // For reselling, show as ended-unsold (will be changed to scheduled when reselling)
       case 'settled':
         return 'fully-paid-sold'
       case 'scheduled':
         return 'scheduled'
       case 'live':
         return 'live' // Live auctions show as "Live" (started)
+      case 'draft':
+        return 'scheduled' // Draft auctions can be scheduled
       default:
         return 'scheduled'
     }
@@ -353,10 +355,22 @@ export default function EditBiddingProduct() {
       })
 
       // Prepare auction update data
-      const newState = formData.status === 'scheduled' ? 'scheduled' 
-        : formData.status === 'ended-unsold' ? 'ended'
-        : formData.status === 'fully-paid-sold' ? 'settled'
-        : 'live'
+      // Map frontend status to backend state
+      // For reselling (ended -> scheduled), allow the transition
+      let newState: string
+      if (formData.status === 'scheduled') {
+        newState = 'scheduled'
+      } else if (formData.status === 'ended-unsold') {
+        // If current state is 'ended' and user wants to resell, transition to 'scheduled'
+        // Otherwise keep as 'ended'
+        newState = auction.state === 'ended' ? 'scheduled' : 'ended'
+      } else if (formData.status === 'fully-paid-sold') {
+        newState = 'settled'
+      } else if (formData.status === 'live') {
+        newState = 'live'
+      } else {
+        newState = auction.state // Keep current state if unknown
+      }
 
       const auctionUpdateData: any = {
         startAt: startDateTime.toISOString(),
@@ -365,7 +379,7 @@ export default function EditBiddingProduct() {
         depositAmount: formData.depositAmount ? Math.round(parseFloat(formData.depositAmount) * 100) : undefined,
       }
 
-      // Only include state if it has changed
+      // Only include state if it has changed (this allows reselling: ended -> scheduled)
       if (newState !== auction.state) {
         auctionUpdateData.state = newState
       }

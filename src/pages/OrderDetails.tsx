@@ -18,6 +18,16 @@ export default function OrderDetails() {
   const [backendStatus, setBackendStatus] = useState<string>('') // Store backend status separately
   const [statusModalOpen, setStatusModalOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<string>('')
+  // Auction order data
+  const [auctionOrderData, setAuctionOrderData] = useState<{
+    auctionId?: string
+    paymentStage?: string
+    downPaymentMinor?: string
+    remainingPaymentMinor?: string
+    depositAmountMinor?: string
+    finalPaymentAfterDeposit?: string
+    fullPaymentAfterDeposit?: string
+  } | null>(null)
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -194,6 +204,21 @@ export default function OrderDetails() {
           const apiOrder = await ordersApi.getById(orderIdToFetch)
           setBackendStatus(apiOrder.status) // Store backend status
           
+          // Store auction order data if it's an auction order
+          if (apiOrder.auctionId) {
+            setAuctionOrderData({
+              auctionId: apiOrder.auctionId,
+              paymentStage: apiOrder.paymentStage || undefined,
+              downPaymentMinor: apiOrder.downPaymentMinor || undefined,
+              remainingPaymentMinor: apiOrder.remainingPaymentMinor || undefined,
+              depositAmountMinor: (apiOrder as any).depositAmountMinor || undefined,
+              finalPaymentAfterDeposit: (apiOrder as any).finalPaymentAfterDeposit || undefined,
+              fullPaymentAfterDeposit: (apiOrder as any).fullPaymentAfterDeposit || undefined,
+            })
+          } else {
+            setAuctionOrderData(null)
+          }
+          
           // Transform API order to frontend format
           const transformedOrder: OrderDetailsType = {
             id: apiOrder.id,
@@ -303,11 +328,42 @@ export default function OrderDetails() {
     }
 
     try {
-      console.log('Updating order status:', { orderUuid, selectedStatus, currentStatus: backendStatus })
-      await ordersApi.updateStatus(orderUuid, selectedStatus)
+      console.log('Updating order status:', { orderUuid, selectedStatus, currentStatus: backendStatus, auctionOrderData })
+      
+      // For auction orders, use payment stage endpoints
+      if (auctionOrderData?.auctionId) {
+        if (selectedStatus === 'down_payment_paid' && auctionOrderData.paymentStage === 'down_payment_required') {
+          await ordersApi.markDownPaymentPaid(orderUuid)
+        } else if (selectedStatus === 'paid' && (auctionOrderData.paymentStage === 'final_payment_required' || auctionOrderData.paymentStage === 'full_payment_required')) {
+          if (auctionOrderData.paymentStage === 'final_payment_required') {
+            await ordersApi.markFinalPaymentPaid(orderUuid)
+          } else {
+            await ordersApi.markFullPaymentPaid(orderUuid)
+          }
+        } else {
+          // For other status changes on auction orders, use regular update
+          await ordersApi.updateStatus(orderUuid, selectedStatus)
+        }
+      } else {
+        // Regular order status update
+        await ordersApi.updateStatus(orderUuid, selectedStatus)
+      }
       
       // Reload order data to get updated status
       const updatedOrder = await ordersApi.getById(orderUuid)
+      
+      // Update auction order data if it's an auction order
+      if (updatedOrder.auctionId) {
+        setAuctionOrderData({
+          auctionId: updatedOrder.auctionId,
+          paymentStage: updatedOrder.paymentStage || undefined,
+          downPaymentMinor: updatedOrder.downPaymentMinor || undefined,
+          remainingPaymentMinor: updatedOrder.remainingPaymentMinor || undefined,
+          depositAmountMinor: (updatedOrder as any).depositAmountMinor || undefined,
+          finalPaymentAfterDeposit: (updatedOrder as any).finalPaymentAfterDeposit || undefined,
+          fullPaymentAfterDeposit: (updatedOrder as any).fullPaymentAfterDeposit || undefined,
+        })
+      }
       
       // Transform updated order to frontend format
       const transformedOrder: OrderDetailsType = {
@@ -369,6 +425,11 @@ export default function OrderDetails() {
       setOrder(transformedOrder)
       setStatusModalOpen(false)
       alert('Order status updated successfully!')
+      
+      // If this was an auction order payment stage update, redirect to orders table
+      if (auctionOrderData?.auctionId && (selectedStatus === 'down_payment_paid' || selectedStatus === 'paid')) {
+        navigate('/orders')
+      }
     } catch (error: any) {
       console.error('Error updating order status:', error)
       console.error('Error details:', {
@@ -776,8 +837,53 @@ export default function OrderDetails() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Order Type:</span>
-                  <span className="font-medium text-gray-900">Regular Order</span>
+                  <span className="font-medium text-gray-900">{auctionOrderData ? 'Auction Order' : 'Regular Order'}</span>
                 </div>
+                {auctionOrderData && (
+                  <>
+                    <div className="pt-2 border-t border-gray-200">
+                      <p className="text-sm font-semibold text-gray-900 mb-2">Payment Breakdown</p>
+                      <div className="space-y-2">
+                        {auctionOrderData.downPaymentMinor && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Down Payment:</span>
+                            <span className={`font-medium ${order?.status === 'completed' || auctionOrderData.paymentStage === 'final_payment_required' || auctionOrderData.paymentStage === 'fully_paid' ? 'text-green-600' : 'text-gray-900'}`}>
+                              ${(parseFloat(auctionOrderData.downPaymentMinor) / 100).toFixed(2)}
+                              {order?.status === 'completed' || auctionOrderData.paymentStage === 'final_payment_required' || auctionOrderData.paymentStage === 'fully_paid' ? ' (Paid)' : ' (Pending)'}
+                            </span>
+                          </div>
+                        )}
+                        {auctionOrderData.remainingPaymentMinor && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Final Payment:</span>
+                            <span className={`font-medium ${auctionOrderData.paymentStage === 'fully_paid' ? 'text-green-600' : 'text-gray-900'}`}>
+                              ${(parseFloat(auctionOrderData.remainingPaymentMinor) / 100).toFixed(2)}
+                              {auctionOrderData.paymentStage === 'fully_paid' ? ' (Paid)' : ' (Pending)'}
+                            </span>
+                          </div>
+                        )}
+                        {auctionOrderData.depositAmountMinor && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Deposit Amount:</span>
+                            <span className="font-medium text-gray-900">${(parseFloat(auctionOrderData.depositAmountMinor) / 100).toFixed(2)}</span>
+                          </div>
+                        )}
+                        {auctionOrderData.finalPaymentAfterDeposit && auctionOrderData.paymentStage === 'final_payment_required' && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Final Payment (After Deposit):</span>
+                            <span className="font-medium text-gray-900">${(parseFloat(auctionOrderData.finalPaymentAfterDeposit) / 100).toFixed(2)}</span>
+                          </div>
+                        )}
+                        {auctionOrderData.fullPaymentAfterDeposit && auctionOrderData.paymentStage === 'full_payment_required' && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Full Payment (After Deposit):</span>
+                            <span className="font-medium text-gray-900">${(parseFloat(auctionOrderData.fullPaymentAfterDeposit) / 100).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Payment Method:</span>
                   <span className="font-medium text-gray-900">{order.payment.method === 'credit-card' ? 'Online Payment' : order.payment.method}</span>
@@ -847,13 +953,31 @@ export default function OrderDetails() {
                   className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 focus:border-[#F39C12] focus:outline-none focus:ring-1 focus:ring-[#F39C12]"
                 >
                   <option value="">Select status...</option>
-                  <option value="created">Created</option>
-                  <option value="paid">Paid</option>
-                  <option value="fulfillment_pending">Fulfillment Pending</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="closed">Closed</option>
-                  <option value="cancelled">Cancelled</option>
+                  {auctionOrderData ? (
+                    <>
+                      {auctionOrderData.paymentStage === 'down_payment_required' && (
+                        <option value="down_payment_paid">Mark Down Payment Paid</option>
+                      )}
+                      {(auctionOrderData.paymentStage === 'final_payment_required' || auctionOrderData.paymentStage === 'full_payment_required') && (
+                        <option value="paid">Mark Final/Full Payment Paid</option>
+                      )}
+                      <option value="fulfillment_pending">Fulfillment Pending</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="closed">Closed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="created">Created</option>
+                      <option value="paid">Paid</option>
+                      <option value="fulfillment_pending">Fulfillment Pending</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="closed">Closed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </>
+                  )}
                 </select>
                 {order && selectedStatus !== backendStatus && (
                   <p className="text-xs text-gray-500">

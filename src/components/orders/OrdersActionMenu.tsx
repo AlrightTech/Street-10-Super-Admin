@@ -12,9 +12,6 @@ interface OrdersActionMenuProps {
 
 const ACTIONS: { key: OrderActionType; label: string }[] = [
   { key: 'view', label: 'View' },
-  { key: 'edit', label: 'Edit Order' },
-  { key: 'block', label: 'Block Order' },
-  { key: 'delete', label: 'Cancel Order' }, // Changed from "Delete Order" to "Cancel Order"
 ]
 
 export default function OrdersActionMenu({ onSelect, className = '', align = 'right', orderStatus }: OrdersActionMenuProps) {
@@ -38,7 +35,8 @@ export default function OrdersActionMenu({ onSelect, className = '', align = 'ri
     }
   }, [open])
 
-  const handleSelect = (action: OrderActionType) => {
+  const handleSelect = (action: OrderActionType, e?: React.MouseEvent) => {
+    e?.stopPropagation()
     onSelect?.(action)
     setOpen(false)
   }
@@ -49,7 +47,10 @@ export default function OrdersActionMenu({ onSelect, className = '', align = 'ri
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((prev) => !prev)
+        }}
         className="rounded-full text-gray-400 transition hover:text-gray-600 focus:outline-none cursor-pointer"
       >
         <MoreVerticalIcon className="h-5 w-5" />
@@ -72,7 +73,10 @@ export default function OrdersActionMenu({ onSelect, className = '', align = 'ri
             <button
               key={action.key}
               type="button"
-              onClick={() => handleSelect(action.key)}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleSelect(action.key, e)
+              }}
               role="menuitem"
               className={`flex w-full items-center px-4 py-2 text-sm transition hover:bg-gray-50 cursor-pointer ${
                 action.key === 'delete' ? 'text-[#B71D18] hover:text-[#B71D18]' : 'text-gray-600 hover:text-gray-900'

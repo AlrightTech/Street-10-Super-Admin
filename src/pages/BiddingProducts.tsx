@@ -158,6 +158,13 @@ export default function BiddingProducts() {
     }
 
     fetchAuctions()
+    
+    // Poll auctions every 30 seconds to update status (for resold auctions and time-based status changes)
+    const pollInterval = setInterval(() => {
+      fetchAuctions()
+    }, 30000) // Poll every 30 seconds
+    
+    return () => clearInterval(pollInterval)
   }, [currentPage, statusFilter])
 
   // WebSocket connection for real-time status updates
@@ -211,33 +218,36 @@ export default function BiddingProducts() {
           console.log('📢 Super Admin received auction_status_changed:', data)
           if (data.auctionId) {
             // Fetch full auction data to get order, reservePriceMet, etc. for correct status mapping
-            try {
-              const updatedAuctionData = await auctionsApi.getById(data.auctionId)
-              // Update the auction in the list with full data
-              setAuctions((prevAuctions) =>
-                prevAuctions.map((auction) => {
-                  if (auction.id === data.auctionId) {
-                    return updatedAuctionData
-                  }
-                  return auction
-                })
-              )
-            } catch (error) {
-              console.error('Error fetching updated auction data:', error)
-              // Fallback: just update state if fetch fails
-              setAuctions((prevAuctions) =>
-                prevAuctions.map((auction) => {
-                  if (auction.id === data.auctionId) {
-                    return {
-                      ...auction,
-                      state: data.state,
-                      ...(data.reservePriceMet !== undefined && { reservePriceMet: data.reservePriceMet }),
+            // Use a small delay to ensure order is updated in database
+            setTimeout(async () => {
+              try {
+                const updatedAuctionData = await auctionsApi.getById(data.auctionId)
+                // Update the auction in the list with full data
+                setAuctions((prevAuctions) =>
+                  prevAuctions.map((auction) => {
+                    if (auction.id === data.auctionId) {
+                      return updatedAuctionData
                     }
-                  }
-                  return auction
-                })
-              )
-            }
+                    return auction
+                  })
+                )
+              } catch (error) {
+                console.error('Error fetching updated auction data:', error)
+                // Fallback: just update state if fetch fails
+                setAuctions((prevAuctions) =>
+                  prevAuctions.map((auction) => {
+                    if (auction.id === data.auctionId) {
+                      return {
+                        ...auction,
+                        state: data.state,
+                        ...(data.reservePriceMet !== undefined && { reservePriceMet: data.reservePriceMet }),
+                      }
+                    }
+                    return auction
+                  })
+                )
+              }
+            }, 500) // Small delay to ensure database is updated
           }
         })
 
@@ -245,35 +255,52 @@ export default function BiddingProducts() {
         socket.on('auction_ended', async (data: any) => {
           console.log('🏁 Super Admin received auction_ended:', data)
           if (data.auctionId) {
-            // Fetch full auction data to get order status for correct status mapping
-            try {
-              const updatedAuctionData = await auctionsApi.getById(data.auctionId)
-              // Update the auction in the list with full data
-              setAuctions((prevAuctions) =>
-                prevAuctions.map((auction) => {
-                  if (auction.id === data.auctionId) {
-                    return updatedAuctionData
+            // Wait a bit for settlement to complete, then fetch full auction data
+            // Settlement creates the order, so we need to wait for it
+            const fetchWithRetry = async (retries = 3, delay = 1000) => {
+              for (let i = 0; i < retries; i++) {
+                try {
+                  const updatedAuctionData = await auctionsApi.getById(data.auctionId)
+                  // Check if order exists (settlement completed)
+                  const hasOrder = (updatedAuctionData as any)?.order
+                  if (hasOrder || i === retries - 1) {
+                    // Update the auction in the list with full data
+                    setAuctions((prevAuctions) =>
+                      prevAuctions.map((auction) => {
+                        if (auction.id === data.auctionId) {
+                          return updatedAuctionData
+                        }
+                        return auction
+                      })
+                    )
+                    return
                   }
-                  return auction
-                })
-              )
-            } catch (error) {
-              console.error('Error fetching updated auction data:', error)
-              // Fallback: just update state if fetch fails
-              setAuctions((prevAuctions) =>
-                prevAuctions.map((auction) => {
-                  if (auction.id === data.auctionId) {
-                    return {
-                      ...auction,
-                      state: 'ended',
-                      ...(data.reservePriceMet !== undefined && { reservePriceMet: data.reservePriceMet }),
-                      ...(data.orderId && { order: { id: data.orderId, status: 'created' } }),
-                    }
+                  // Order not created yet, wait and retry
+                  await new Promise(resolve => setTimeout(resolve, delay))
+                } catch (error) {
+                  console.error(`Error fetching updated auction data (attempt ${i + 1}):`, error)
+                  if (i === retries - 1) {
+                    // Final attempt failed, update with available data
+                    setAuctions((prevAuctions) =>
+                      prevAuctions.map((auction) => {
+                        if (auction.id === data.auctionId) {
+                          return {
+                            ...auction,
+                            state: 'ended',
+                            ...(data.reservePriceMet !== undefined && { reservePriceMet: data.reservePriceMet }),
+                            ...(data.orderId && { order: { id: data.orderId, status: 'created' } }),
+                          }
+                        }
+                        return auction
+                      })
+                    )
+                  } else {
+                    await new Promise(resolve => setTimeout(resolve, delay))
                   }
-                  return auction
-                })
-              )
+                }
+              }
             }
+            fetchWithRetry()
           }
         })
 

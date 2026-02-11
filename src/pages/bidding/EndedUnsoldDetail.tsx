@@ -191,6 +191,11 @@ export default function EndedUnsoldDetail({ product, auction, mediaUrls, onClose
   const handleEditProduct = () => {
     navigate(`/building-products/${product.id}/edit`)
   }
+
+  const handleResell = () => {
+    // Navigate to edit page where admin can set new start/end dates and prices
+    navigate(`/building-products/${product.id}/edit`)
+  }
   
   // Use provided mediaUrls or fallback to single imageUrl, or placeholder
   const productImages = mediaUrls && mediaUrls.length > 0 
@@ -425,7 +430,10 @@ export default function EndedUnsoldDetail({ product, auction, mediaUrls, onClose
                   </div>
                 </div>
 
-                <button className="w-full inline-flex items-center justify-center rounded-lg bg-[#F7931E] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer">
+                <button 
+                  onClick={handleResell}
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#F7931E] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#E8840D] cursor-pointer"
+                >
                   Resell
                 </button>
               </div>

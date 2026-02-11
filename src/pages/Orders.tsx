@@ -120,6 +120,17 @@ export default function Orders() {
           const customerName = (order.user as any)?.name || order.user?.email?.split('@')[0] || 'Unknown'
           const customerImageUrl = (order.user as any)?.profileImageUrl || null
           
+          // For auction orders, use paymentStage for display status, otherwise use order.status
+          // Store paymentStage in a custom field for the badge component
+          let displayStatus = order.status as OrderStatus
+          if (order.auctionId && order.paymentStage) {
+            // Map payment stage to display status
+            // Keep order.status as 'created' but show payment stage in UI
+            displayStatus = order.status as OrderStatus
+            // Store paymentStage for badge component to use
+            ;(order as any).displayPaymentStage = order.paymentStage
+          }
+          
           return {
             id: `#${order.orderNumber || order.id.slice(-8)}`,
             customerName: customerName,
@@ -130,11 +141,15 @@ export default function Orders() {
             amount: total,
             amountFormatted: `${order.currency} ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             paymentMethod: order.paymentMethod || 'N/A',
-            status: order.status as OrderStatus,
+            status: displayStatus,
             orderDate: new Date(order.createdAt).toLocaleDateString('en-GB'),
             orderNumber: order.orderNumber,
             orderId: order.id, // Store actual UUID for navigation
-          } as OrderRecord & { orderId: string }
+            userId: order.userId, // Store user ID for customer detail navigation
+            paymentStage: order.paymentStage, // Store for badge component
+            auctionId: order.auctionId, // Store for badge component
+            orderType: (order as any).orderType || 'admin-ecommerce', // Store order type
+          } as OrderRecord & { orderId: string; userId?: string; paymentStage?: string; auctionId?: string; orderType?: string }
         })
         
         setOrders(transformedOrders)
@@ -215,11 +230,13 @@ export default function Orders() {
   }
 
   const handleOrderAction = async (order: OrderRecord, action: OrderActionType) => {
-    const orderId = (order as any).orderId || order.id.replace('#', '')
+    // Use orderId if available (actual UUID), otherwise extract from id
+    const orderId = (order as any).orderId || (order.id?.toString().replace('#', '') || '')
     
     if (action === 'view' || action === 'view-order') {
-      // Navigate to order details page
-      navigate(`/orders/${orderId}`)
+      // Navigate to order details page (not customer detail page)
+      console.log('Navigating to order detail page with orderId:', orderId)
+      navigate(`/orders/${orderId}/detail`)
     } else if (action === 'edit') {
       // Navigate to order edit page (if exists) or detail page
       navigate(`/orders/${orderId}/detail`)
@@ -295,9 +312,15 @@ export default function Orders() {
   }
 
   const handleNameClick = (order: OrderRecord) => {
-    // Navigate to order details page using order ID (UUID)
-    const orderId = (order as any).orderId || order.id.replace('#', '')
-    navigate(`/orders/${orderId}`)
+    // Navigate to order customer detail page using order ID
+    const orderId = (order as any).orderId || (order.id?.toString().replace('#', '') || '')
+    if (orderId) {
+      navigate(`/orders/${orderId}`)
+    } else {
+      // Fallback: navigate to order detail if user ID not available
+      const orderId = (order as any).orderId || order.id.replace('#', '')
+      navigate(`/orders/${orderId}`)
+    }
   }
 
   // If viewing order detail, show order detail view instead of the table

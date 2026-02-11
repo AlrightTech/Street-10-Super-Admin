@@ -29,7 +29,42 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   inactive: 'Inactive',
 }
 
-export default function OrderStatusBadge({ status, className = '' }: OrderStatusBadgeProps) {
+// Payment stage labels for auction orders
+const PAYMENT_STAGE_LABEL: Record<string, string> = {
+  down_payment_required: 'Down Payment Required',
+  final_payment_required: 'Final Payment Required',
+  full_payment_required: 'Full Payment Required',
+  fully_paid: 'Fully Paid',
+  settlement_missed: 'Settlement Missed',
+}
+
+const PAYMENT_STAGE_STYLES: Record<string, string> = {
+  down_payment_required: 'bg-yellow-100 text-yellow-800',
+  final_payment_required: 'bg-orange-100 text-orange-800',
+  full_payment_required: 'bg-purple-100 text-purple-800',
+  fully_paid: 'bg-[#DCF6E5] text-[#118D57]',
+  settlement_missed: 'bg-[#FFE4DE] text-[#B71D18]',
+}
+
+interface OrderStatusBadgeProps {
+  status: OrderStatus;
+  className?: string;
+  paymentStage?: string; // For auction orders
+  auctionId?: string; // For auction orders
+}
+
+export default function OrderStatusBadge({ status, className = '', paymentStage, auctionId }: OrderStatusBadgeProps) {
+  // For auction orders, show payment stage instead of status
+  if (auctionId && paymentStage && PAYMENT_STAGE_LABEL[paymentStage]) {
+    return (
+      <span
+        className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium ${PAYMENT_STAGE_STYLES[paymentStage] || STATUS_STYLES[status]} ${className}`}
+      >
+        {PAYMENT_STAGE_LABEL[paymentStage]}
+      </span>
+    )
+  }
+  
   return (
     <span
       className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[status]} ${className}`}
