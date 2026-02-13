@@ -1,10 +1,12 @@
 import api, { type ApiResponse, type PaginatedResponse } from '../utils/api';
 
+export type LoginScreenTargetApi = 'vendor' | 'admin' | 'website_login' | 'registration';
+
 export interface LoginScreen {
   id: string;
   title: string;
   backgroundUrl: string;
-  target: 'vendor' | 'admin';
+  target: LoginScreenTargetApi;
   status: 'active' | 'scheduled' | 'expired';
   priority: 'high' | 'medium' | 'low';
   startDate: string;
@@ -16,7 +18,7 @@ export interface LoginScreen {
 export interface LoginScreenFilters {
   search?: string;
   status?: 'active' | 'scheduled' | 'expired';
-  target?: 'vendor' | 'admin';
+  target?: LoginScreenTargetApi;
   priority?: 'high' | 'medium' | 'low';
   page?: number;
   limit?: number;
@@ -26,7 +28,7 @@ export interface LoginScreenFilters {
 export interface CreateLoginScreenData {
   title: string;
   backgroundUrl: string;
-  target: 'vendor' | 'admin';
+  target: LoginScreenTargetApi;
   priority: 'high' | 'medium' | 'low';
   startDate: string;
   endDate: string;
@@ -106,7 +108,7 @@ export const loginScreensApi = {
   /**
    * Get active login screen for a specific target (public endpoint - no auth required)
    */
-  getActive: async (target: 'vendor' | 'admin'): Promise<LoginScreen | null> => {
+  getActive: async (target: LoginScreenTargetApi): Promise<LoginScreen | null> => {
     try {
       // Use axios directly for public endpoint (bypass auth)
       const axios = (await import('axios')).default;

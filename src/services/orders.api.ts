@@ -55,7 +55,11 @@ export interface OrderDetails extends Omit<Order, 'vendor' | 'items'> {
     id: string;
     name?: string;
     email: string;
+    profileImageUrl?: string | null;
   };
+  deliveryCompany?: string | null;
+  trackingNumber?: string | null;
+  estimatedDeliveryDate?: string | null;
   items: Array<{
     id: string;
     productId: string;
@@ -214,3 +218,49 @@ export const ordersApi = {
   },
 };
 
+export interface CustomerNote {
+  id: string;
+  userId: string;
+  orderId?: string | null;
+  note: string;
+  addedBy: string;
+  addedByUser?: {
+    id: string;
+    name?: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const customerNotesApi = {
+  // Get customer notes
+  getNotes: async (userId: string, orderId?: string): Promise<CustomerNote[]> => {
+    const response = await api.get<ApiResponse<{ notes: CustomerNote[] }>>(`/users/${userId}/notes`, {
+      params: orderId ? { orderId } : {},
+    });
+    return response.data.data.notes;
+  },
+
+  // Create customer note
+  createNote: async (userId: string, note: string, orderId?: string): Promise<CustomerNote> => {
+    const response = await api.post<ApiResponse<{ note: CustomerNote }>>(`/users/${userId}/notes`, {
+      note,
+      orderId: orderId || null,
+    });
+    return response.data.data.note;
+  },
+
+  // Update customer note
+  updateNote: async (noteId: string, note: string): Promise<CustomerNote> => {
+    const response = await api.put<ApiResponse<{ note: CustomerNote }>>(`/notes/${noteId}`, {
+      note,
+    });
+    return response.data.data.note;
+  },
+
+  // Delete customer note
+  deleteNote: async (noteId: string): Promise<void> => {
+    await api.delete<ApiResponse<void>>(`/notes/${noteId}`);
+  },
+};

@@ -19,6 +19,17 @@ export default function OrderShipping() {
     sendTrackingNotification: true,
   })
 
+  const deliveryCompanies = [
+    'DHL',
+    'FedEx',
+    'UPS',
+    'Leopard',
+    'Aramex',
+    'TNT',
+    'USPS',
+    'Other'
+  ]
+
   useEffect(() => {
     const fetchOrder = async () => {
       try {
@@ -96,14 +107,23 @@ export default function OrderShipping() {
     : 'N/A'
 
   return (
-    <div className="space-y-4 md:space-y-6 px-4 md:px-0">
+    <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Orders</h1>
-        <p className="mt-1 text-xs sm:text-sm text-gray-600">
-          <span className="text-gray-600">Dashboard • </span>
-          <span className="text-gray-900">Add Tracking Information</span>
-        </p>
+      <div className="flex items-center gap-4">
+        <button
+          onClick={() => navigate(`/orders/${orderId}/detail`)}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {order?.trackingNumber || order?.deliveryCompany ? 'Update Shipping Information' : 'Add Shipping Information'}
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">Add tracking details for order #{orderNumber}</p>
+        </div>
       </div>
 
       {/* Order Summary Card */}
@@ -112,20 +132,20 @@ export default function OrderShipping() {
           <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h2 className="text-base sm:text-lg font-semibold text-blue-900">Order Summary</h2>
+          <h2 className="text-lg font-semibold text-blue-900">Order Summary</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <p className="text-xs sm:text-sm text-blue-700 mb-1">Order ID</p>
-            <p className="text-sm sm:text-base font-semibold text-blue-900">#{orderNumber}</p>
+            <p className="text-sm text-blue-700 mb-1">Order ID</p>
+            <p className="text-base font-semibold text-blue-900">#{orderNumber}</p>
           </div>
           <div>
-            <p className="text-xs sm:text-sm text-blue-700 mb-1">Customer Name</p>
-            <p className="text-sm sm:text-base font-semibold text-blue-900">{customerName}</p>
+            <p className="text-sm text-blue-700 mb-1">Customer Name</p>
+            <p className="text-base font-semibold text-blue-900">{customerName}</p>
           </div>
           <div>
-            <p className="text-xs sm:text-sm text-blue-700 mb-1">Order Date</p>
-            <p className="text-sm sm:text-base font-semibold text-blue-900">{orderDate}</p>
+            <p className="text-sm text-blue-700 mb-1">Order Date</p>
+            <p className="text-base font-semibold text-blue-900">{orderDate}</p>
           </div>
         </div>
       </div>
@@ -135,16 +155,21 @@ export default function OrderShipping() {
         <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Select Delivery Company <span className="text-red-500">*</span>
+              Delivery Company <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <select
               value={formData.deliveryCompany}
               onChange={(e) => setFormData({ ...formData, deliveryCompany: e.target.value })}
-              placeholder="e.g DHL, Leopard"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none bg-white"
               required
-            />
+            >
+              <option value="">Select a delivery company</option>
+              {deliveryCompanies.map((company) => (
+                <option key={company} value={company}>
+                  {company}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -198,7 +223,7 @@ export default function OrderShipping() {
             <textarea
               value={formData.shippingNotes}
               onChange={(e) => setFormData({ ...formData, shippingNotes: e.target.value })}
-              placeholder="Add any special delivery instructions or notes for the customer..."
+              placeholder="Add any special delivery instructions or notes..."
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             />
@@ -224,7 +249,7 @@ export default function OrderShipping() {
             <div className="flex items-center gap-3">
               <Bell className="h-5 w-5 text-blue-600" />
               <div>
-                <p className="text-sm font-medium text-blue-900">Send tracking details to customer automatically After Patch</p>
+                <p className="text-sm font-medium text-blue-900">Send tracking details to customer automatically</p>
                 <p className="text-xs text-blue-700 mt-1">Customer will receive an email and SMS with tracking information</p>
               </div>
             </div>
@@ -267,7 +292,7 @@ export default function OrderShipping() {
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
-                Save & Notify Customer
+                {order?.trackingNumber || order?.deliveryCompany ? 'Update & Notify Customer' : 'Save & Notify Customer'}
               </>
             )}
           </button>

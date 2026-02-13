@@ -7,7 +7,7 @@ export interface LoginScreen {
   id: string
   thumbnail: string
   title: string
-  target: 'Vendor' | 'Admin'
+  target: 'Vendor' | 'Admin' | 'Website Login' | 'Registration'
   startDate: string
   endDate: string
   priority: 'High' | 'Medium' | 'Low'

@@ -33,6 +33,24 @@ const formatDate = (dateString: string): string => {
   return `${day} ${month} ${year}`
 }
 
+// Login screen target: filter dropdown value -> API value
+function loginScreenTargetFilterToApi(value: string): 'vendor' | 'admin' | 'website_login' | 'registration' | undefined {
+  if (value === 'Vendor') return 'vendor'
+  if (value === 'Admin') return 'admin'
+  if (value === 'Website Login') return 'website_login'
+  if (value === 'Registration') return 'registration'
+  return undefined
+}
+
+// Login screen target: API value -> display (table/filter) value
+function loginScreenTargetApiToDisplay(api: string): 'Vendor' | 'Admin' | 'Website Login' | 'Registration' {
+  if (api === 'vendor') return 'Vendor'
+  if (api === 'admin') return 'Admin'
+  if (api === 'website_login') return 'Website Login'
+  if (api === 'registration') return 'Registration'
+  return 'Vendor'
+}
+
 // Helper function to convert API story highlight to UI story highlight
 const convertApiToUI = (apiHighlight: ApiStoryHighlight): StoryHighlight => {
   return {
@@ -611,7 +629,8 @@ export default function Marketing() {
         }
 
         if (loginScreenTargetFilter !== 'All Targets') {
-          filters.target = loginScreenTargetFilter.toLowerCase() as 'vendor' | 'admin'
+          const targetApi = loginScreenTargetFilterToApi(loginScreenTargetFilter)
+          if (targetApi) filters.target = targetApi
         }
 
         const response = await loginScreensApi.getAll(filters)
@@ -623,7 +642,7 @@ export default function Marketing() {
             id: apiLoginScreen.id,
             thumbnail: thumbnail,
             title: apiLoginScreen.title,
-            target: apiLoginScreen.target === 'vendor' ? 'Vendor' : 'Admin',
+            target: loginScreenTargetApiToDisplay(apiLoginScreen.target),
             startDate: apiLoginScreen.startDate ? formatDate(apiLoginScreen.startDate) : '',
             endDate: apiLoginScreen.endDate ? formatDate(apiLoginScreen.endDate) : '',
             priority: apiLoginScreen.priority === 'high' ? 'High' : apiLoginScreen.priority === 'medium' ? 'Medium' : 'Low',
@@ -771,7 +790,7 @@ export default function Marketing() {
               id: apiLoginScreen.id,
               thumbnail: thumbnail,
               title: apiLoginScreen.title,
-              target: apiLoginScreen.target === 'vendor' ? 'Vendor' : 'Admin',
+              target: loginScreenTargetApiToDisplay(apiLoginScreen.target),
               startDate: apiLoginScreen.startDate ? formatDate(apiLoginScreen.startDate) : '',
               endDate: apiLoginScreen.endDate ? formatDate(apiLoginScreen.endDate) : '',
               priority: apiLoginScreen.priority === 'high' ? 'High' : apiLoginScreen.priority === 'medium' ? 'Medium' : 'Low',
@@ -2065,7 +2084,7 @@ export default function Marketing() {
               />
               <FilterDropdown
                 label={loginScreenTargetFilter}
-                options={['All Targets', 'Vendor', 'Admin']}
+                options={['All Targets', 'Vendor', 'Admin', 'Website Login', 'Registration']}
                 onSelect={(value) => setLoginScreenTargetFilter(value)}
                 className="w-full sm:w-auto"
               />

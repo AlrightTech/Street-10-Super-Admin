@@ -3,16 +3,34 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { CalendarIcon, UploadIcon, ChevronDownIcon, XIcon } from '../components/icons/Icons'
 import { loginScreensApi, uploadFileToS3 } from '../services/login-screens.api'
 
+type TargetDisplay = 'Vendor' | 'Admin' | 'Website Login' | 'Registration'
+
 interface LoginScreenFormData {
   title: string
   backgroundUrl: string
-  target: 'Vendor' | 'Admin'
+  target: TargetDisplay
   priority: 'High' | 'Medium' | 'Low'
   startDate: string
   endDate: string
   startTime: string
   endTime: string
   backgroundFile: File | null
+}
+
+function targetApiToDisplay(api: string): TargetDisplay {
+  if (api === 'vendor') return 'Vendor'
+  if (api === 'admin') return 'Admin'
+  if (api === 'website_login') return 'Website Login'
+  if (api === 'registration') return 'Registration'
+  return 'Vendor'
+}
+
+function targetDisplayToApi(display: TargetDisplay): 'vendor' | 'admin' | 'website_login' | 'registration' {
+  if (display === 'Vendor') return 'vendor'
+  if (display === 'Admin') return 'admin'
+  if (display === 'Website Login') return 'website_login'
+  if (display === 'Registration') return 'registration'
+  return 'vendor'
 }
 
 export default function AddLoginScreen() {
@@ -74,7 +92,7 @@ export default function AddLoginScreen() {
           setFormData({
             title: loginScreen.title,
             backgroundUrl: loginScreen.backgroundUrl,
-            target: loginScreen.target === 'vendor' ? 'Vendor' : 'Admin',
+            target: targetApiToDisplay(loginScreen.target),
             priority: loginScreen.priority === 'high' ? 'High' : loginScreen.priority === 'medium' ? 'Medium' : 'Low',
             startDate: loginScreen.startDate ? loginScreen.startDate.split('T')[0] : '',
             endDate: loginScreen.endDate ? loginScreen.endDate.split('T')[0] : '',
@@ -240,7 +258,7 @@ export default function AddLoginScreen() {
       const apiData = {
         title: formData.title.trim(),
         backgroundUrl: backgroundUrl, // S3 URL (not Base64)
-        target: formData.target.toLowerCase() as 'vendor' | 'admin',
+        target: targetDisplayToApi(formData.target),
         priority: (formData.priority === 'High' ? 'high' : formData.priority === 'Medium' ? 'medium' : 'low') as 'high' | 'medium' | 'low',
         startDate: combineDateAndTime(formData.startDate, formData.startTime).toISOString(),
         endDate: combineDateAndTime(formData.endDate, formData.endTime).toISOString(),
@@ -393,12 +411,12 @@ export default function AddLoginScreen() {
           </button>
           {isTargetDropdownOpen && (
             <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
-              {['Vendor', 'Admin'].map((option) => (
+              {(['Vendor', 'Admin', 'Website Login', 'Registration'] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
                   onClick={() => {
-                    setFormData((prev) => ({ ...prev, target: option as 'Vendor' | 'Admin' }))
+                    setFormData((prev) => ({ ...prev, target: option }))
                     setIsTargetDropdownOpen(false)
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { vendorsApi } from '../services/vendors.api'
-import type { VendorDetailData } from '../types/vendorDetails'
+import { ordersApi, type Order } from '../services/orders.api'
+import { productsApi, type Product } from '../services/products.api'
+import type { VendorDetailData, VendorServiceItem } from '../types/vendorDetails'
 import { useTranslation } from '../hooks/useTranslation'
 
 const MetricDocIcon = ({ gradient }: { gradient: string }) => (
@@ -109,8 +111,74 @@ export default function VendorDetail() {
           }
         }
 
-        // Fetch vendor from API
-        const apiVendor = await vendorsApi.getById(vendorIdToFetch)
+        // Fetch vendor, orders, and products in parallel
+        const [apiVendor, ordersResult, productsResult] = await Promise.all([
+          vendorsApi.getById(vendorIdToFetch),
+          ordersApi.getAll({ vendor_id: vendorIdToFetch, limit: 500 }).catch(() => ({ data: [] as Order[], pagination: { total: 0 } })),
+          productsApi.getAll({ vendor_id: vendorIdToFetch, limit: 100 }).catch(() => ({ data: [] as Product[], pagination: { total: 0 } })),
+        ])
+
+        const orders: Order[] = ordersResult.data || []
+        const products: Product[] = productsResult.data || []
+
+        // Commission from API (vendor has commissionType + commissionValue)
+        const commissionValue = Number((apiVendor as any).commissionValue ?? 0)
+        const commissionType = (apiVendor as any).commissionType || 'percentage'
+        const commissionRateStr =
+          commissionType === 'percentage'
+            ? `${commissionValue}%`
+            : `QAR ${commissionValue.toFixed(2)}`
+
+        // Total sales: sum of order totals (totalMinor is in minor units, e.g. cents)
+        const totalSalesAmount = orders.reduce(
+          (sum, o) => sum + parseFloat(String(o.totalMinor || 0)) / 100,
+          0
+        )
+        const totalSalesStr = totalSalesAmount.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+
+        // Order counts for performance
+        const completedStatuses = ['delivered', 'closed']
+        const completedOrders = orders.filter((o) =>
+          completedStatuses.includes(o.status)
+        ).length
+        const pendingStatuses = [
+          'created',
+          'paid',
+          'fulfillment_pending',
+          'shipped',
+        ]
+        const pendingOrders = orders.filter((o) =>
+          pendingStatuses.includes(o.status)
+        ).length
+
+        // Order count per product (from order items)
+        const orderCountByProductId: Record<string, number> = {}
+        for (const order of orders) {
+          for (const item of order.items || []) {
+            const pid = item.productId
+            if (!pid) continue
+            orderCountByProductId[pid] =
+              (orderCountByProductId[pid] || 0) + (item.quantity || 1)
+          }
+        }
+
+        // Map products to VendorServiceItem
+        const services: VendorServiceItem[] = products.map((p) => {
+          const priceMajor = parseFloat(String(p.priceMinor || 0)) / 100
+          const categoryName =
+            p.categories?.[0]?.category?.name || '—'
+          return {
+            id: p.id,
+            name: p.title,
+            category: categoryName,
+            price: `QAR ${priceMajor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            orders: String(orderCountByProductId[p.id] ?? 0),
+            status: p.status || 'active',
+          }
+        })
 
         // Extract profile image from vendor or companyDocs
         const companyDocs = (apiVendor as any).companyDocs || {}
@@ -127,48 +195,50 @@ export default function VendorDetail() {
                          apiVendor.user?.email?.split('@')[0] || 
                          'Unknown'
 
-        // Transform API response to VendorDetailData format
+        // Transform API response to VendorDetailData format with real data
         const transformedVendor: VendorDetailData = {
           id: parseInt(apiVendor.id.replace(/-/g, "").substring(0, 10), 16) % 1000000,
-          ownerName: ownerName, // Owner's personal name
-          businessName: apiVendor.name || 'Unknown Business', // Business name
+          ownerName: ownerName,
+          businessName: apiVendor.name || 'Unknown Business',
           email: apiVendor.email || apiVendor.user?.email || '',
           phone: apiVendor.phone || apiVendor.user?.phone || '',
           role: 'vendor',
           status: apiVendor.status === 'approved' ? 'approved' : 'pending',
           avatar: profileImageUrl,
-          address: 'N/A', // API currently doesn't provide address
+          address: 'N/A',
           vendorType: 'General',
-          commissionRate: '10%', // Default, API doesn't provide this
+          commissionRate: commissionRateStr,
           financialInfo: {
-            commissionRate: '10%',
+            commissionRate: commissionRateStr,
             accountStatus: apiVendor.status === 'approved' ? 'active' : 'pending',
-            totalSales: '0', // Would need to calculate from orders
-            paymentRequest: 'pending',
+            totalSales: totalSalesStr,
+            paymentRequest: 'None', // No payout/payment-request API yet
           },
           performance: [
-            { id: '1', label: 'Total Orders', value: '0', icon: 'clipboard' },
-            { id: '2', label: 'Completed Orders', value: '0', icon: 'check' },
+            { id: '1', label: 'Total Orders', value: String(orders.length), icon: 'clipboard' },
+            { id: '2', label: 'Completed Orders', value: String(completedOrders), icon: 'check' },
             { id: '3', label: 'Rating', value: '0', icon: 'star' },
-            { id: '4', label: 'Pending Orders', value: '0', icon: 'clipboard' },
+            { id: '4', label: 'Pending Orders', value: String(pendingOrders), icon: 'clipboard' },
           ],
           documents: [
             { id: '1', title: 'Business License', status: apiVendor.status === 'approved' ? 'verified' : 'pending', date: new Date(apiVendor.createdAt).toLocaleDateString() },
             { id: '2', title: 'ID Document', status: apiVendor.status === 'approved' ? 'verified' : 'pending', date: new Date(apiVendor.createdAt).toLocaleDateString() },
             { id: '3', title: 'Tax Certificate', status: apiVendor.status === 'approved' ? 'verified' : 'pending', date: new Date(apiVendor.createdAt).toLocaleDateString() },
           ],
-          services: [], // Would need to fetch from products API
+          services,
         }
 
         if (transformedVendor.status !== 'approved') {
-          navigate(`/vendor-request-detail/${transformedVendor.id}`, { replace: true })
+          navigate(`/vendors/vendor-request-detail/${transformedVendor.id}`, { replace: true })
           return
         }
 
         setVendor(transformedVendor)
       } catch (error: any) {
         console.error('Error loading vendor:', error)
-        alert(`Error loading vendor: ${error?.message || 'Vendor not found'}`)
+        console.error('Vendor ID that failed:', id)
+        // Don't show alert, just log and redirect
+        // The error might be due to vendor not existing or API issue
         navigate('/vendors', { replace: true })
       } finally {
         setLoading(false)

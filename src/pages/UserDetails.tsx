@@ -355,7 +355,11 @@ export default function UserDetails() {
 
       <div className="space-y-4 sm:space-y-6">
         {/* User Summary Card */}
-        <UserSummaryCard user={user} />
+        <UserSummaryCard
+          user={user}
+          onEdit={handleEdit}
+          onViewKYC={userUuid ? () => navigate(`/view-kyc/${userUuid}`) : undefined}
+        />
 
         {/* User Stats Card */}
         <UserStatsCard

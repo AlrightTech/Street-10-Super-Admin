@@ -1,17 +1,11 @@
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { ordersApi, type OrderDetails } from '../services/orders.api'
+import { customerNotesApi, type CustomerNote } from '../services/orders.api'
 import type { OrderRecord } from './Orders'
 import OrderStatusBadge from '../components/orders/OrderStatusBadge'
-import { ShoppingBagIcon, CheckCircleIcon, XCircleIcon, RefreshCwIcon, PhoneIcon, MailIcon, CalendarIcon, MapPinIcon, CheckIcon, PlusIcon, UserIcon } from '../components/icons/Icons'
-
-interface CustomerNote {
-  id: string
-  text: string
-  addedBy: string
-  date: string
-  color: 'blue' | 'green'
-}
+import { ShoppingBagIcon, CheckCircleIcon, XCircleIcon, RefreshCwIcon, PhoneIcon, MailIcon, CalendarIcon, MapPinIcon, CheckIcon, PlusIcon, UserIcon, DownloadIcon, ChevronDownIcon } from '../components/icons/Icons'
+import api from '../utils/api'
 
 export default function OrderDetail() {
   const { orderId } = useParams<{ orderId: string }>()
@@ -27,6 +21,13 @@ export default function OrderDetail() {
   const [isTimeFilterDropdownOpen, setIsTimeFilterDropdownOpen] = useState(false)
   const timeFilterDropdownRef = useRef<HTMLDivElement>(null)
   const ordersPerPage = 3
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [totalRefundAmount, setTotalRefundAmount] = useState(0)
+  const [customerNotes, setCustomerNotes] = useState<CustomerNote[]>([])
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false)
+  const [newNoteText, setNewNoteText] = useState('')
+  const [isAddingNote, setIsAddingNote] = useState(false)
 
   const timeFilterOptions = [
     'All Time',
@@ -114,6 +115,41 @@ export default function OrderDetail() {
           })
           
           setCustomerOrders(transformedCustomerOrders)
+          
+          // Fetch refund requests for all customer orders
+          try {
+            const orderIds = transformedCustomerOrders.map(o => o.orderId)
+            let totalRefund = 0
+            
+            // Fetch refund requests for each order
+            for (const orderId of orderIds) {
+              try {
+                const refundResponse = await api.get(`/orders/${orderId}/refund-requests`)
+                const refundRequests = refundResponse.data?.data?.refundRequests || []
+                const approvedRefunds = refundRequests.filter((rr: any) => rr.status === 'approved')
+                const refundSum = approvedRefunds.reduce((sum: number, rr: any) => {
+                  const amount = rr.amountMinor ? parseFloat(rr.amountMinor) / 100 : 0
+                  return sum + amount
+                }, 0)
+                totalRefund += refundSum
+              } catch (err) {
+                // Ignore errors for individual orders
+                console.error(`Error fetching refunds for order ${orderId}:`, err)
+              }
+            }
+            
+            setTotalRefundAmount(totalRefund)
+          } catch (error) {
+            console.error('Error fetching refund requests:', error)
+          }
+          
+          // Fetch customer notes
+          try {
+            const notes = await customerNotesApi.getNotes(orderData.userId)
+            setCustomerNotes(notes)
+          } catch (error) {
+            console.error('Error fetching customer notes:', error)
+          }
         } catch (error) {
           console.error('Error fetching customer orders:', error)
         }
@@ -172,12 +208,9 @@ export default function OrderDetail() {
 
   // Calculate summary statistics based on filtered orders
   const totalOrders = filteredOrders.length
-  const activeOrders = filteredOrders.filter(o => o.status === 'active').length
-  const inactiveOrders = filteredOrders.filter(o => o.status === 'inactive').length
-  const totalRefunds = inactiveOrders // Simplified: assume inactive orders are refunded
-  const totalRefundAmount = filteredOrders
-    .filter(o => o.status === 'inactive')
-    .reduce((sum, o) => sum + o.amount, 0)
+  const completedOrders = filteredOrders.filter(o => o.status === 'delivered' || o.status === 'closed').length
+  const cancelledOrders = filteredOrders.filter(o => o.status === 'cancelled').length
+  const totalRefunds = cancelledOrders // Count of cancelled orders (which may have refunds)
 
   // Get real customer data from orderDetails (prioritize orderDetails over order)
   const customerEmail = orderDetails?.user?.email || order.customerEmail || 'N/A'
@@ -230,25 +263,6 @@ export default function OrderDetail() {
   // Billing address (usually same as shipping, or could be separate field)
   const billingAddress = shippingAddress // For now, use shipping address as billing
 
-  // Mock customer notes
-  const customerNotes: CustomerNote[] = [
-    {
-      id: '1',
-      text: 'Regular buyer, prefers express shipping. Very responsive to promotional emails.',
-      addedBy: 'John Doe',
-      date: 'Jun 10, 2024',
-      color: 'blue'
-    },
-    {
-      id: '2',
-      text: 'High-value customer. Always pays on time. Excellent communication.',
-      addedBy: 'Jane Smith',
-      date: 'Dec 28, 2023',
-      color: 'green'
-    }
-  ]
-
-
   const handleViewAllOrders = () => {
     if (orderId) {
       navigate(`/orders/${orderId}/view`)
@@ -273,8 +287,33 @@ export default function OrderDetail() {
     }
   }
 
-  const handleAddNote = () => {
-    console.log('Add note clicked')
+  const handleAddNote = async () => {
+    if (!newNoteText.trim()) {
+      alert('Please enter a note')
+      return
+    }
+
+    if (!orderDetails?.user?.id) {
+      alert('Customer information not available')
+      return
+    }
+
+    setIsAddingNote(true)
+    try {
+      const newNote = await customerNotesApi.createNote(
+        orderDetails.user.id,
+        newNoteText.trim(),
+        orderId || undefined
+      )
+      setCustomerNotes([newNote, ...customerNotes])
+      setNewNoteText('')
+      setShowAddNoteModal(false)
+    } catch (error: any) {
+      console.error('Error adding note:', error)
+      alert(error?.response?.data?.message || 'Failed to add note. Please try again.')
+    } finally {
+      setIsAddingNote(false)
+    }
     // Add functionality to add customer note
   }
 
@@ -284,15 +323,81 @@ export default function OrderDetail() {
     }
   }
 
+  // Helper function to determine order type
+  const getOrderType = (order: OrderDetails | null): 'auction' | 'admin-ecommerce' | 'vendor' => {
+    if (!order) return 'admin-ecommerce'
+    
+    // If orderType is already set, use it
+    if (order.orderType === 'vendor') return 'vendor'
+    if (order.orderType === 'superadmin' || order.orderType === 'ecommerce') return 'admin-ecommerce'
+    
+    // Check auctionId
+    if ((order as any).auctionId) {
+      return 'auction'
+    }
+    
+    // Check vendor role
+    if (order.vendor && (order.vendor as any).role === 'vendor') {
+      return 'vendor'
+    }
+    
+    // Default to admin-ecommerce
+    return 'admin-ecommerce'
+  }
+
+  // Helper function to get status badge color
+  const getStatusBadgeClass = (status: string) => {
+    const statusLower = status.toLowerCase()
+    if (statusLower === 'completed' || statusLower === 'delivered' || statusLower === 'closed') {
+      return 'bg-green-100 text-green-700'
+    }
+    if (statusLower === 'paid') {
+      return 'bg-blue-100 text-blue-700'
+    }
+    if (statusLower === 'pending' || statusLower === 'created' || statusLower === 'fulfillment_pending') {
+      return 'bg-yellow-100 text-yellow-700'
+    }
+    if (statusLower === 'shipped') {
+      return 'bg-orange-100 text-orange-700'
+    }
+    if (statusLower === 'cancelled') {
+      return 'bg-red-100 text-red-700'
+    }
+    return 'bg-gray-100 text-gray-700'
+  }
+
+  // Helper function to format status display
+  const formatStatus = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'created': 'Pending',
+      'paid': 'Paid',
+      'fulfillment_pending': 'Pending',
+      'shipped': 'Shipped',
+      'delivered': 'Completed',
+      'closed': 'Completed',
+      'cancelled': 'Cancelled',
+    }
+    return statusMap[status.toLowerCase()] || status
+  }
+
   // If on detail route, show order detail view matching reference image
   if (isDetailRoute) {
     // Calculate totals from real order items - define orderItems first
     const orderItems = orderDetails?.items || []
     
+    // Determine order type
+    const orderType = getOrderType(orderDetails)
+    
+    // Get currency from order
+    const currency = orderDetails?.currency || 'QAR'
+    
     // Real products from order items
     const orderProducts = orderItems.map((item: any) => {
       const unitPrice = parseFloat(item.priceMinor || '0') / 100
       const quantity = item.quantity || 1
+      const productImage = item.product?.media?.[0]?.url || 
+                          item.product?.media?.[0]?.url || 
+                          'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=100&h=100&fit=crop'
       return {
         id: item.id || item.productId,
         name: item.product?.title || 'Unknown Product',
@@ -300,16 +405,123 @@ export default function OrderDetail() {
         quantity: quantity,
         unitPrice: unitPrice,
         subtotal: unitPrice * quantity,
+        image: productImage,
       }
     })
 
-    const orderTimeline = [
-      { status: 'Order Placed', date: 'Dec 15, 2024', time: '2:30 PM', completed: true },
-      { status: 'Payment Confirmed', date: 'Dec 15, 2024', time: '3:20 PM', completed: true },
-      { status: 'Processing', date: 'Dec 15, 2024', time: '9:15 AM', completed: false, isCurrent: true },
-      { status: 'Shipped', date: '', time: '', completed: false },
-      { status: 'Delivered', date: '', time: '', completed: false },
-    ]
+    // Build order timeline from real order data
+    const buildOrderTimeline = () => {
+      const timeline = []
+      const orderStatus = orderDetails?.status || 'created'
+      const createdAt = orderDetails?.createdAt ? new Date(orderDetails.createdAt) : null
+      const updatedAt = orderDetails?.updatedAt ? new Date(orderDetails.updatedAt) : null
+      
+      // Helper to format date and time
+      const formatDateTime = (date: Date) => {
+        if (!date || isNaN(date.getTime())) return { date: '', time: '' }
+        return {
+          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+        }
+      }
+      
+      // Order Placed - always completed (createdAt)
+      const orderPlacedDate = createdAt ? formatDateTime(createdAt) : { date: '', time: '' }
+      timeline.push({
+        status: 'Order Placed',
+        date: orderPlacedDate.date,
+        time: orderPlacedDate.time,
+        completed: true,
+        isCurrent: false
+      })
+      
+      // Payment Confirmed - completed if status is 'paid' or later
+      const isPaid = ['paid', 'fulfillment_pending', 'shipped', 'delivered', 'closed'].includes(orderStatus)
+      let paymentDate = { date: '', time: '' }
+      if (isPaid) {
+        // For payment, use updatedAt when status became 'paid', or createdAt if paid at creation
+        if (orderStatus === 'paid' && createdAt && updatedAt) {
+          // If status is 'paid' and times are close, payment happened at creation
+          if (Math.abs(createdAt.getTime() - updatedAt.getTime()) < 60000) {
+            paymentDate = formatDateTime(createdAt)
+          } else {
+            paymentDate = formatDateTime(updatedAt)
+          }
+        } else if (updatedAt) {
+          paymentDate = formatDateTime(updatedAt)
+        } else if (createdAt) {
+          paymentDate = formatDateTime(createdAt)
+        }
+      }
+      timeline.push({
+        status: 'Payment Confirmed',
+        date: paymentDate.date,
+        time: paymentDate.time,
+        completed: isPaid,
+        isCurrent: !isPaid && orderStatus === 'created'
+      })
+      
+      // Processing - completed if status is 'fulfillment_pending' or later
+      const isProcessing = ['fulfillment_pending', 'shipped', 'delivered', 'closed'].includes(orderStatus)
+      // Use updatedAt when status is exactly 'fulfillment_pending', otherwise use updatedAt as approximation
+      let processingDate = { date: '', time: '' }
+      if (isProcessing) {
+        if (orderStatus === 'fulfillment_pending' && updatedAt) {
+          processingDate = formatDateTime(updatedAt)
+        } else if (updatedAt) {
+          // If status moved beyond processing, use updatedAt as approximation
+          processingDate = formatDateTime(updatedAt)
+        }
+      }
+      timeline.push({
+        status: 'Processing',
+        date: processingDate.date,
+        time: processingDate.time,
+        completed: isProcessing,
+        isCurrent: !isProcessing && orderStatus === 'paid'
+      })
+      
+      // Shipped - completed if status is 'shipped' or later
+      const isShipped = ['shipped', 'delivered', 'closed'].includes(orderStatus)
+      // Use updatedAt when status is exactly 'shipped'
+      let shippedDate = { date: '', time: '' }
+      if (isShipped) {
+        if (orderStatus === 'shipped' && updatedAt) {
+          shippedDate = formatDateTime(updatedAt)
+        } else if (updatedAt) {
+          // If delivered, shipped happened before, use updatedAt as approximation
+          shippedDate = formatDateTime(updatedAt)
+        }
+      }
+      timeline.push({
+        status: 'Shipped',
+        date: shippedDate.date,
+        time: shippedDate.time,
+        completed: isShipped,
+        isCurrent: !isShipped && orderStatus === 'fulfillment_pending'
+      })
+      
+      // Delivered - completed if status is 'delivered' or 'closed'
+      const isDelivered = ['delivered', 'closed'].includes(orderStatus)
+      // Use updatedAt when status is 'delivered' or 'closed'
+      let deliveredDate = { date: '', time: '' }
+      if (isDelivered) {
+        if (updatedAt) {
+          deliveredDate = formatDateTime(updatedAt)
+        }
+      }
+      timeline.push({
+        status: 'Delivered',
+        date: deliveredDate.date,
+        time: deliveredDate.time,
+        completed: isDelivered,
+        isCurrent: !isDelivered && orderStatus === 'shipped'
+      })
+      
+      return timeline
+    }
+    
+    const orderTimeline = buildOrderTimeline()
 
     // Use actual order number from API
     const formattedOrderId = orderDetails?.orderNumber || order.orderNumber || order.id
@@ -340,21 +552,81 @@ export default function OrderDetail() {
     const orderDateStr = orderDetails?.createdAt || order.orderDate
     const { formatted: formattedDate, time: orderTime } = parseDate(orderDateStr)
     
-    // Calculate totals from real order items (already defined above)
-    const subtotal = orderItems.reduce((sum: number, item: any) => {
-      const itemPrice = parseFloat(item.priceMinor || '0') / 100
-      return sum + (itemPrice * (item.quantity || 1))
-    }, 0)
-    const discount = parseFloat(orderDetails?.discountMinor || '0') / 100
+    // Total from order (subtotal/discount used for display elsewhere)
     const shipping = 0 // Shipping might be in order data, for now 0
     const total = parseFloat(orderDetails?.totalMinor || '0') / 100
 
-    // Customer data from real order
-    const detailCustomerName = customerName
-    const detailCustomerEmail = customerEmail
-    const detailCustomerPhone = customerPhone
+    // Map display status to API status
+    const getStatusValue = (displayStatus: string): string => {
+      const statusMap: Record<string, string> = {
+        'Created': 'created',
+        'Paid': 'paid',
+        'Processing': 'fulfillment_pending',
+        'Shipped': 'shipped',
+        'Delivered': 'delivered',
+        'Completed': 'closed',
+        'Cancelled': 'cancelled',
+      }
+      return statusMap[displayStatus] || displayStatus.toLowerCase()
+    }
 
-    const handleUpdateStatus = () => {
+    // Get available status options based on current status
+    const getAvailableStatuses = (): string[] => {
+      const currentStatus = orderDetails?.status || 'created'
+      
+      // For auction orders, check if payment is complete before allowing fulfillment statuses
+      const isAuctionOrder = (orderDetails as any)?.auctionId
+      const paymentStage = (orderDetails as any)?.paymentStage
+      
+      // If auction order and payment not complete, restrict status options
+      if (isAuctionOrder && paymentStage && 
+          ['down_payment_required', 'final_payment_required', 'full_payment_required'].includes(paymentStage)) {
+        // Only allow payment-related statuses or cancellation
+        if (currentStatus === 'created' || currentStatus === 'down_payment_paid') {
+          return ['Cancelled'] // Can only cancel until payment is complete
+        }
+      }
+      
+      const validTransitions: Record<string, string[]> = {
+        created: ['Paid', 'Cancelled'],
+        down_payment_paid: ['Paid', 'Cancelled'], // For auction orders
+        paid: ['Processing', 'Cancelled'],
+        fulfillment_pending: ['Shipped', 'Cancelled'],
+        shipped: ['Delivered', 'Cancelled'],
+        delivered: ['Completed'],
+        closed: [], // Terminal state
+        cancelled: [], // Terminal state
+      }
+      return validTransitions[currentStatus] || []
+    }
+
+    const handleUpdateStatus = async (newStatus: string) => {
+      if (!orderId) return
+      
+      setShowStatusDropdown(false)
+      setIsUpdatingStatus(true)
+      
+      try {
+        const statusValue = getStatusValue(newStatus)
+        await ordersApi.updateStatus(orderId, statusValue)
+        
+        // Refresh order data to get updated timeline and status - ensures real-time update
+        const updatedOrder = await ordersApi.getById(orderId)
+        setOrderDetails(updatedOrder)
+        
+        // Timeline will automatically update based on new orderDetails status and updatedAt
+        
+        // Show success message
+        alert(`Order status updated to ${newStatus} successfully`)
+      } catch (error: any) {
+        console.error('Error updating status:', error)
+        alert(error?.response?.data?.message || 'Failed to update order status. Please try again.')
+      } finally {
+        setIsUpdatingStatus(false)
+      }
+    }
+
+    const handleAddTracking = () => {
       if (orderId) {
         navigate(`/orders/${orderId}/shipping`)
       }
@@ -376,6 +648,39 @@ export default function OrderDetail() {
       window.print()
     }
 
+    const handleViewProfile = () => {
+      if (orderDetails?.userId) {
+        navigate(`/users/${orderDetails.userId}`)
+      }
+    }
+
+    const handleViewVendor = () => {
+      if (orderDetails?.vendor?.id) {
+        navigate(`/vendors/${orderDetails.vendor.id}/detail`)
+      }
+    }
+
+    // Get customer data for header section
+    const headerCustomerImageUrl = (orderDetails?.user as any)?.profileImageUrl || null
+    const headerCustomerName = customerName
+    const headerCustomerEmail = customerEmail
+    const headerCustomerPhone = customerPhone || '-'
+
+    // Get vendor info if it's a vendor order
+    // Check if vendor exists (even if only id and email are available)
+    const hasVendor = orderDetails?.vendor && orderDetails.vendor.id
+    const vendorInfo = orderType === 'vendor' && hasVendor && orderDetails?.vendor ? {
+      id: orderDetails.vendor.id,
+      name: (orderDetails.vendor as any)?.name || orderDetails.vendor.email || 'Vendor',
+      email: orderDetails.vendor.email,
+      imageUrl: (orderDetails.vendor as any)?.profileImageUrl || null
+    } : null
+    
+    // Debug: Log vendor info for troubleshooting
+    if (orderType === 'vendor') {
+      console.log('Vendor order detected:', { orderType, hasVendor, vendor: orderDetails?.vendor, vendorInfo })
+    }
+
     return (
       <div className="space-y-4 md:space-y-6 px-4 md:px-0">
         {/* Page Header */}
@@ -388,186 +693,160 @@ export default function OrderDetail() {
           </p>
         </div>
 
-        {/* Order Details Section */}
-        <div>
-          <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Order Details</h2>
-          <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-            {/* Order ID Card - Light Blue */}
-            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-blue-800 mb-1">Order ID</p>
-              <p className="text-base sm:text-lg font-semibold text-blue-800 break-all">{formattedOrderId}</p>
-            </div>
-            
-            {/* Order Date Card - Light Green */}
-            <div className="rounded-lg bg-green-50 border border-green-200 p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-green-800 mb-1">Order Date</p>
-              <p className="text-base sm:text-lg font-semibold text-green-800">{formattedDate}</p>
-              <p className="text-xs sm:text-sm text-green-800 mt-1">{orderTime}</p>
-            </div>
-            
-            {/* Total Amount Card - Light Purple */}
-            <div className="rounded-lg bg-purple-50 border border-purple-200 p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-purple-800 mb-1">Total Amount</p>
-              <p className="text-base sm:text-lg font-semibold text-purple-800">{orderDetails?.currency || 'QAR'} {total.toFixed(2)}</p>
-            </div>
+        {/* Order ID, Date and Action Buttons - Above Customer Information */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
+          {/* Left: Order ID and Date */}
+          <div className="flex flex-col">
+            <p className="text-base sm:text-lg font-bold text-gray-900">{formattedOrderId}</p>
+            <p className="text-sm text-gray-600">{formattedDate} at {orderTime}</p>
           </div>
+
+          {/* Right: Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <button
+              onClick={handleDownloadInvoice}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+            >
+              <DownloadIcon className="w-4 h-4" />
+              <span>Download Invoice</span>
+            </button>
+            {/* Vendor Information Button - Only for vendor orders */}
+            {orderType === 'vendor' && vendorInfo && (
+              <button
+                onClick={handleViewVendor}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+              >
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {vendorInfo.imageUrl ? (
+                    <img 
+                      src={vendorInfo.imageUrl} 
+                      alt={vendorInfo.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <span className="text-xs font-semibold text-white">
+                      {vendorInfo.name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <span>Vendor Information</span>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Customer Information Section */}
-        <div>
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">Customer Information</h2>
-            <button
-              onClick={() => navigate(`/users/${orderDetails?.userId || (order as any)?.userId}`)}
-              className="px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors"
-            >
-              View Profile
-            </button>
-          </div>
-          <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            <div>
-              <div className="flex items-start gap-2 mb-3 sm:mb-2">
-                <UserIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-900">Name</p>
-                  <p className="text-xs sm:text-sm text-gray-600 break-words">{detailCustomerName}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2 mb-3 sm:mb-2">
-                <PhoneIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-900">Phone</p>
-                  <p className="text-xs sm:text-sm text-gray-600 break-all">{detailCustomerPhone}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2 mb-2">
-                <MailIcon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-900">Email</p>
-                  <p className="text-xs sm:text-sm text-gray-600 break-all">{detailCustomerEmail}</p>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <MapPinIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <p className="text-xs sm:text-sm font-medium text-gray-900">Shipping Address</p>
-              </div>
-              <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                {shippingAddress.street && <p>{shippingAddress.street}{shippingAddress.apartment ? `, ${shippingAddress.apartment}` : ''}</p>}
-                {(shippingAddress.city || shippingAddress.state || shippingAddress.postalCode) && (
-                  <p>
-                    {[shippingAddress.city, shippingAddress.state, shippingAddress.postalCode].filter(Boolean).join(', ')}
-                  </p>
-                )}
-                {shippingAddress.country && <p>{shippingAddress.country}</p>}
-                {!shippingAddress.street && !shippingAddress.city && !shippingAddress.country && (
-                  <p className="text-gray-400 italic">No address provided</p>
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 relative">
+          <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Customer Information</h2>
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
+            {/* Left: Customer Info */}
+            <div className="flex items-start gap-4 flex-1">
+              {/* Customer Avatar */}
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {headerCustomerImageUrl ? (
+                  <img 
+                    src={headerCustomerImageUrl} 
+                    alt={headerCustomerName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.style.display = 'none'
+                    }}
+                  />
+                ) : (
+                  <span className="text-2xl font-semibold text-gray-600">
+                    {headerCustomerName.charAt(0).toUpperCase()}
+                  </span>
                 )}
               </div>
+              {/* Customer Details */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">{headerCustomerName}</h3>
+                <p className="text-sm text-gray-600 mb-1">{headerCustomerEmail}</p>
+                <p className="text-sm text-gray-600">{headerCustomerPhone}</p>
+              </div>
             </div>
-          </div>
+
+            {/* Right: View Profile Button (top right) and Status Badge (bottom right) */}
+            <div className="flex flex-col items-start sm:items-end gap-4 sm:absolute sm:top-4 sm:right-6 sm:bottom-4 sm:justify-between">
+              <button
+                onClick={handleViewProfile}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
+              >
+                <UserIcon className="w-4 h-4" />
+                <span>View Profile</span>
+              </button>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(orderDetails?.status || '')}`}>
+                {formatStatus(orderDetails?.status || '')}
+              </span>
+            </div>
           </div>
         </div>
-
-        {/* Vendor Information Section - Only for vendor orders */}
-        {orderDetails?.orderType === 'vendor' && orderDetails?.vendor && (
-          <div>
-            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Vendor Information</h2>
-            <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="flex-shrink-0">
-                    <img
-                      src={(orderDetails.vendor as any)?.profileImageUrl || `https://i.pravatar.cc/100?img=${(orderDetails.vendor as any)?.name?.length || 0}`}
-                      alt={(orderDetails.vendor as any)?.name || 'Vendor'}
-                      className="h-12 w-12 sm:h-16 sm:w-16 rounded-full object-cover border-2 border-orange-200"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://i.pravatar.cc/100?img=${(orderDetails.vendor as any)?.name?.length || 0}`;
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm sm:text-base font-semibold text-gray-900">
-                      {(orderDetails.vendor as any)?.name || orderDetails.vendor?.email || 'Vendor'}
-                    </p>
-                    <p className="text-xs sm:text-sm text-gray-600">{orderDetails.vendor?.email}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => navigate(`/vendors/${orderDetails.vendor?.id}`)}
-                  className="px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors"
-                >
-                  View Vendor
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Order Items Section */}
         <div>
           <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Order Items</h2>
           <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-            <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-            <table className="w-full border-collapse min-w-[600px] md:min-w-0">
-              <thead>
-                <tr className='bg-gray-100'>
-                  <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap">Product</th>
-                  <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap">SKU</th>
-                  <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap">Qty</th>
-                  <th className="px-2 md:px-4 py-2 md:py-3 text-left text-xs md:text-sm font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap">Unit Price</th>
-                  <th className="px-2 md:px-4 py-2 md:py-3 text-right text-xs md:text-sm font-semibold text-gray-600 border-b border-gray-200 whitespace-nowrap">Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderProducts.map((product) => (
-                  <tr key={product.id}>
-                    <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-900 border-b border-gray-200">{product.name}</td>
-                    <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 border-b border-gray-200">{product.sku}</td>
-                    <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 border-b border-gray-200">{product.quantity}</td>
-                    <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 border-b border-gray-200 whitespace-nowrap">${product.unitPrice.toFixed(2)}</td>
-                    <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-900 text-right border-b border-gray-200 whitespace-nowrap">${product.subtotal.toFixed(2)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">Product</th>
+                    <th className="text-center py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">Qty</th>
+                    <th className="text-right py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">Unit Price</th>
+                    <th className="text-right py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">Subtotal</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className='sm:hidden block'>
-                  <td colSpan={4} className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-600 text-right border-t border-gray-200">Shipping:</td>
-                  <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm text-gray-900 text-right border-t border-gray-200">${shipping.toFixed(2)}</td>
-                </tr>
-                <tr className='sm:hidden block'>
-                  <td colSpan={4} className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm font-semibold text-gray-900 text-right">Total:</td>
-                  <td className="px-2 md:px-4 py-2 md:py-3 text-xs md:text-sm font-semibold text-gray-900 text-right">${total.toFixed(2)}</td>
-                </tr>
-              </tfoot>
-            </table>
-
-            <div className='px-4 sm:block hidden pt-3 pb-3 bg-gray-100'>
-            <div className='flex justify-between'>
-              <div className='semi-bold'>Subtotal:</div>
-              <div>${subtotal.toFixed(2)}</div>
-            </div>
-            {discount > 0 && (
-              <div className='flex justify-between'>
-                <div className='semi-bold'>Discount:</div>
-                <div>-${discount.toFixed(2)}</div>
-              </div>
-            )}
-            <div className='flex justify-between'>
-              <div className='semi-bold'>Shipping:</div>
-              <div>${shipping.toFixed(2)}</div>
-            </div>
-            <div className='flex justify-between'>
-              <div className='semi-bold'>Total:</div>
-              <div>${total.toFixed(2)}</div>
-            </div>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {orderProducts.map((product) => (
+                    <tr key={product.id} className="bg-white">
+                      <td className="py-3 px-3 sm:px-4">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <img 
+                            src={product.image || 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=100&h=100&fit=crop'} 
+                            alt={product.name} 
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover flex-shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=100&h=100&fit=crop'
+                            }}
+                          />
+                          <div className="min-w-0">
+                            <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{product.name}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">SKU: {product.sku}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-700 text-center whitespace-nowrap">{product.quantity}</td>
+                      <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-700 text-right whitespace-nowrap">{currency} {product.unitPrice.toFixed(2)}</td>
+                      <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm font-medium text-gray-900 text-right whitespace-nowrap">{currency} {product.subtotal.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  {/* Shipping Row */}
+                  <tr className="bg-gray-50 border-t-2 border-gray-300">
+                    <td className="py-3 px-3 sm:px-4">
+                      <p className="text-xs sm:text-sm text-gray-700">Shipping</p>
+                    </td>
+                    <td className="py-3 px-3 sm:px-4"></td>
+                    <td className="py-3 px-3 sm:px-4"></td>
+                    <td className="py-3 px-3 sm:px-4 text-xs sm:text-sm text-gray-700 text-right whitespace-nowrap">{currency} {shipping.toFixed(2)}</td>
+                  </tr>
+                  {/* Total Row */}
+                  <tr className="bg-gray-50">
+                    <td className="py-3 px-3 sm:px-4">
+                      <p className="text-sm sm:text-base font-bold text-gray-900">Total</p>
+                    </td>
+                    <td className="py-3 px-3 sm:px-4"></td>
+                    <td className="py-3 px-3 sm:px-4"></td>
+                    <td className="py-3 px-3 sm:px-4 text-sm sm:text-base font-bold text-gray-900 text-right whitespace-nowrap">{currency} {total.toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-            </div>
         </div>
 
         {/* Payment Information and Delivery Information Section */}
@@ -580,21 +859,29 @@ export default function OrderDetail() {
                 <div className='flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2'>
                   <p className="text-xs sm:text-sm font-medium text-gray-900">Payment Method</p>
                   <div className="flex items-center gap-2">
-                    <svg className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none">
-                      <rect width="24" height="16" rx="2" fill="#1A1F71"/>
-                      <path d="M8 8h8v8H8z" fill="#F79E1B"/>
-                    </svg>
-                    <p className="text-xs sm:text-sm text-gray-600 break-all">--- 4532</p>
+                    {orderDetails?.paymentMethod ? (
+                      <>
+                        <svg className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+                          <rect width="24" height="16" rx="2" fill="#1A1F71"/>
+                          <path d="M8 8h8v8H8z" fill="#F79E1B"/>
+                        </svg>
+                        <p className="text-xs sm:text-sm text-gray-600 break-all">{orderDetails.paymentMethod}</p>
+                      </>
+                    ) : (
+                      <p className="text-xs sm:text-sm text-gray-400 italic">Not specified</p>
+                    )}
                   </div>
                 </div>
                 <div className='flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2'>
                   <p className="text-xs sm:text-sm font-medium text-gray-900">Transaction ID</p>
-                  <p className="text-xs sm:text-sm text-gray-600 break-all">TXN-789456123</p>
+                  <p className="text-xs sm:text-sm text-gray-400 italic break-all">
+                    {(orderDetails as any)?.paymentIntentId ? `#${(orderDetails as any).paymentIntentId.slice(-12)}` : 'Not available'}
+                  </p>
                 </div>
                 <div className='flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2 sm:items-center'>
                   <p className="text-xs sm:text-sm font-medium text-gray-900">Status</p>
-                  <span className="inline-flex items-center px-2 sm:px-4 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit">
-                    Paid
+                  <span className={`inline-flex items-center px-2 sm:px-4 rounded-full text-xs font-medium w-fit ${getStatusBadgeClass(orderDetails?.status || '')}`}>
+                    {formatStatus(orderDetails?.status || '')}
                   </span>
                 </div>
               </div>
@@ -606,21 +893,29 @@ export default function OrderDetail() {
               <div className="space-y-3 sm:space-y-4 bg-gray-300 rounded-md p-3">
                 <div className='flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2 sm:items-center'>
                   <p className="text-xs sm:text-sm font-medium text-gray-900">Shipping Method</p>
-                  <p className="text-xs sm:text-sm text-gray-600">Express Delivery</p>
+                  <p className="text-xs sm:text-sm text-gray-400 italic">{orderDetails?.deliveryCompany ? 'Express Delivery' : 'Not specified'}</p>
                 </div>
                 <div className='flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2 sm:items-center'>
                   <p className="text-xs sm:text-sm font-medium text-gray-900">Courier</p>
-                  <p className="text-xs sm:text-sm text-gray-600">FedEx</p>
+                  <p className="text-xs sm:text-sm text-gray-400 italic">{orderDetails?.deliveryCompany || 'Not specified'}</p>
                 </div>
                 <div className='flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2 sm:items-center'>
                   <p className="text-xs sm:text-sm font-medium text-gray-900">Tracking Number</p>
-                  <a href="#" className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 underline break-all">
-                    #IZ999AA1234567890
-                  </a>
+                  {orderDetails?.trackingNumber ? (
+                    <a href="#" className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 underline break-all">
+                      #{orderDetails.trackingNumber}
+                    </a>
+                  ) : (
+                    <p className="text-xs sm:text-sm text-gray-400 italic">Not available</p>
+                  )}
                 </div>
                 <div className='flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2 sm:items-center'>
                   <p className="text-xs sm:text-sm font-medium text-gray-900">Est. Delivery</p>
-                  <p className="text-xs sm:text-sm text-gray-600">Dec 18, 2024</p>
+                  <p className="text-xs sm:text-sm text-gray-400 italic">
+                    {orderDetails?.estimatedDeliveryDate 
+                      ? new Date(orderDetails.estimatedDeliveryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : 'Not specified'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -652,9 +947,11 @@ export default function OrderDetail() {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs sm:text-sm md:text-base font-medium text-gray-900">{item.status}</p>
+                  <p className={`text-xs sm:text-sm md:text-base font-medium ${item.completed || item.isCurrent ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {item.status}
+                  </p>
                 </div>
-                <p className="text-xs sm:text-sm text-gray-500 sm:ml-auto">
+                <p className={`text-xs sm:text-sm sm:ml-auto ${item.completed || item.isCurrent ? 'text-gray-500' : 'text-gray-400'}`}>
                   {item.date && item.time ? `${item.date}, ${item.time}` : 'Pending'}
                 </p>
               </div>
@@ -665,16 +962,65 @@ export default function OrderDetail() {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
+          {/* Add Tracking Button */}
           <button
             type="button"
-            onClick={handleUpdateStatus}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2.5 sm:py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-[#E8840D] cursor-pointer"
+            onClick={handleAddTracking}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 sm:py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-blue-700 cursor-pointer"
           >
-            <span>Update Status</span>
             <svg className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
+            <span>
+              {orderDetails?.trackingNumber || orderDetails?.deliveryCompany 
+                ? 'Update Tracking Information' 
+                : 'Add Tracking'}
+            </span>
           </button>
+          
+          {/* Update Status Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowStatusDropdown(!showStatusDropdown)
+              }}
+              disabled={isUpdatingStatus}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7931E] px-4 py-2.5 sm:py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-[#E8840D] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>Update Status</span>
+              <ChevronDownIcon className={`h-3 w-3 sm:h-4 sm:w-4 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showStatusDropdown && (
+              <>
+                <div 
+                  className="fixed inset-0 z-[45]"
+                  onClick={() => setShowStatusDropdown(false)}
+                />
+                <div className="absolute right-0 sm:right-0 bottom-full mb-2 z-[60] bg-white rounded-lg shadow-xl border border-gray-200 w-48 py-2 max-h-64 overflow-y-auto">
+                  {getAvailableStatuses().length > 0 ? (
+                    getAvailableStatuses().map((status) => (
+                      <button
+                        key={status}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleUpdateStatus(status)
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-sm rounded-lg hover:bg-gray-50 active:scale-[0.98] transition-all duration-200 text-gray-700"
+                      >
+                        {status}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2.5 text-sm text-gray-400">
+                      No status changes available
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
           <button
             type="button"
             onClick={handleIssueRefund}
@@ -796,9 +1142,6 @@ export default function OrderDetail() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Orders Card */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 relative">
-          <div className="flex justify-end absolute top-6 right-6">
-            <p className="text-sm font-medium text-green-600">+12%</p>
-          </div>
           <div className="flex flex-col">
             <div className="rounded-lg bg-blue-100 p-2 w-fit mb-3">
               <ShoppingBagIcon className="h-5 w-5 text-blue-600" />
@@ -810,36 +1153,30 @@ export default function OrderDetail() {
 
         {/* Completed Orders Card */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 relative">
-          <div className="flex justify-end absolute top-6 right-6">
-            <p className="text-sm font-medium text-green-600">+8%</p>
-          </div>
           <div className="flex flex-col">
             <div className="rounded-lg bg-green-100 p-2 w-fit mb-3">
               <CheckCircleIcon className="h-5 w-5 text-green-600" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{activeOrders}</p>
-            <p className="text-sm text-gray-600 mt-1">Active Orders</p>
+            <p className="text-2xl font-bold text-gray-900">{completedOrders}</p>
+            <p className="text-sm text-gray-600 mt-1">Completed Orders</p>
           </div>
         </div>
 
-        {/* Inactive Orders Card */}
+        {/* Cancelled Orders Card */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 relative">
-          <div className="flex justify-end absolute top-6 right-6">
-            <p className="text-sm font-medium text-red-600">-2%</p>
-          </div>
           <div className="flex flex-col">
             <div className="rounded-lg bg-red-100 p-2 w-fit mb-3">
               <XCircleIcon className="h-5 w-5 text-red-600" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{inactiveOrders}</p>
-            <p className="text-sm text-gray-600 mt-1">Inactive Orders</p>
+            <p className="text-2xl font-bold text-gray-900">{cancelledOrders}</p>
+            <p className="text-sm text-gray-600 mt-1">Cancelled Orders</p>
           </div>
         </div>
 
         {/* Total Refunds Card */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 relative">
           <div className="flex justify-end absolute top-6 right-6">
-            <p className="text-sm font-medium text-orange-600">${totalRefundAmount.toFixed(0)}</p>
+            <p className="text-sm font-medium text-orange-600">QAR {totalRefundAmount.toFixed(2)}</p>
           </div>
           <div className="flex flex-col">
             <div className="rounded-lg bg-orange-100 p-2 w-fit mb-3">
@@ -966,26 +1303,22 @@ export default function OrderDetail() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{orderItem.orderDate}</td>
-                  <td className="px-4 py-3 text-sm text-gray-900">${orderItem.amount.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{orderItem.amountFormatted || `QAR ${orderItem.amount.toFixed(2)}`}</td>
                   <td className="px-4 py-3">
                     <OrderStatusBadge status={orderItem.status} />
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{orderItem.paymentMethod}</td>
                   <td className="px-4 py-3">
-                    {orderItem.status === 'active' ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(`/orders/${orderItem.id.replace('#', '')}/detail`)
-                        }}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
-                      >
-                        View Detail
-                      </button>
-                    ) : (
-                      <span className="text-sm text-gray-400">--</span>
-                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigate(`/orders/${orderItem.orderId}/detail`)
+                      }}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer"
+                    >
+                      View order
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -1092,7 +1425,7 @@ export default function OrderDetail() {
           <h3 className="text-base font-semibold text-gray-900">Customer Notes</h3>
           <button
             type="button"
-            onClick={handleAddNote}
+            onClick={() => setShowAddNoteModal(true)}
             className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-blue-500 hover:text-blue-600 cursor-pointer"
           >
             <PlusIcon className="h-4 w-4" />
@@ -1100,19 +1433,70 @@ export default function OrderDetail() {
           </button>
         </div>
         <div className="space-y-4">
-          {customerNotes.map((note) => (
-            <div key={note.id} className="flex gap-4">
-              <div className={`w-1 rounded-full ${note.color === 'blue' ? 'bg-blue-500' : 'bg-green-500'}`} />
-              <div className="flex-1">
-                <p className="text-sm text-gray-700">{note.text}</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Added by {note.addedBy} - {note.date}
-                </p>
-              </div>
-            </div>
-          ))}
+          {customerNotes.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">No notes added yet.</p>
+          ) : (
+            customerNotes.map((note) => {
+              const addedByName = note.addedByUser?.name || note.addedByUser?.email || 'Admin'
+              const noteDate = new Date(note.createdAt).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric' 
+              })
+              // Alternate colors for visual distinction
+              const colorClass = parseInt(note.id.slice(-1), 16) % 2 === 0 ? 'bg-blue-500' : 'bg-green-500'
+              
+              return (
+                <div key={note.id} className="flex gap-4">
+                  <div className={`w-1 rounded-full ${colorClass}`} />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700">{note.note}</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Added by {addedByName} - {noteDate}
+                    </p>
+                  </div>
+                </div>
+              )
+            })
+          )}
         </div>
       </div>
+
+      {/* Add Note Modal */}
+      {showAddNoteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Customer Note</h3>
+            <textarea
+              value={newNoteText}
+              onChange={(e) => setNewNoteText(e.target.value)}
+              placeholder="Enter note text..."
+              className="w-full border border-gray-300 rounded-lg p-3 text-sm text-gray-900 focus:border-[#F7931E] focus:outline-none focus:ring-1 focus:ring-[#F7931E] resize-none"
+              rows={4}
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddNoteModal(false)
+                  setNewNoteText('')
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddNote}
+                disabled={isAddingNote || !newNoteText.trim()}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-[#F7931E] rounded-lg hover:bg-[#E8840D] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isAddingNote ? 'Adding...' : 'Add Note'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
