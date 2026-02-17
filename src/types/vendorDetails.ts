@@ -19,6 +19,8 @@ export interface VendorDocument {
   title: string
   status: string
   date: string
+  url?: string
+  fileName?: string
 }
 
 export interface VendorServiceItem {

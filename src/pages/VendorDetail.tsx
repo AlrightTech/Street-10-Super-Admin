@@ -30,10 +30,48 @@ const RatingChart = () => {
   )
 }
 
-const DocumentCard = ({ title, status, date, icon, translateTitle, translateStatus }: { title: string; status: string; date: string; icon: 'doc' | 'briefcase'; translateTitle: (title: string) => string; translateStatus: (status: string) => string }) => (
-  <div className="flex h-full flex-col justify-between rounded-lg border border-[#E6E8F0] bg-white px-4 py-4 md:px-6 md:py-5">
+function openDocumentUrl(url: string) {
+  if (url.startsWith('data:')) {
+    try {
+      const parts = url.split(',')
+      const mime = parts[0].match(/data:([^;]+)/)?.[1] || 'application/octet-stream'
+      const binary = atob(parts[1] || '')
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      const blob = new Blob([bytes], { type: mime })
+      const blobUrl = URL.createObjectURL(blob)
+      window.open(blobUrl, '_blank')
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+    } catch {
+      window.open(url, '_blank')
+    }
+  } else {
+    window.open(url, '_blank')
+  }
+}
+
+const DocumentCard = ({
+  title,
+  status,
+  date,
+  icon,
+  url,
+  fileName,
+  translateTitle,
+  translateStatus,
+}: {
+  title: string
+  status: string
+  date: string
+  icon: 'doc' | 'briefcase'
+  url?: string
+  fileName?: string
+  translateTitle: (title: string) => string
+  translateStatus: (status: string) => string
+}) => (
+  <div className="flex h-full min-w-[280px] max-w-[320px] shrink-0 flex-col justify-between rounded-lg border border-[#E6E8F0] bg-white px-4 py-4 md:px-6 md:py-5">
     <div className="flex items-center gap-3 sm:gap-4">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFF5E6] sm:h-12 sm:w-12">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF5E6] sm:h-12 sm:w-12">
         {icon === 'doc' ? (
           <svg className="h-5 w-5 text-[#F39C12] sm:h-6 sm:w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M7 2h8l5 5v13a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2z" />
@@ -46,16 +84,26 @@ const DocumentCard = ({ title, status, date, icon, translateTitle, translateStat
           </svg>
         )}
       </div>
-      <div>
-        <p className="text-lg font-semibold text-[#1C1F30] sm:text-base">{translateTitle(title)}</p>
+      <div className="min-w-0">
+        <p className="text-lg font-semibold text-[#1C1F30] sm:text-base truncate" title={title}>{translateTitle(title)}</p>
+        {fileName && <p className="text-xs text-[#6B7280] truncate mt-0.5" title={fileName}>{fileName}</p>}
         <span className="text-sm font-medium text-[#22C55E]">{translateStatus(status)}</span>
       </div>
     </div>
-    <div className="mt-4 flex items-center justify-end gap-2 text-sm font-medium text-[#374151] md:mt-6">
-      <svg className="h-4 w-4 text-[#6B7280]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 5v12m0 0l4-4m-4 4l-4-4M5 19h14" />
-      </svg>
+    <div className="mt-4 flex items-center justify-between gap-2 text-sm font-medium text-[#374151] md:mt-6">
       <span>{date}</span>
+      {url ? (
+        <button
+          type="button"
+          onClick={() => openDocumentUrl(url)}
+          className="inline-flex items-center gap-1 text-[#2563EB] hover:text-[#1D4ED8] hover:underline"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+          View
+        </button>
+      ) : null}
     </div>
   </div>
 )
@@ -187,13 +235,56 @@ export default function VendorDetail() {
           companyDocs.profileImageUrl ||
           ''
         
-        // Extract owner name (personal name) from companyDocs or user.name
+        // Extract owner name and business details
         const businessDetails = companyDocs.businessDetails || {}
         const ownerName = (apiVendor as any).ownerName || 
                          businessDetails.ownerName || 
                          apiVendor.user?.name || 
                          apiVendor.user?.email?.split('@')[0] || 
                          'Unknown'
+        const vendorType = businessDetails.businessType || 'General'
+        const addressParts = [
+          businessDetails.businessAddress,
+          businessDetails.city,
+          businessDetails.state,
+          businessDetails.zipCode,
+          businessDetails.country,
+        ].filter(Boolean)
+        const address = addressParts.length > 0 ? addressParts.join(', ') : 'N/A'
+
+        // Build real documents from companyDocs (no dummy data)
+        const documents: VendorDetailData['documents'] = []
+        const createdDate = new Date(apiVendor.createdAt).toLocaleDateString()
+        const docStatus = apiVendor.status === 'approved' ? 'verified' : 'pending'
+        if (companyDocs.companyRegistrationDoc?.url) {
+          documents.push({
+            id: 'company-registration',
+            title: 'Company Registration Document',
+            status: docStatus,
+            date: createdDate,
+            url: companyDocs.companyRegistrationDoc.url,
+            fileName: companyDocs.companyRegistrationDoc.name,
+          })
+        }
+        if (companyDocs.commercialLicense?.url) {
+          documents.push({
+            id: 'commercial-license',
+            title: 'Commercial License',
+            status: docStatus,
+            date: createdDate,
+            url: companyDocs.commercialLicense.url,
+            fileName: companyDocs.commercialLicense.name,
+          })
+        }
+        // If vendor has no uploaded docs, show a single placeholder card
+        if (documents.length === 0) {
+          documents.push({
+            id: 'no-docs',
+            title: 'No documents uploaded',
+            status: 'pending',
+            date: '—',
+          })
+        }
 
         // Transform API response to VendorDetailData format with real data
         const transformedVendor: VendorDetailData = {
@@ -205,14 +296,14 @@ export default function VendorDetail() {
           role: 'vendor',
           status: apiVendor.status === 'approved' ? 'approved' : 'pending',
           avatar: profileImageUrl,
-          address: 'N/A',
-          vendorType: 'General',
+          address,
+          vendorType,
           commissionRate: commissionRateStr,
           financialInfo: {
             commissionRate: commissionRateStr,
             accountStatus: apiVendor.status === 'approved' ? 'active' : 'pending',
             totalSales: totalSalesStr,
-            paymentRequest: 'None', // No payout/payment-request API yet
+            paymentRequest: 'None',
           },
           performance: [
             { id: '1', label: 'Total Orders', value: String(orders.length), icon: 'clipboard' },
@@ -220,11 +311,7 @@ export default function VendorDetail() {
             { id: '3', label: 'Rating', value: '0', icon: 'star' },
             { id: '4', label: 'Pending Orders', value: String(pendingOrders), icon: 'clipboard' },
           ],
-          documents: [
-            { id: '1', title: 'Business License', status: apiVendor.status === 'approved' ? 'verified' : 'pending', date: new Date(apiVendor.createdAt).toLocaleDateString() },
-            { id: '2', title: 'ID Document', status: apiVendor.status === 'approved' ? 'verified' : 'pending', date: new Date(apiVendor.createdAt).toLocaleDateString() },
-            { id: '3', title: 'Tax Certificate', status: apiVendor.status === 'approved' ? 'verified' : 'pending', date: new Date(apiVendor.createdAt).toLocaleDateString() },
-          ],
+          documents,
           services,
         }
 
@@ -404,18 +491,22 @@ export default function VendorDetail() {
 
       <div>
         <h2 className="text-[26px] font-semibold text-[#1A1A1A]">Documents &amp; Verification</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {vendor.documents.map((document, index) => (
-            <DocumentCard
-              key={document.id}
-              title={document.title}
-              status={document.status}
-              date={document.date}
-              icon={index === 2 ? 'briefcase' : 'doc'}
-              translateTitle={translateTitle}
-              translateStatus={translateStatus}
-            />
-          ))}
+        <div className="mt-4 overflow-x-auto overflow-y-hidden pb-2 -mx-1 px-1 scrollbar-thin">
+          <div className="flex gap-4 w-max min-w-full">
+            {vendor.documents.map((document, index) => (
+              <DocumentCard
+                key={document.id}
+                title={document.title}
+                status={document.status}
+                date={document.date}
+                icon={index === 2 ? 'briefcase' : 'doc'}
+                url={document.url}
+                fileName={document.fileName}
+                translateTitle={translateTitle}
+                translateStatus={translateStatus}
+              />
+            ))}
+          </div>
         </div>
       </div>
 

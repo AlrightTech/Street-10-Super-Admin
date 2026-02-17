@@ -18,6 +18,26 @@ const DownloadIcon = ({ className = 'h-4 w-4 text-[#6B7280]' }: { className?: st
   </svg>
 )
 
+function openDocumentUrl(url: string) {
+  if (url.startsWith('data:')) {
+    try {
+      const parts = url.split(',')
+      const mime = parts[0].match(/data:([^;]+)/)?.[1] || 'application/octet-stream'
+      const binary = atob(parts[1] || '')
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      const blob = new Blob([bytes], { type: mime })
+      const blobUrl = URL.createObjectURL(blob)
+      window.open(blobUrl, '_blank')
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+    } catch {
+      window.open(url, '_blank')
+    }
+  } else {
+    window.open(url, '_blank')
+  }
+}
+
 export default function VendorRequestDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -83,7 +103,12 @@ export default function VendorRequestDetail() {
         // Parse companyDocs JSON to extract business details and documents
         const companyDocs = apiVendor.companyDocs as any || {}
         const businessDetails = companyDocs.businessDetails || {}
-        const profileImageUrl = companyDocs.profileImageUrl || null
+        // Profile image: vendor table first, then companyDocs (legacy)
+        const profileImageUrl = (apiVendor.profileImageUrl && String(apiVendor.profileImageUrl).trim())
+          ? apiVendor.profileImageUrl
+          : (companyDocs.profileImageUrl && String(companyDocs.profileImageUrl).trim())
+            ? companyDocs.profileImageUrl
+            : null
 
         // Extract document information
         const documents: any[] = []
@@ -110,7 +135,7 @@ export default function VendorRequestDetail() {
           })
         }
 
-        // Build address string
+        // Single business address (from Business Details)
         const addressParts = [
           businessDetails.businessAddress,
           businessDetails.city,
@@ -120,22 +145,21 @@ export default function VendorRequestDetail() {
         ].filter(Boolean)
         const address = addressParts.length > 0 ? addressParts.join(', ') : 'N/A'
 
-        // Transform API response to VendorRequestDetail format
-        // Use ownerName from backend (which comes from companyDocs.businessDetails.ownerName or user.name)
         const ownerName = apiVendor.ownerName || apiVendor.user?.name || businessDetails.ownerName || apiVendor.user?.email?.split('@')[0] || 'Vendor'
-        
+        const vendorType = businessDetails.businessType || 'General'
+
         const transformedDetail: VendorRequestDetail = {
           id: parseInt(id),
-          ownerName: ownerName, // Owner's personal name
+          ownerName,
           avatar: profileImageUrl || '',
           contact: {
             email: apiVendor.email || apiVendor.user?.email || '',
-            phone: apiVendor.phone || businessDetails.contactPersonPhone || apiVendor.user?.phone || '',
+            phone: apiVendor.phone || businessDetails.companyPhone || businessDetails.contactPersonPhone || apiVendor.user?.phone || '',
           },
           business: {
-            businessName: apiVendor.name || 'Business', // Business name
-            vendorType: 'General',
-            address: address,
+            businessName: apiVendor.name || 'Business',
+            vendorType,
+            address,
             contactPerson: businessDetails.contactPerson || ownerName || 'Contact',
           },
           documents: documents.length > 0 ? documents : [
@@ -147,9 +171,7 @@ export default function VendorRequestDetail() {
               icon: 'document',
             },
           ],
-          businessDescription: businessDetails.businessAddress 
-            ? `Business located at ${address}` 
-            : 'No business description provided',
+          businessDescription: address !== 'N/A' ? address : 'No business address provided',
           status: (apiVendor.status === 'approved' ? 'approved' :
                    apiVendor.status === 'rejected' ? 'rejected' :
                    'pending') as any,
@@ -287,14 +309,24 @@ export default function VendorRequestDetail() {
         from-white via-white to-[#F4F6FB] p-4 sm:p-6">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <div className="flex flex-col gap-4 px-2 sm:px-5 sm:flex-row sm:items-center sm:gap-5">
-              {detail.avatar ? (
-                <img
-                  src={detail.avatar}
-                  alt={detail.ownerName}
-                  className="h-24 w-24 rounded-full object-cover sm:mx-0"
-                />
-              ) : (
-                <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-[#F3F4F6] text-xl font-semibold text-[#9CA3AF] sm:mx-0">
+              <div className="relative h-24 w-24 shrink-0 sm:mx-0">
+                {detail.avatar ? (
+                  <img
+                    src={detail.avatar}
+                    alt={detail.ownerName}
+                    className="h-24 w-24 rounded-full object-cover absolute inset-0"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                      if (fallback) fallback.style.display = 'flex'
+                    }}
+                  />
+                ) : null}
+                <div
+                  className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-[#F3F4F6] text-xl font-semibold text-[#9CA3AF]"
+                  style={{ display: detail.avatar ? 'none' : 'flex' }}
+                >
                   {detail.ownerName
                     .split(' ')
                     .map((part) => part[0])
@@ -302,7 +334,7 @@ export default function VendorRequestDetail() {
                     .toUpperCase()
                     .slice(0, 2)}
                 </div>
-              )}
+              </div>
               <div className="space-y-3 text-center sm:text-left">
                 <div>
                   <h2 className="text-2xl font-semibold text-[#111827]">{detail.ownerName}</h2>
@@ -364,7 +396,7 @@ export default function VendorRequestDetail() {
                     {document.url && (
                       <button
                         type="button"
-                        onClick={() => window.open(document.url as string, '_blank')}
+                        onClick={() => openDocumentUrl(document.url as string)}
                         className="inline-flex items-center gap-1 text-[#2563EB] hover:text-[#1D4ED8]"
                       >
                         <DownloadIcon className="h-4 w-4 text-[#2563EB]" />
@@ -380,15 +412,6 @@ export default function VendorRequestDetail() {
       </div>
 
       <div className="space-y-4">
-        <div>
-          <h2 className="text-base font-semibold text-[#1F2937]">Business Details</h2>
-          <div className="mt-4 rounded-lg bg-white px-4 py-6 sm:px-6 sm:py-8 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
-            <p className="text-sm font-medium text-[#333333]">
-              {detail.businessDescription}
-            </p>
-          </div>
-        </div>
-
         <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pb-5">
           <button
             type="button"
