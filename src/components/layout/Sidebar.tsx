@@ -29,8 +29,8 @@ import { settingsApi } from '../../services/settings.api'
  */
 const navigationItems: Array<NavigationItem & { hasDropdown?: boolean; notificationModule?: NotificationModule }> = [
   { id: '1', label: 'Dashboard', icon: 'LayoutDashboard', path: '/dashboard', active: true },
-  { id: '2', label: 'Users', icon: 'Users', path: '/users' },
-  { id: '3', label: 'Vendors', icon: 'ShoppingBag', path: '/vendors' },
+  { id: '2', label: 'Users', icon: 'Users', path: '/users', notificationModule: 'users' },
+  { id: '3', label: 'Vendors', icon: 'ShoppingBag', path: '/vendors', notificationModule: 'vendors' },
   { id: '4', label: 'Orders', icon: 'Package', path: '/orders', notificationModule: 'orders' },
   { id: '5', label: 'Finance', icon: 'DollarSign', path: '/finance', notificationModule: 'finance' },
   { id: '6', label: 'Marketing', icon: 'Megaphone', path: '/marketing' },
@@ -38,7 +38,7 @@ const navigationItems: Array<NavigationItem & { hasDropdown?: boolean; notificat
   { id: '8', label: 'Main Control', icon: 'Settings', path: '/main-control' },
   { id: '9', label: 'Categories', icon: 'FolderTree', path: '/categories' },
   { id: '10', label: 'Products', icon: 'Package', path: '/products', hasDropdown: true },
-  { id: '11', label: 'Wallet', icon: 'Wallet', path: '/wallet' },
+  { id: '11', label: 'Wallet', icon: 'Wallet', path: '/wallet', notificationModule: 'wallet' },
   { id: '12', label: 'Settings', icon: 'Settings', path: '/settings' },
 ]
 

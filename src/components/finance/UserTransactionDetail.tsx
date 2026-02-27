@@ -1,264 +1,150 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import FilterDropdown from './FilterDropdown'
 import FinanceStatusBadge from './FinanceStatusBadge'
 import { DownloadIcon, CalendarIcon, MoreVerticalIcon } from '../icons/Icons'
 import type { UserTransaction } from '../../pages/Finance'
 import type { FinanceStatus } from './FinanceStatusBadge'
+import { userApi, walletApi, type UserOrder, type UserBid, type UserSpendingSummary } from '../../services/wallet.api'
 
 interface UserTransactionDetailProps {
   transaction: UserTransaction
   onClose: () => void
 }
 
-interface BiddingTransaction {
-  id: string
-  product: {
-    name: string
-    category: string
-    image?: string
-  }
-  bidId: string
-  bidAmount: string
-  currentPrice: string
-  result: 'Won' | 'Pending' | 'Lost' | 'Winning'
-  endDate: string
-  status: 'won' | 'won-payment-pending' | 'lost' | 'winning'
-}
-
-interface OrderTransaction {
-  id: string
-  transactionId: string
-  orderId: string
-  amountPaid: string
-  vendor: string
-  status: FinanceStatus
-  date: string
-}
-
-// Mock order transaction data
-const MOCK_ORDER_TRANSACTIONS: OrderTransaction[] = [
-  { id: '1', transactionId: 'TX-001', orderId: '#001', amountPaid: '$2,750', vendor: 'Electronic', status: 'paid', date: '15 Aug 2023' },
-  { id: '2', transactionId: 'TX-002', orderId: '#002', amountPaid: '$299', vendor: 'Carlos Rohn', status: 'refunded', date: '3 Aug 2023' },
-  { id: '3', transactionId: 'TX-003', orderId: '#003', amountPaid: '$299', vendor: 'Juri', status: 'pending', date: '3 Aug 2023' },
-  { id: '4', transactionId: 'TX-004', orderId: '#004', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '5', transactionId: 'TX-005', orderId: '#005', amountPaid: '$299', vendor: 'Juri', status: 'refunded', date: '3 Aug 2023' },
-  { id: '6', transactionId: 'TX-006', orderId: '#006', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '7', transactionId: 'TX-007', orderId: '#007', amountPaid: '$299', vendor: 'Juri', status: 'pending', date: '3 Aug 2023' },
-  { id: '8', transactionId: 'TX-008', orderId: '#008', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '9', transactionId: 'TX-009', orderId: '#009', amountPaid: '$299', vendor: 'Juri', status: 'refunded', date: '3 Aug 2023' },
-  { id: '10', transactionId: 'TX-010', orderId: '#010', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '11', transactionId: 'TX-011', orderId: '#011', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '12', transactionId: 'TX-012', orderId: '#012', amountPaid: '$299', vendor: 'Juri', status: 'pending', date: '3 Aug 2023' },
-  { id: '13', transactionId: 'TX-013', orderId: '#013', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '14', transactionId: 'TX-014', orderId: '#014', amountPaid: '$299', vendor: 'Juri', status: 'refunded', date: '3 Aug 2023' },
-  { id: '15', transactionId: 'TX-015', orderId: '#015', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '16', transactionId: 'TX-016', orderId: '#016', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '17', transactionId: 'TX-017', orderId: '#017', amountPaid: '$299', vendor: 'Juri', status: 'pending', date: '3 Aug 2023' },
-  { id: '18', transactionId: 'TX-018', orderId: '#018', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '19', transactionId: 'TX-019', orderId: '#019', amountPaid: '$299', vendor: 'Juri', status: 'refunded', date: '3 Aug 2023' },
-  { id: '20', transactionId: 'TX-020', orderId: '#020', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '21', transactionId: 'TX-021', orderId: '#021', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '22', transactionId: 'TX-022', orderId: '#022', amountPaid: '$299', vendor: 'Juri', status: 'pending', date: '3 Aug 2023' },
-  { id: '23', transactionId: 'TX-023', orderId: '#023', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '24', transactionId: 'TX-024', orderId: '#024', amountPaid: '$299', vendor: 'Juri', status: 'refunded', date: '3 Aug 2023' },
-  { id: '25', transactionId: 'TX-025', orderId: '#025', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '26', transactionId: 'TX-026', orderId: '#026', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '27', transactionId: 'TX-027', orderId: '#027', amountPaid: '$299', vendor: 'Juri', status: 'pending', date: '3 Aug 2023' },
-  { id: '28', transactionId: 'TX-028', orderId: '#028', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '29', transactionId: 'TX-029', orderId: '#029', amountPaid: '$299', vendor: 'Juri', status: 'refunded', date: '3 Aug 2023' },
-  { id: '30', transactionId: 'TX-030', orderId: '#030', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '31', transactionId: 'TX-031', orderId: '#031', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '32', transactionId: 'TX-032', orderId: '#032', amountPaid: '$299', vendor: 'Juri', status: 'pending', date: '3 Aug 2023' },
-  { id: '33', transactionId: 'TX-033', orderId: '#033', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '34', transactionId: 'TX-034', orderId: '#034', amountPaid: '$299', vendor: 'Juri', status: 'refunded', date: '3 Aug 2023' },
-  { id: '35', transactionId: 'TX-035', orderId: '#035', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '36', transactionId: 'TX-036', orderId: '#036', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '37', transactionId: 'TX-037', orderId: '#037', amountPaid: '$299', vendor: 'Juri', status: 'pending', date: '3 Aug 2023' },
-  { id: '38', transactionId: 'TX-038', orderId: '#038', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-  { id: '39', transactionId: 'TX-039', orderId: '#039', amountPaid: '$299', vendor: 'Juri', status: 'refunded', date: '3 Aug 2023' },
-  { id: '40', transactionId: 'TX-040', orderId: '#040', amountPaid: '$299', vendor: 'Juri', status: 'paid', date: '3 Aug 2023' },
-]
-
-// Mock bidding transaction data
-const MOCK_BIDDING_TRANSACTIONS: BiddingTransaction[] = [
-  {
-    id: '1',
-    product: { name: 'Vintage Leather Jacket', category: 'Electronic' },
-    bidId: 'BID-2024-001',
-    bidAmount: '$8,750',
-    currentPrice: '$8,750',
-    result: 'Won',
-    endDate: '15/01/2024',
-    status: 'won',
-  },
-  {
-    id: '2',
-    product: { name: 'Smart Watch Pro', category: 'Carlos Rohn' },
-    bidId: 'BID-2024-002',
-    bidAmount: '$299.99',
-    currentPrice: '$299.99',
-    result: 'Pending',
-    endDate: '15/01/2024',
-    status: 'won-payment-pending',
-  },
-  {
-    id: '3',
-    product: { name: 'Designer Handbag', category: 'Juri' },
-    bidId: 'BID-2024-003',
-    bidAmount: '$299.99',
-    currentPrice: '$299.99',
-    result: 'Lost',
-    endDate: '15/01/2024',
-    status: 'lost',
-  },
-  {
-    id: '4',
-    product: { name: 'Wireless Headphones', category: 'Home Decor' },
-    bidId: 'BID-2024-004',
-    bidAmount: '$299.99',
-    currentPrice: '$299.99',
-    result: 'Pending',
-    endDate: '15/01/2024',
-    status: 'winning',
-  },
-  {
-    id: '5',
-    product: { name: 'Gaming Laptop', category: 'Electronics' },
-    bidId: 'BID-2024-005',
-    bidAmount: '$1,200',
-    currentPrice: '$1,200',
-    result: 'Won',
-    endDate: '16/01/2024',
-    status: 'won',
-  },
-  {
-    id: '6',
-    product: { name: 'Vintage Camera', category: 'Photography' },
-    bidId: 'BID-2024-006',
-    bidAmount: '$450',
-    currentPrice: '$450',
-    result: 'Lost',
-    endDate: '17/01/2024',
-    status: 'lost',
-  },
-  {
-    id: '7',
-    product: { name: 'Designer Sunglasses', category: 'Fashion' },
-    bidId: 'BID-2024-007',
-    bidAmount: '$150',
-    currentPrice: '$150',
-    result: 'Won',
-    endDate: '18/01/2024',
-    status: 'won',
-  },
-  {
-    id: '8',
-    product: { name: 'Smartphone', category: 'Electronics' },
-    bidId: 'BID-2024-008',
-    bidAmount: '$800',
-    currentPrice: '$800',
-    result: 'Pending',
-    endDate: '19/01/2024',
-    status: 'won-payment-pending',
-  },
-  {
-    id: '9',
-    product: { name: 'Vintage Watch', category: 'Accessories' },
-    bidId: 'BID-2024-009',
-    bidAmount: '$600',
-    currentPrice: '$600',
-    result: 'Won',
-    endDate: '20/01/2024',
-    status: 'won',
-  },
-  {
-    id: '10',
-    product: { name: 'Art Painting', category: 'Art' },
-    bidId: 'BID-2024-010',
-    bidAmount: '$2,500',
-    currentPrice: '$2,500',
-    result: 'Lost',
-    endDate: '21/01/2024',
-    status: 'lost',
-  },
-  {
-    id: '11',
-    product: { name: 'Musical Instrument', category: 'Music' },
-    bidId: 'BID-2024-011',
-    bidAmount: '$950',
-    currentPrice: '$950',
-    result: 'Won',
-    endDate: '22/01/2024',
-    status: 'won',
-  },
-  {
-    id: '12',
-    product: { name: 'Collectible Item', category: 'Collectibles' },
-    bidId: 'BID-2024-012',
-    bidAmount: '$350',
-    currentPrice: '$350',
-    result: 'Pending',
-    endDate: '23/01/2024',
-    status: 'winning',
-  },
-  {
-    id: '13',
-    product: { name: 'Sports Equipment', category: 'Sports' },
-    bidId: 'BID-2024-013',
-    bidAmount: '$180',
-    currentPrice: '$180',
-    result: 'Won',
-    endDate: '24/01/2024',
-    status: 'won',
-  },
-  {
-    id: '14',
-    product: { name: 'Furniture Set', category: 'Home Decor' },
-    bidId: 'BID-2024-014',
-    bidAmount: '$1,500',
-    currentPrice: '$1,500',
-    result: 'Lost',
-    endDate: '25/01/2024',
-    status: 'lost',
-  },
-  {
-    id: '15',
-    product: { name: 'Jewelry Piece', category: 'Jewelry' },
-    bidId: 'BID-2024-015',
-    bidAmount: '$750',
-    currentPrice: '$750',
-    result: 'Won',
-    endDate: '26/01/2024',
-    status: 'won',
-  },
-]
-
 const PAGE_SIZE = 10
 
 export default function UserTransactionDetail({ transaction, onClose }: UserTransactionDetailProps) {
+  const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState('By Date')
   const [activeTab, setActiveTab] = useState<'orders' | 'biddings'>('orders')
+  const [loading, setLoading] = useState(true)
+  const [summary, setSummary] = useState<UserSpendingSummary | null>(null)
+  const [orders, setOrders] = useState<UserOrder[]>([])
+  const [bids, setBids] = useState<UserBid[]>([])
+  const [ordersTotalPages, setOrdersTotalPages] = useState(1)
+  const [bidsTotalPages, setBidsTotalPages] = useState(1)
+  const [userPhone, setUserPhone] = useState<string>('')
+  const [userProfileImage, setUserProfileImage] = useState<string | null>(null)
+
+  // Extract userId from transaction
+  const userId = transaction.userId || ''
+
+  useEffect(() => {
+    if (userId) {
+      loadData()
+    }
+  }, [userId, activeTab, currentPage])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      
+      if (activeTab === 'orders') {
+        const ordersResponse = await userApi.getOrders(userId, {
+          page: currentPage,
+          limit: PAGE_SIZE,
+        })
+        setOrders(ordersResponse.data)
+        setOrdersTotalPages(ordersResponse.pagination.totalPages)
+      } else {
+        const bidsResponse = await userApi.getBids(userId, {
+          page: currentPage,
+          limit: PAGE_SIZE,
+        })
+        setBids(bidsResponse.data)
+        setBidsTotalPages(bidsResponse.pagination.totalPages)
+      }
+
+      // Load summary and user wallet (for phone and profile image) once
+      if (!summary) {
+        const [summaryData, walletData] = await Promise.all([
+          userApi.getSpendingSummary(userId),
+          walletApi.getUserWallet(userId).catch(() => null),
+        ])
+        setSummary(summaryData)
+        // Get user phone and profile image from wallet data if available
+        const walletUser = walletData?.wallet?.user
+        if (walletUser) {
+          if (walletUser.phone) {
+            setUserPhone(walletUser.phone)
+          }
+          if ((walletUser as { profileImageUrl?: string }).profileImageUrl) {
+            setUserProfileImage((walletUser as { profileImageUrl?: string }).profileImageUrl!)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleTabChange = (tab: 'orders' | 'biddings') => {
     setActiveTab(tab)
     setCurrentPage(1)
   }
 
+  // Helper function to map order status to finance status
+  const mapOrderStatusToFinanceStatus = (status: string): FinanceStatus => {
+    switch (status) {
+      case 'paid':
+      case 'delivered':
+        return 'paid'
+      case 'refunded':
+        return 'refunded'
+      case 'pending':
+      case 'created':
+        return 'pending'
+      default:
+        return 'pending'
+    }
+  }
+
   const totalPages = useMemo(() => {
-    const dataLength = activeTab === 'orders' ? MOCK_ORDER_TRANSACTIONS.length : MOCK_BIDDING_TRANSACTIONS.length
-    return Math.max(1, Math.ceil(dataLength / PAGE_SIZE))
-  }, [activeTab])
+    return activeTab === 'orders' ? ordersTotalPages : bidsTotalPages
+  }, [activeTab, ordersTotalPages, bidsTotalPages])
 
-  const paginatedOrders = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return MOCK_ORDER_TRANSACTIONS.slice(start, start + PAGE_SIZE)
-  }, [currentPage])
+  // Map backend orders to frontend format
+  const mappedOrders = useMemo(() => {
+    return orders.map((order) => ({
+      id: order.id,
+      transactionId: order.id.slice(0, 8).toUpperCase(),
+      orderId: `#${order.orderNumber}`,
+      amountPaid: `${(parseFloat(order.totalMinor) / 100).toFixed(2)} ${order.currency}`,
+      vendor: order.vendor?.name || 'Unknown',
+      status: mapOrderStatusToFinanceStatus(order.status),
+      date: new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+    }))
+  }, [orders])
 
-  const paginatedHistory = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return MOCK_BIDDING_TRANSACTIONS.slice(start, start + PAGE_SIZE)
-  }, [currentPage])
+  // Map backend bids to frontend format
+  const mappedBids = useMemo(() => {
+    return bids.map((bid) => {
+      const amount = parseFloat(bid.amountMinor) / 100
+      const product = bid.auction?.product
+      
+      return {
+        id: bid.id,
+        product: {
+          name: product?.title || 'Unknown Product',
+          category: bid.auction?.product?.id || 'Unknown',
+          image: product?.media?.[0]?.url,
+        },
+        bidId: bid.id.slice(0, 12).toUpperCase(),
+        bidAmount: `${amount.toFixed(2)} ${bid.currency}`,
+        currentPrice: `${amount.toFixed(2)} ${bid.currency}`,
+        result: bid.isWinning ? 'Won' : bid.auction?.state === 'closed' ? 'Lost' : 'Pending',
+        endDate: new Date(bid.auction?.endAt || bid.placedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', year: 'numeric' }),
+        status: bid.isWinning ? 'won' : bid.auction?.state === 'closed' ? 'lost' : 'winning',
+      }
+    })
+  }, [bids])
+
+  const paginatedOrders = mappedOrders
+  const paginatedHistory = mappedBids
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = []
@@ -314,9 +200,13 @@ export default function UserTransactionDetail({ transaction, onClose }: UserTran
             {/* Profile Picture */}
             <div className="flex-shrink-0">
               <img
-                src={`https://i.pravatar.cc/100?img=${(transaction.userName.length % 70) + 1}`}
+                src={userProfileImage || `https://i.pravatar.cc/100?img=${(transaction.userName.length % 70) + 1}`}
                 alt={transaction.userName}
                 className="h-20 w-20 rounded-full object-cover ring-2 ring-gray-200"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.src = `https://i.pravatar.cc/100?img=${(transaction.userName.length % 70) + 1}`
+                }}
               />
             </div>
             
@@ -329,9 +219,9 @@ export default function UserTransactionDetail({ transaction, onClose }: UserTran
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">{transaction.userEmail}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">+12345678900</span>
-                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm text-gray-600">{userPhone || 'N/A'}</span>
+                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 w-fit">
                     Active
                   </span>
                 </div>
@@ -343,7 +233,13 @@ export default function UserTransactionDetail({ transaction, onClose }: UserTran
           <div className="flex flex-col items-end gap-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                if (userId) {
+                  navigate(`/users/${userId}`)
+                } else {
+                  onClose()
+                }
+              }}
               className="inline-flex items-center justify-center rounded-lg bg-[#F7931E] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#E8851A]"
             >
               View Profile
@@ -355,59 +251,92 @@ export default function UserTransactionDetail({ transaction, onClose }: UserTran
       {/* Spending & Refunds Summary Section */}
       <div className="rounded-xl bg-white shadow-sm p-6">
         <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Spending & Refunds Summary</h2>
-        <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Total Orders Spent</h3>
-            <p className="text-2xl font-bold text-gray-900">$2149.96</p>
+        {loading && !summary ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C00]"></div>
           </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Total Bidding Spent</h3>
-            <p className="text-2xl font-bold text-gray-900">$2149.96</p>
+        ) : summary ? (
+          <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <p className="text-xl font-semibold text-gray-900 mb-1">
+                {(parseFloat(summary.totalOrdersSpent) / 100).toFixed(2)}
+                <span className="ml-1 text-xs font-normal text-gray-500">QAR</span>
+              </p>
+              <h3 className="text-sm font-normal text-gray-600">Total Orders Spent</h3>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <p className="text-xl font-semibold text-gray-900 mb-1">
+                {(parseFloat(summary.totalBiddingSpent) / 100).toFixed(2)}
+                <span className="ml-1 text-xs font-normal text-gray-500">QAR</span>
+              </p>
+              <h3 className="text-sm font-normal text-gray-600">Total Bidding Spent</h3>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <p className="text-xl font-semibold text-green-600 mb-1">
+                {(parseFloat(summary.totalOrderRefunds) / 100).toFixed(2)}
+                <span className="ml-1 text-xs font-normal text-gray-500">QAR</span>
+              </p>
+              <h3 className="text-sm font-normal text-gray-600">Total Order Refunds</h3>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <p className="text-xl font-semibold text-green-600 mb-1">
+                {(parseFloat(summary.totalWalletRefunds) / 100).toFixed(2)}
+                <span className="ml-1 text-xs font-normal text-gray-500">QAR</span>
+              </p>
+              <h3 className="text-sm font-normal text-gray-600">Total Wallet Refunds</h3>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <p className="text-xl font-semibold text-orange-600 mb-1">
+                {(parseFloat(summary.pendingOrderRefunds) / 100).toFixed(2)}
+                <span className="ml-1 text-xs font-normal text-gray-500">QAR</span>
+              </p>
+              <h3 className="text-sm font-normal text-gray-600">Pending Order Refunds</h3>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <p className="text-xl font-semibold text-orange-600 mb-1">
+                {(parseFloat(summary.pendingWalletRefunds) / 100).toFixed(2)}
+                <span className="ml-1 text-xs font-normal text-gray-500">QAR</span>
+              </p>
+              <h3 className="text-sm font-normal text-gray-600">Pending Wallet Refunds</h3>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <p className="text-xl font-semibold text-gray-900 mb-1">
+                {(parseFloat(summary.netSpending) / 100).toFixed(2)}
+                <span className="ml-1 text-xs font-normal text-gray-500">QAR</span>
+              </p>
+              <h3 className="text-sm font-normal text-gray-600">Net Spending</h3>
+            </div>
           </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Total Order Refunds</h3>
-            <p className="text-2xl font-bold text-green-600">$199.99</p>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Total Wallet Refunds</h3>
-            <p className="text-2xl font-bold text-green-600">$199.99</p>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Pending Order Refunds</h3>
-            <p className="text-2xl font-bold text-orange-600">$0.00</p>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Pending Wallet Refunds</h3>
-            <p className="text-2xl font-bold text-orange-600">$0.00</p>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Net Spending</h3>
-            <p className="text-2xl font-bold text-gray-900">$1949.97</p>
-          </div>
-        </div>
+        ) : null}
       </div>
 
       {/* Order Summary Section */}
       <div className="rounded-xl bg-white shadow-sm p-6">
         <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
-        <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Total Orders</h3>
-            <p className="text-2xl font-bold text-gray-900">15</p>
+        {summary ? (
+          <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <h3 className="text-sm font-normal text-gray-600 mb-2">Total Orders</h3>
+              <p className="text-2xl font-bold text-gray-900">{summary.totalOrders}</p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <h3 className="text-sm font-normal text-gray-600 mb-2">Completed orders</h3>
+              <p className="text-2xl font-bold text-green-600">{summary.completedOrders}</p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <h3 className="text-sm font-normal text-gray-600 mb-2">Refunds Orders</h3>
+              <p className="text-2xl font-bold text-orange-600">{summary.refundedOrders}</p>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-white p-5">
+              <h3 className="text-sm font-normal text-gray-600 mb-2">Total Bidding won</h3>
+              <p className="text-2xl font-bold text-gray-900">{summary.totalBiddingWon}</p>
+            </div>
           </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Completed orders</h3>
-            <p className="text-2xl font-bold text-green-600">9</p>
+        ) : (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C00]"></div>
           </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Refunds Orders</h3>
-            <p className="text-2xl font-bold text-orange-600">5</p>
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-5">
-            <h3 className="text-sm font-normal text-gray-600 mb-2">Total Bidding won</h3>
-            <p className="text-2xl font-bold text-gray-900">1</p>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Transaction History Section */}
@@ -431,7 +360,7 @@ export default function UserTransactionDetail({ transaction, onClose }: UserTran
                     : 'text-gray-600 hover:text-gray-900 border-b-2 border-transparent'
                 }`}
               >
-                Orders (40)
+                Orders ({summary?.totalOrders || 0})
               </button>
               <button
                 type="button"
@@ -442,7 +371,7 @@ export default function UserTransactionDetail({ transaction, onClose }: UserTran
                     : 'text-gray-600 hover:text-gray-900 border-b-2 border-transparent'
                 }`}
               >
-                Biddings (15)
+                Biddings ({summary?.totalBiddingWon || 0})
               </button>
             </div>
           </div>
@@ -511,7 +440,23 @@ export default function UserTransactionDetail({ transaction, onClose }: UserTran
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedHistory.map((history) => (
+                      {loading ? (
+                        <tr>
+                          <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FF8C00]"></div>
+                              Loading bids...
+                            </div>
+                          </td>
+                        </tr>
+                      ) : paginatedHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
+                            No bids found
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedHistory.map((history) => (
                         <tr key={history.id} className="border-b border-gray-200 last:border-b-0">
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -536,13 +481,17 @@ export default function UserTransactionDetail({ transaction, onClose }: UserTran
                           </TableCell>
                           <TableCell className="text-xs">{history.endDate}</TableCell>
                           <TableCell>
-                            <BiddingStatusBadge status={history.status} />
+                            <BiddingStatusBadge status={history.status as BiddingStatus} />
                           </TableCell>
                           <TableCell align="center">
-                            <ActionMenuButton transactionId={history.id} />
+                            <ActionMenuButton 
+                              transactionId={history.id} 
+                              type="bid"
+                              auctionId={bids.find(b => b.id === history.id)?.auction?.id}
+                            />
                           </TableCell>
                         </tr>
-                      ))}
+                      )))}
                     </tbody>
                   </table>
                 </div>
@@ -620,7 +569,23 @@ export default function UserTransactionDetail({ transaction, onClose }: UserTran
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedOrders.map((order) => (
+                      {loading ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FF8C00]"></div>
+                              Loading orders...
+                            </div>
+                          </td>
+                        </tr>
+                      ) : paginatedOrders.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
+                            No orders found
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedOrders.map((order) => (
                         <tr key={order.id} className="border-b border-gray-200 last:border-b-0">
                           <TableCell className="text-sm">{order.transactionId}</TableCell>
                           <TableCell className="text-sm">{order.orderId}</TableCell>
@@ -631,10 +596,14 @@ export default function UserTransactionDetail({ transaction, onClose }: UserTran
                           </TableCell>
                           <TableCell className="text-xs">{order.date}</TableCell>
                           <TableCell align="center">
-                            <ActionMenuButton transactionId={order.id} />
+                            <ActionMenuButton 
+                              transactionId={order.id} 
+                              type="order"
+                              orderId={orders.find(o => o.id === order.id)?.id}
+                            />
                           </TableCell>
                         </tr>
-                      ))}
+                      )))}
                     </tbody>
                   </table>
                 </div>
@@ -781,9 +750,13 @@ function BiddingStatusBadge({ status, className = '' }: BiddingStatusBadgeProps)
 
 interface ActionMenuButtonProps {
   transactionId: string
+  type?: 'order' | 'bid'
+  orderId?: string
+  auctionId?: string
 }
 
-function ActionMenuButton({ transactionId }: ActionMenuButtonProps) {
+function ActionMenuButton({ transactionId: _transactionId, type, orderId, auctionId }: ActionMenuButtonProps) {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -804,9 +777,11 @@ function ActionMenuButton({ transactionId }: ActionMenuButtonProps) {
   }, [open])
 
   const handleView = () => {
-    // Handle view action
-    // eslint-disable-next-line no-console
-    console.log(`View transaction: ${transactionId}`)
+    if (type === 'order' && orderId) {
+      navigate(`/orders/${orderId}/detail`)
+    } else if (type === 'bid' && auctionId) {
+      navigate(`/building-products/${auctionId}`)
+    }
     setOpen(false)
   }
 

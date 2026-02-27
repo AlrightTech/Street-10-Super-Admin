@@ -1,7 +1,7 @@
 /**
- * Notification types for different modules
+ * Notification types for different modules (sidebar tabs)
  */
-export type NotificationModule = 'orders' | 'finance'
+export type NotificationModule = 'users' | 'vendors' | 'orders' | 'finance' | 'wallet'
 
 /**
  * Notification interface
@@ -17,10 +17,14 @@ export interface Notification {
 }
 
 /**
- * Notification counts by module
+ * Notification counts by module (for sidebar badges)
+ * users = verification/KYC requested, vendors = pending vendors, orders = uncompleted, finance = pending refunds, wallet = pending withdrawals
  */
 export interface NotificationCounts {
+  users: number
+  vendors: number
   orders: number
   finance: number
+  wallet: number
 }
 

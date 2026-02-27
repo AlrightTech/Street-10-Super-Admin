@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { UserIcon, ArrowUpDownIcon, DollarSignIcon, LockIcon, CalendarIcon, MoreVerticalIcon, XIcon } from '../components/icons/Icons'
 import Pagination from '../components/ui/Pagination'
-import { mockUserWalletMetrics, mockUserWallets } from '../data/mockUserWallets'
+import { walletApi } from '../services/wallet.api'
 import type { UserWallet, UserWalletStatus } from '../types/wallet'
 
 /**
@@ -104,12 +104,20 @@ function getStatusBadgeColor(status: UserWalletStatus): string {
  * User Wallets Page Component
  */
 export default function UserWallets() {
-  const [wallets, setWallets] = useState<UserWallet[]>(mockUserWallets)
+  const [wallets, setWallets] = useState<UserWallet[]>([])
+  const [loading, setLoading] = useState(true)
+  const [metrics, setMetrics] = useState({
+    totalUsers: 0,
+    activeWallets: 0,
+    frozenWallets: 0,
+    totalBalance: '0.00 QAR',
+  })
   const [sortBy, setSortBy] = useState<string>('newest')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [activeFilter, setActiveFilter] = useState<'all' | UserWalletStatus>('all')
   const [searchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null)
   const [creditModalOpen, setCreditModalOpen] = useState(false)
   const [debitModalOpen, setDebitModalOpen] = useState(false)
@@ -120,7 +128,67 @@ export default function UserWallets() {
   const [debitAmount, setDebitAmount] = useState('')
   const [debitReason, setDebitReason] = useState('')
   const [freezeReason, setFreezeReason] = useState('')
+  const [processing, setProcessing] = useState(false)
   const itemsPerPage = 10
+
+  // Load wallets from API
+  useEffect(() => {
+    loadWallets()
+    loadMetrics()
+  }, [currentPage, activeFilter, statusFilter])
+
+  const loadWallets = async () => {
+    try {
+      setLoading(true)
+      const frozen = activeFilter === 'frozen' ? true : activeFilter === 'active' ? false : undefined
+      const response = await walletApi.getUserWallets({
+        page: currentPage,
+        limit: itemsPerPage,
+        frozen,
+      })
+      
+      // Map backend wallets to frontend format
+      const mappedWallets = response.data.map((wallet) => mapWalletToFrontend(wallet))
+      setWallets(mappedWallets)
+      setTotalPages(response.pagination.totalPages)
+    } catch (error) {
+      console.error('Error loading wallets:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadMetrics = async () => {
+    try {
+      const metricsData = await walletApi.getMetrics()
+      const totalBalance = parseFloat(metricsData.totalBalance) / 100
+      
+      setMetrics({
+        totalUsers: metricsData.totalWallets,
+        activeWallets: metricsData.totalWallets - metricsData.frozenWallets,
+        frozenWallets: metricsData.frozenWallets,
+        totalBalance: `${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} QAR`,
+      })
+    } catch (error) {
+      console.error('Error loading metrics:', error)
+    }
+  }
+
+  // Map backend wallet to frontend format
+  const mapWalletToFrontend = (wallet: any): UserWallet => {
+    const available = parseFloat(wallet.availableMinor) / 100
+    const lastTransaction = wallet.updatedAt || wallet.createdAt
+    
+    return {
+      id: wallet.userId,
+      userId: wallet.userId,
+      userName: wallet.user?.name || 'Unknown User',
+      userEmail: wallet.user?.email || '',
+      balance: `${available.toFixed(2)} ${wallet.currency}`,
+      lastTransaction: new Date(lastTransaction).toISOString().split('T')[0],
+      status: wallet.frozen ? 'frozen' : 'active',
+    }
+  }
 
   // Filter and sort wallets
   const filteredAndSortedWallets = useMemo(() => {
@@ -166,17 +234,8 @@ export default function UserWallets() {
     }
   }, [wallets])
 
-  // Paginate wallets
-  const paginatedWallets = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const endIndex = startIndex + itemsPerPage
-    return filteredAndSortedWallets.slice(startIndex, endIndex)
-  }, [filteredAndSortedWallets, currentPage])
-
-  // Calculate total pages
-  const totalPages = useMemo(() => {
-    return Math.ceil(filteredAndSortedWallets.length / itemsPerPage)
-  }, [filteredAndSortedWallets.length])
+  // Use API pagination - wallets are already paginated
+  const paginatedWallets = filteredAndSortedWallets
 
   // Reset to page 1 when filter or search changes
   useEffect(() => {
@@ -248,27 +307,32 @@ export default function UserWallets() {
   /**
    * Handle credit wallet submit
    */
-  const handleCreditSubmit = () => {
-    if (selectedWallet && creditAmount) {
-      // Update wallet balance
-      setWallets((prevWallets) =>
-        prevWallets.map((w) => {
-          if (w.id === selectedWallet.id) {
-            const currentBalance = parseFloat(w.balance.replace(/[^0-9.-]+/g, ''))
-            const creditValue = parseFloat(creditAmount.replace(/[^0-9.-]+/g, ''))
-            const newBalance = currentBalance + creditValue
-            return {
-              ...w,
-              balance: `$${newBalance.toFixed(2)}`,
-            }
-          }
-          return w
+  const handleCreditSubmit = async () => {
+    if (selectedWallet && creditAmount && creditDescription) {
+      try {
+        setProcessing(true)
+        const amountMinor = Math.round(parseFloat(creditAmount) * 100)
+        
+        await walletApi.creditWallet(selectedWallet.userId, {
+          amountMinor,
+          description: creditDescription,
         })
-      )
-      setCreditModalOpen(false)
-      setSelectedWallet(null)
-      setCreditAmount('')
-      setCreditDescription('')
+        
+        // Reload wallets to get updated data
+        await loadWallets()
+        await loadMetrics()
+        
+        setCreditModalOpen(false)
+        setSelectedWallet(null)
+        setCreditAmount('')
+        setCreditDescription('')
+        alert('Wallet credited successfully!')
+      } catch (error: any) {
+        console.error('Error crediting wallet:', error)
+        alert(error?.response?.data?.error?.message || error?.message || 'Failed to credit wallet')
+      } finally {
+        setProcessing(false)
+      }
     }
   }
 
@@ -296,33 +360,40 @@ export default function UserWallets() {
   /**
    * Handle debit wallet submit
    */
-  const handleDebitSubmit = () => {
-    if (selectedWallet && debitAmount) {
-      const currentBalance = parseFloat(selectedWallet.balance.replace(/[^0-9.-]+/g, ''))
-      const debitValue = parseFloat(debitAmount.replace(/[^0-9.-]+/g, ''))
-      
-      if (debitValue > currentBalance) {
-        alert('Debit amount cannot exceed current balance')
-        return
-      }
-
-      // Update wallet balance
-      setWallets((prevWallets) =>
-        prevWallets.map((w) => {
-          if (w.id === selectedWallet.id) {
-            const newBalance = currentBalance - debitValue
-            return {
-              ...w,
-              balance: `$${newBalance.toFixed(2)}`,
-            }
-          }
-          return w
+  const handleDebitSubmit = async () => {
+    if (selectedWallet && debitAmount && debitReason) {
+      try {
+        setProcessing(true)
+        const amountMinor = Math.round(parseFloat(debitAmount) * 100)
+        const currentBalance = parseFloat(selectedWallet.balance.replace(/[^0-9.-]+/g, ''))
+        const debitValue = parseFloat(debitAmount)
+        
+        if (debitValue > currentBalance) {
+          alert('Debit amount cannot exceed current balance')
+          setProcessing(false)
+          return
+        }
+        
+        await walletApi.debitWallet(selectedWallet.userId, {
+          amountMinor,
+          reason: debitReason,
         })
-      )
-      setDebitModalOpen(false)
-      setSelectedWallet(null)
-      setDebitAmount('')
-      setDebitReason('')
+        
+        // Reload wallets to get updated data
+        await loadWallets()
+        await loadMetrics()
+        
+        setDebitModalOpen(false)
+        setSelectedWallet(null)
+        setDebitAmount('')
+        setDebitReason('')
+        alert('Wallet debited successfully!')
+      } catch (error: any) {
+        console.error('Error debiting wallet:', error)
+        alert(error?.response?.data?.error?.message || error?.message || 'Failed to debit wallet')
+      } finally {
+        setProcessing(false)
+      }
     }
   }
 
@@ -349,25 +420,31 @@ export default function UserWallets() {
   /**
    * Handle freeze wallet submit
    */
-  const handleFreezeSubmit = () => {
+  const handleFreezeSubmit = async () => {
     if (selectedWallet) {
-      const newStatus: UserWalletStatus = selectedWallet.status === 'active' ? 'frozen' : 'active'
-      
-      // Update wallet status
-      setWallets((prevWallets) =>
-        prevWallets.map((w) => {
-          if (w.id === selectedWallet.id) {
-            return {
-              ...w,
-              status: newStatus,
-            }
-          }
-          return w
-        })
-      )
-      setFreezeModalOpen(false)
-      setSelectedWallet(null)
-      setFreezeReason('')
+      try {
+        setProcessing(true)
+        
+        if (selectedWallet.status === 'active') {
+          await walletApi.freezeWallet(selectedWallet.userId)
+        } else {
+          await walletApi.unfreezeWallet(selectedWallet.userId)
+        }
+        
+        // Reload wallets to get updated data
+        await loadWallets()
+        await loadMetrics()
+        
+        setFreezeModalOpen(false)
+        setSelectedWallet(null)
+        setFreezeReason('')
+        alert(`Wallet ${selectedWallet.status === 'active' ? 'frozen' : 'unfrozen'} successfully!`)
+      } catch (error: any) {
+        console.error('Error freezing/unfreezing wallet:', error)
+        alert(error?.response?.data?.error?.message || error?.message || 'Failed to update wallet status')
+      } finally {
+        setProcessing(false)
+      }
     }
   }
 
@@ -390,12 +467,12 @@ export default function UserWallets() {
 
       {/* Top Metrics Section */}
       <div className="mb-4 sm:mb-6 grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Total Request */}
+        {/* Total Users */}
         <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5 shadow-sm transition-colors hover:bg-gray-100">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-1">Total Request</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockUserWalletMetrics.totalUsers}</p>
+              <p className="text-sm text-gray-600 mb-1">Total Users</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalUsers}</p>
             </div>
             <div className="text-[#EE8E32]">
               <UserIcon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -408,7 +485,7 @@ export default function UserWallets() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Active Wallets</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockUserWalletMetrics.activeWallets}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.activeWallets}</p>
             </div>
             <div className="text-[#EE8E32]">
               <ArrowUpDownIcon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -421,7 +498,7 @@ export default function UserWallets() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Frozen Wallets</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockUserWalletMetrics.frozenWallets}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.frozenWallets}</p>
             </div>
             <div className="text-[#EE8E32]">
               <LockIcon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -434,7 +511,7 @@ export default function UserWallets() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Total Balance</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockUserWalletMetrics.totalBalance}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalBalance}</p>
             </div>
             <div className="text-[#EE8E32]">
               <DollarSignIcon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -562,7 +639,16 @@ export default function UserWallets() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {paginatedWallets.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FF8C00]"></div>
+                      Loading wallets...
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedWallets.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
                     No wallets found for the selected filters.
@@ -733,10 +819,17 @@ export default function UserWallets() {
                 <button
                   type="button"
                   onClick={handleCreditSubmit}
-                  disabled={!creditAmount || parseFloat(creditAmount.replace(/[^0-9.-]+/g, '')) <= 0}
-                  className="flex-1 rounded-lg bg-[#FF8C00] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={processing || !creditAmount || !creditDescription || parseFloat(creditAmount.replace(/[^0-9.-]+/g, '')) <= 0}
+                  className="flex-1 rounded-lg bg-[#FF8C00] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Credit Wallet
+                  {processing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    'Credit Wallet'
+                  )}
                 </button>
               </div>
             </div>
@@ -825,10 +918,17 @@ export default function UserWallets() {
                 <button
                   type="button"
                   onClick={handleDebitSubmit}
-                  disabled={!debitAmount || parseFloat(debitAmount.replace(/[^0-9.-]+/g, '')) <= 0}
-                  className="flex-1 rounded-lg bg-[#FF8C00] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={processing || !debitAmount || !debitReason || parseFloat(debitAmount.replace(/[^0-9.-]+/g, '')) <= 0}
+                  className="flex-1 rounded-lg bg-[#FF8C00] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Debit Wallet
+                  {processing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    'Debit Wallet'
+                  )}
                 </button>
               </div>
             </div>
@@ -904,9 +1004,17 @@ export default function UserWallets() {
                 <button
                   type="button"
                   onClick={handleFreezeSubmit}
-                  className="flex-1 rounded-lg bg-[#FF8C00] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer"
+                  disabled={processing}
+                  className="flex-1 rounded-lg bg-[#FF8C00] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {selectedWallet.status === 'active' ? 'Freeze Wallet' : 'Unfreeze Wallet'}
+                  {processing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    selectedWallet.status === 'active' ? 'Freeze Wallet' : 'Unfreeze Wallet'
+                  )}
                 </button>
               </div>
             </div>

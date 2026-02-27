@@ -12,8 +12,8 @@ interface LanguageOption {
 }
 
 const languages: LanguageOption[] = [
-  { code: 'en', label: 'English', flag: '🇬🇧' },
-  { code: 'ar', label: 'Arabic', flag: '🇶🇦' },
+  { code: 'en', label: 'English', flag: 'https://flagcdn.com/w80/gb.png' },
+  { code: 'ar', label: 'Arabic', flag: 'https://flagcdn.com/w80/qa.png' },
 ]
 
 /**
@@ -24,9 +24,8 @@ export default function LanguageSwitcher() {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Get the icon/flag for the current language
-  const currentIcon = language === 'ar' ? '🇶🇦' : '🇬🇧'
-  const currentLabel = language === 'ar' ? 'العربية' : 'English'
+  const currentLang = languages.find((l) => l.code === language) || languages[0]
+  const currentLabel = language === 'ar' ? 'Arabic' : 'English'
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -50,22 +49,24 @@ export default function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600
-         bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300
-         hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none cursor-pointer transition-colors"
+        className="inline-flex items-center gap-2 cursor-pointer hover:opacity-90 transition-opacity"
         aria-label="Select language"
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        <span className="text-lg">{currentIcon}</span>
-        <span className='font-semibold'>{currentLabel}</span>
+        <img
+          src={currentLang.flag}
+          alt={currentLabel}
+          className="h-10 w-10 rounded-full border border-gray-300 object-cover flex-shrink-0"
+        />
+        <span className="font-semibold text-gray-700 hidden sm:inline">{currentLabel}</span>
         <svg
-          className={`h-4 mt-0.5 w-4 font-bold transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`h-5 w-5 text-gray-500 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
         >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
@@ -78,14 +79,18 @@ export default function LanguageSwitcher() {
                 key={lang.code}
                 type="button"
                 onClick={() => handleLanguageChange(lang.code)}
-                className={`flex w-full items-center gap-3 px-4 py-2 text-sm cursor-pointer transition-colors ${
+                className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm cursor-pointer transition-colors ${
                   language === lang.code
                     ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
                 role="menuitem"
               >
-                <span className="text-lg">{lang.flag}</span>
+                <img
+                  src={lang.flag}
+                  alt={lang.label}
+                  className="h-6 w-6 rounded-full object-cover flex-shrink-0"
+                />
                 <span>{lang.label}</span>
                 {language === lang.code && (
                   <svg className="ml-auto h-4 w-4 text-orange-600 dark:text-orange-400" fill="currentColor" viewBox="0 0 20 20">

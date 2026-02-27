@@ -392,7 +392,7 @@ export default function EcommerceOrderView() {
                           <p className="text-xs sm:text-sm text-gray-900">{product.quantity}</p>
                         </div>
                         <div className="text-center flex-1 sm:flex-none sm:min-w-[70px]">
-                          <p className="text-xs sm:text-sm text-gray-900">${product.price.toFixed(2)}</p>
+                          <p className="text-xs sm:text-sm text-gray-900">{product.price.toLocaleString()} QAR</p>
                         </div>
                         <div className="text-center flex-1 sm:flex-none sm:min-w-[80px]">
                           <p className="text-xs sm:text-sm text-gray-900">${product.total.toFixed(2)}</p>
@@ -432,7 +432,7 @@ export default function EcommerceOrderView() {
                 </div>
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-medium text-gray-900">${subtotal.toFixed(2)}</span>
+                  <span className="font-medium text-gray-900">{subtotal.toLocaleString()} QAR</span>
                 </div>
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-gray-600">Shipping:</span>
@@ -440,7 +440,7 @@ export default function EcommerceOrderView() {
                 </div>
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-gray-600">Tax:</span>
-                  <span className="font-medium text-gray-900">${order.payment.tax.toFixed(2)}</span>
+                  <span className="font-medium text-gray-900">{order.payment.tax.toLocaleString()} QAR</span>
                 </div>
                 {order.payment.discount > 0 && (
                   <div className="flex justify-between text-xs sm:text-sm">
@@ -452,7 +452,7 @@ export default function EcommerceOrderView() {
               <div className="border-t border-gray-200 my-2 sm:my-3"></div>
               <div className="flex justify-between">
                 <span className="text-xs sm:text-sm font-semibold text-gray-900">Total Amount:</span>
-                <span className="text-sm sm:text-base font-bold text-gray-900">${order.payment.total.toFixed(2)}</span>
+                <span className="text-sm sm:text-base font-bold text-gray-900">{order.payment.total.toLocaleString()} QAR</span>
               </div>
             </div>
 

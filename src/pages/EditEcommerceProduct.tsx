@@ -657,57 +657,6 @@ export default function EditEcommerceProduct() {
               </div>
             </div>
           </div>
-
-          {/* Additional Information Section */}
-          <div className="space-y-4">
-            <h2 className="text-base font-semibold text-gray-900">Additional Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="brand" className="block text-sm font-normal text-[#888888] mb-1.5">
-                  Brand
-                </label>
-                <input
-                  type="text"
-                  id="brand"
-                  name="brand"
-                  value={formData.brand}
-                  onChange={handleChange}
-                  placeholder="Apple"
-                  className="w-full rounded-lg bg-[#F3F5F6] px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F7931E]"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="weight" className="block text-sm font-normal text-[#888888] mb-1.5">
-                  Weight
-                </label>
-                <input
-                  type="text"
-                  id="weight"
-                  name="weight"
-                  value={formData.weight}
-                  onChange={handleChange}
-                  placeholder="0.056 kg"
-                  className="w-full rounded-lg bg-[#F3F5F6] px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F7931E]"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="dimensions" className="block text-sm font-normal text-[#888888] mb-1.5">
-                  Dimensions
-                </label>
-                <input
-                  type="text"
-                  id="dimensions"
-                  name="dimensions"
-                  value={formData.dimensions}
-                  onChange={handleChange}
-                  placeholder="5.06 x 2.18 x 2.40cm"
-                  className="w-full rounded-lg bg-[#F3F5F6] px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-[#F7931E]"
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Action Buttons */}

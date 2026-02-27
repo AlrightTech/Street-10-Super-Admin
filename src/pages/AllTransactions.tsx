@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import VendorUsersToggle from '../components/finance/VendorUsersToggle'
 import FinanceFilterTabs, { type FinanceFilterKey } from '../components/finance/FinanceFilterTabs'
 import FinanceTable from '../components/finance/FinanceTable'
@@ -10,34 +10,7 @@ import type { FinanceActionType } from '../components/finance/FinanceActionMenu'
 import SearchBar from '../components/ui/SearchBar'
 import { CalendarIcon, ExportIcon } from '../components/icons/Icons'
 import type { UserTransaction, FinanceTransaction } from './Finance'
-
-// Mock data for all transactions
-const MOCK_ALL_TRANSACTIONS: UserTransaction[] = [
-  { id: '1', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'pending' },
-  { id: '2', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'completed' },
-  { id: '3', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Credit Card', date: '2024-01-20', status: 'pending' },
-  { id: '4', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'debit', amount: '$150.00', paymentMethod: 'Wallet Balance', date: '2024-01-20', status: 'failed' },
-  { id: '5', transactionId: 'TXN-2024-001', userName: 'Michael Johnson', userEmail: 'michael.j@email.com', type: 'credit', amount: '$150.00', paymentMethod: 'Bank Transfer', date: '2024-01-20', status: 'completed' },
-  { id: '6', transactionId: 'TXN-2024-002', userName: 'Sarah Williams', userEmail: 'sarah.w@email.com', type: 'credit', amount: '$200.00', paymentMethod: 'Credit Card', date: '2024-01-21', status: 'completed' },
-  { id: '7', transactionId: 'TXN-2024-003', userName: 'David Brown', userEmail: 'david.b@email.com', type: 'debit', amount: '$175.00', paymentMethod: 'Wallet Balance', date: '2024-01-22', status: 'pending' },
-  { id: '8', transactionId: 'TXN-2024-004', userName: 'Emily Davis', userEmail: 'emily.d@email.com', type: 'credit', amount: '$125.00', paymentMethod: 'Bank Transfer', date: '2024-01-23', status: 'failed' },
-  { id: '9', transactionId: 'TXN-2024-005', userName: 'James Wilson', userEmail: 'james.w@email.com', type: 'credit', amount: '$300.00', paymentMethod: 'Credit Card', date: '2024-01-24', status: 'completed' },
-  { id: '10', transactionId: 'TXN-2024-006', userName: 'Lisa Anderson', userEmail: 'lisa.a@email.com', type: 'debit', amount: '$100.00', paymentMethod: 'Wallet Balance', date: '2024-01-25', status: 'pending' },
-  { id: '11', transactionId: 'TXN-2024-007', userName: 'Robert Taylor', userEmail: 'robert.t@email.com', type: 'credit', amount: '$250.00', paymentMethod: 'Bank Transfer', date: '2024-01-26', status: 'completed' },
-  { id: '12', transactionId: 'TXN-2024-008', userName: 'Jennifer Martinez', userEmail: 'jennifer.m@email.com', type: 'debit', amount: '$180.00', paymentMethod: 'Credit Card', date: '2024-01-27', status: 'failed' },
-  { id: '13', transactionId: 'TXN-2024-009', userName: 'Christopher Lee', userEmail: 'christopher.l@email.com', type: 'credit', amount: '$220.00', paymentMethod: 'Wallet Balance', date: '2024-01-28', status: 'completed' },
-  { id: '14', transactionId: 'TXN-2024-010', userName: 'Amanda White', userEmail: 'amanda.w@email.com', type: 'credit', amount: '$190.00', paymentMethod: 'Bank Transfer', date: '2024-01-29', status: 'pending' },
-  { id: '15', transactionId: 'TXN-2024-011', userName: 'Daniel Harris', userEmail: 'daniel.h@email.com', type: 'debit', amount: '$160.00', paymentMethod: 'Credit Card', date: '2024-01-30', status: 'completed' },
-  { id: '16', transactionId: 'TXN-2024-012', userName: 'Jessica Clark', userEmail: 'jessica.c@email.com', type: 'credit', amount: '$140.00', paymentMethod: 'Wallet Balance', date: '2024-02-01', status: 'failed' },
-  { id: '17', transactionId: 'TXN-2024-013', userName: 'Matthew Lewis', userEmail: 'matthew.l@email.com', type: 'credit', amount: '$270.00', paymentMethod: 'Bank Transfer', date: '2024-02-02', status: 'completed' },
-  { id: '18', transactionId: 'TXN-2024-014', userName: 'Ashley Walker', userEmail: 'ashley.w@email.com', type: 'debit', amount: '$130.00', paymentMethod: 'Credit Card', date: '2024-02-03', status: 'pending' },
-  { id: '19', transactionId: 'TXN-2024-015', userName: 'Ryan Hall', userEmail: 'ryan.h@email.com', type: 'credit', amount: '$210.00', paymentMethod: 'Wallet Balance', date: '2024-02-04', status: 'completed' },
-  { id: '20', transactionId: 'TXN-2024-016', userName: 'Nicole Young', userEmail: 'nicole.y@email.com', type: 'debit', amount: '$165.00', paymentMethod: 'Bank Transfer', date: '2024-02-05', status: 'failed' },
-  { id: '21', transactionId: 'TXN-2024-017', userName: 'Kevin King', userEmail: 'kevin.k@email.com', type: 'credit', amount: '$240.00', paymentMethod: 'Credit Card', date: '2024-02-06', status: 'completed' },
-  { id: '22', transactionId: 'TXN-2024-018', userName: 'Michelle Wright', userEmail: 'michelle.w@email.com', type: 'credit', amount: '$155.00', paymentMethod: 'Wallet Balance', date: '2024-02-07', status: 'pending' },
-  { id: '23', transactionId: 'TXN-2024-019', userName: 'Brandon Lopez', userEmail: 'brandon.l@email.com', type: 'debit', amount: '$185.00', paymentMethod: 'Bank Transfer', date: '2024-02-08', status: 'completed' },
-  { id: '24', transactionId: 'TXN-2024-020', userName: 'Stephanie Hill', userEmail: 'stephanie.h@email.com', type: 'credit', amount: '$195.00', paymentMethod: 'Credit Card', date: '2024-02-09', status: 'failed' },
-]
+import { walletApi } from '../services/wallet.api'
 
 const PAGE_SIZE = 10
 
@@ -80,6 +53,89 @@ export default function AllTransactions() {
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [viewingTransaction, setViewingTransaction] = useState<UserTransaction | null>(null)
   const [viewingVendorTransaction, setViewingVendorTransaction] = useState<FinanceTransaction | null>(null)
+  const [transactions, setTransactions] = useState<UserTransaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+
+  // Load transactions from API
+  useEffect(() => {
+    if (activeTab === 'users') {
+      loadTransactions()
+    }
+  }, [activeTab, currentPage, activeFilter, statusFilter])
+
+  const loadTransactions = async () => {
+    try {
+      setLoading(true)
+      const status = statusFilter !== 'All Status' 
+        ? (statusFilter === 'Completed' ? 'confirmed' : statusFilter.toLowerCase())
+        : activeFilter !== 'all'
+        ? (activeFilter === 'completed' ? 'confirmed' : activeFilter)
+        : undefined
+      
+      const response = await walletApi.getTransactions({
+        page: currentPage,
+        limit: PAGE_SIZE,
+        status,
+      })
+      
+      // Map backend transactions to frontend format
+      const mappedTransactions = response.data.map((tx) => {
+        const amount = parseFloat(tx.amountMinor) / 100
+        const isCredit = ['deposit', 'refund_out', 'bid_release'].includes(tx.type)
+        
+        return {
+          id: tx.id,
+          transactionId: tx.id.slice(0, 8).toUpperCase(),
+          userName: tx.user?.name || 'Unknown User',
+          userEmail: tx.user?.email || '',
+          userId: tx.userId,
+          type: (isCredit ? 'credit' : 'debit') as 'credit' | 'debit',
+          amount: `${amount.toFixed(2)} ${tx.currency}`,
+          paymentMethod: getPaymentMethod(tx.type),
+          date: new Date(tx.createdAt).toISOString().split('T')[0],
+          status: mapBackendStatusToFrontend(tx.status),
+        }
+      })
+      
+      setTransactions(mappedTransactions)
+      setTotalPages(response.pagination.totalPages)
+      setTotalCount(response.pagination.total)
+    } catch (error) {
+      console.error('Error loading transactions:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const mapBackendStatusToFrontend = (status: string): 'completed' | 'pending' | 'failed' => {
+    switch (status) {
+      case 'confirmed':
+        return 'completed'
+      case 'pending':
+        return 'pending'
+      case 'failed':
+      case 'reversed':
+        return 'failed'
+      default:
+        return 'pending'
+    }
+  }
+
+  const getPaymentMethod = (type: string): 'Bank Transfer' | 'Wallet Balance' | 'Credit Card' | 'Debit Card' => {
+    switch (type) {
+      case 'deposit':
+        return 'Credit Card'
+      case 'withdraw':
+        return 'Bank Transfer'
+      case 'purchase':
+      case 'hold':
+        return 'Wallet Balance'
+      default:
+        return 'Wallet Balance'
+    }
+  }
 
   const userFilterTabsWithCounts = useMemo(
     () =>
@@ -87,8 +143,8 @@ export default function AllTransactions() {
         ...tab,
         count:
           tab.key === 'all'
-            ? MOCK_ALL_TRANSACTIONS.length
-            : MOCK_ALL_TRANSACTIONS.filter((t) => t.status === tab.key).length,
+            ? totalCount
+            : transactions.filter((t) => t.status === tab.key).length,
         badgeClassName: {
           active: tab.key === 'all' ? 'bg-[#4C50A2] text-white' : 
                   tab.key === 'completed' ? 'bg-[#DCF6E5] text-[#118D57]' :
@@ -100,7 +156,7 @@ export default function AllTransactions() {
                     'bg-[#FFE4DE] text-[#B71D18]',
         },
       })),
-    [],
+    [transactions, totalCount],
   )
 
   const vendorFilterTabsWithCounts = useMemo(
@@ -134,27 +190,9 @@ export default function AllTransactions() {
   )
 
   const filteredUserTransactions = useMemo(() => {
-    let result = [...MOCK_ALL_TRANSACTIONS]
+    let result = [...transactions]
 
-    // Apply status filter from dropdown
-    if (statusFilter !== 'All Status') {
-      const statusMap: Record<string, 'completed' | 'pending' | 'failed'> = {
-        'Completed': 'completed',
-        'Pending': 'pending',
-        'Failed': 'failed',
-      }
-      const status = statusMap[statusFilter]
-      if (status) {
-        result = result.filter((transaction) => transaction.status === status)
-      }
-    }
-
-    // Apply tab filter
-    if (activeFilter !== 'all') {
-      result = result.filter((transaction) => transaction.status === activeFilter)
-    }
-
-    // Apply search filter
+    // Apply search filter (client-side for current page)
     if (searchValue.trim()) {
       const query = searchValue.toLowerCase()
       result = result.filter(
@@ -182,7 +220,7 @@ export default function AllTransactions() {
     }
 
     return result
-  }, [activeFilter, searchValue, statusFilter, sortBy])
+  }, [transactions, searchValue, sortBy])
 
   const filteredVendorTransactions = useMemo(() => {
     let result = [...MOCK_VENDOR_TRANSACTIONS]
@@ -239,13 +277,11 @@ export default function AllTransactions() {
     return result
   }, [vendorActiveFilter, searchValue, sortBy])
 
-  const userTotalPages = Math.max(1, Math.ceil(filteredUserTransactions.length / PAGE_SIZE))
+  const userTotalPages = totalPages
   const vendorTotalPages = Math.max(1, Math.ceil(filteredVendorTransactions.length / PAGE_SIZE))
 
-  const paginatedUserTransactions = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    return filteredUserTransactions.slice(start, start + PAGE_SIZE)
-  }, [filteredUserTransactions, currentPage])
+  // Use API pagination - transactions are already paginated
+  const paginatedUserTransactions = filteredUserTransactions
 
   const paginatedVendorTransactions = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE
@@ -301,6 +337,7 @@ export default function AllTransactions() {
   const handleSearchChange = (value: string) => {
     setSearchValue(value)
     setCurrentPage(1)
+    // Note: Search is currently client-side filtered. For large datasets, implement server-side search
   }
 
   const handlePageChange = (page: number) => {
@@ -429,11 +466,24 @@ export default function AllTransactions() {
 
             {/* Table */}
             <div className="">
-              <UserTransactionsTable
-                transactions={paginatedUserTransactions}
-                startIndex={(currentPage - 1) * PAGE_SIZE}
-                onActionSelect={handleTransactionAction}
-              />
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C00]"></div>
+                    <p className="text-sm text-gray-500">Loading transactions...</p>
+                  </div>
+                </div>
+              ) : paginatedUserTransactions.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                  <p className="text-sm text-gray-500">No transactions found</p>
+                </div>
+              ) : (
+                <UserTransactionsTable
+                  transactions={paginatedUserTransactions}
+                  startIndex={(currentPage - 1) * PAGE_SIZE}
+                  onActionSelect={handleTransactionAction}
+                />
+              )}
             </div>
 
             {/* Pagination */}

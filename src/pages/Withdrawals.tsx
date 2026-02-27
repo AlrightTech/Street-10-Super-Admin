@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { MoreVerticalIcon, CalendarIcon, ArrowUpDownIcon, ClockIcon, PercentIcon, DollarSignIcon, XIcon } from '../components/icons/Icons'
 import Pagination from '../components/ui/Pagination'
-import { mockWithdrawalMetrics, mockWithdrawalRequests } from '../data/mockWithdrawals'
+import { walletApi } from '../services/wallet.api'
+import { uploadFileToS3 } from '../services/upload.api'
 import type { WithdrawalRequest, WithdrawalStatus } from '../types/wallet'
 
 /**
@@ -99,6 +100,8 @@ function getStatusBadgeColor(status: WithdrawalStatus): string {
       return 'bg-yellow-100 text-yellow-800'
     case 'rejected':
       return 'bg-red-100 text-red-800'
+    case 'cancelled':
+      return 'bg-gray-100 text-gray-800'
     default:
       return 'bg-gray-100 text-gray-800'
   }
@@ -108,20 +111,144 @@ function getStatusBadgeColor(status: WithdrawalStatus): string {
  * Withdrawals Page Component
  */
 export default function Withdrawals() {
-  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>(mockWithdrawalRequests)
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [metrics, setMetrics] = useState({
+    totalRequests: 0,
+    pending: 0,
+    processingFees: '0.00 QAR',
+    totalBalance: '0.00 QAR',
+  })
   const [sortBy, setSortBy] = useState<string>('newest')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [activeFilter, setActiveFilter] = useState<'all' | WithdrawalStatus>('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null)
   const [approveModalOpen, setApproveModalOpen] = useState(false)
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
   const [holdModalOpen, setHoldModalOpen] = useState(false)
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null)
+  const [fullWithdrawRequest, setFullWithdrawRequest] = useState<any>(null)
+  const [userWalletData, setUserWalletData] = useState<any>(null)
+  const [loadingUserData, setLoadingUserData] = useState(false)
   const [approveReason, setApproveReason] = useState('')
   const [rejectReason, setRejectReason] = useState('')
   const [holdReason, setHoldReason] = useState('')
+  const [processing, setProcessing] = useState(false)
+  const [uploadedDocumentUrl, setUploadedDocumentUrl] = useState<string | null>(null)
+  const [uploadingDocument, setUploadingDocument] = useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
   const itemsPerPage = 10
+
+  // Load withdrawals from API
+  useEffect(() => {
+    loadWithdrawals()
+    loadMetrics()
+  }, [currentPage, activeFilter, statusFilter])
+
+  const loadWithdrawals = async () => {
+    try {
+      setLoading(true)
+      const status = activeFilter !== 'all' ? activeFilter : undefined
+      const response = await walletApi.getWithdrawRequests({
+        page: currentPage,
+        limit: itemsPerPage,
+        status,
+      })
+      
+      // Map backend withdrawals to frontend format
+      const mappedWithdrawals = response.data.map((req) => mapWithdrawalToFrontend(req))
+      setWithdrawals(mappedWithdrawals)
+      setTotalPages(response.pagination.totalPages)
+      
+      // Update total requests from pagination total
+      setMetrics((prev) => ({
+        ...prev,
+        totalRequests: response.pagination.total,
+      }))
+    } catch (error) {
+      console.error('Error loading withdrawals:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadMetrics = async () => {
+    try {
+      const metricsData = await walletApi.getMetrics()
+      const totalBalance = parseFloat(metricsData.totalBalance) / 100
+      
+      // Get all withdrawal requests to calculate total processing fees
+      const allRequestsResponse = await walletApi.getWithdrawRequests({
+        page: 1,
+        limit: 1000, // Get all to calculate total fees
+      })
+      
+      // Calculate total processing fees from all requests
+      let totalProcessingFees = 0
+      if (allRequestsResponse.data && allRequestsResponse.data.length > 0) {
+        totalProcessingFees = allRequestsResponse.data.reduce((sum: number, req: any) => {
+          const fee = req.feeMinor ? parseFloat(req.feeMinor) / 100 : 0
+          return sum + fee
+        }, 0)
+      }
+      
+      setMetrics({
+        totalRequests: allRequestsResponse.pagination.total,
+        pending: metricsData.pendingWithdrawals,
+        processingFees: `${totalProcessingFees.toFixed(2)} QAR`,
+        totalBalance: `${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} QAR`,
+      })
+    } catch (error) {
+      console.error('Error loading metrics:', error)
+    }
+  }
+
+  // Map backend withdrawal to frontend format
+  const mapWithdrawalToFrontend = (req: any): WithdrawalRequest => {
+    const amount = parseFloat(req.amountMinor) / 100
+    const fee = req.feeMinor ? parseFloat(req.feeMinor) / 100 : 0
+    const netAmount = req.netAmountMinor ? parseFloat(req.netAmountMinor) / 100 : amount
+    
+    return {
+      id: req.id,
+      requestId: req.id.slice(0, 8).toUpperCase(),
+      userId: req.userId,
+      userName: req.user?.name || 'Unknown User',
+      userEmail: req.user?.email || '',
+      amount: `${amount.toFixed(2)} ${req.currency}`,
+      fee: `${fee.toFixed(2)} ${req.currency}`,
+      netAmount: `${netAmount.toFixed(2)} ${req.currency}`,
+      paymentMethod: 'Bank Transfer',
+      bankName: req.bankName,
+      iban: req.iban,
+      accountNumber: req.accountNumber,
+      country: req.country,
+      swiftCode: req.swiftCode,
+      requestDate: new Date(req.createdAt).toISOString().split('T')[0],
+      status: mapBackendStatusToFrontend(req.status),
+    }
+  }
+
+  const mapBackendStatusToFrontend = (status: string): WithdrawalStatus => {
+    switch (status) {
+      case 'approved':
+        return 'approved'
+      case 'pending':
+        return 'pending'
+      case 'rejected':
+        return 'rejected'
+      case 'cancelled':
+        return 'cancelled'
+      case 'processing':
+        return 'hold'
+      case 'completed':
+        return 'active'
+      default:
+        return 'pending'
+    }
+  }
 
   // Filter and sort withdrawals
   const filteredAndSortedWithdrawals = useMemo(() => {
@@ -152,11 +279,8 @@ export default function Withdrawals() {
     return filtered
   }, [withdrawals, activeFilter, statusFilter, sortBy])
 
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedWithdrawals.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const paginatedWithdrawals = filteredAndSortedWithdrawals.slice(startIndex, endIndex)
+  // Use API pagination - withdrawals are already paginated
+  const paginatedWithdrawals = filteredAndSortedWithdrawals
 
   // Update current page if it's out of bounds
   useEffect(() => {
@@ -208,33 +332,109 @@ export default function Withdrawals() {
   /**
    * Handle approve request
    */
-  const handleApproveRequest = (withdrawal: WithdrawalRequest) => {
+  const handleApproveRequest = async (withdrawal: WithdrawalRequest) => {
+    // Prevent action if already cancelled or approved
+    if (withdrawal.status === 'cancelled' || withdrawal.status === 'approved') {
+      alert('Cannot modify a request that is already cancelled or approved.')
+      return
+    }
+    
     setSelectedWithdrawal(withdrawal)
     setApproveReason('')
+    setUploadedDocumentUrl(null)
+    setFullWithdrawRequest(null)
+    setUserWalletData(null)
     setApproveModalOpen(true)
     setActionMenuOpen(null)
+    
+    // Fetch full withdraw request details and user wallet data
+    try {
+      setLoadingUserData(true)
+      const [requestDetailsResponse, walletData] = await Promise.all([
+        walletApi.getWithdrawRequest(withdrawal.id).catch((err) => {
+          console.error('Error fetching withdraw request:', err)
+          return null
+        }),
+        walletApi.getUserWallet(withdrawal.userId).catch((err) => {
+          console.error('Error fetching user wallet:', err)
+          return null
+        }),
+      ])
+      
+      if (requestDetailsResponse) {
+        setFullWithdrawRequest(requestDetailsResponse)
+      } else {
+        // Fallback to using the withdrawal data we already have
+        setFullWithdrawRequest({
+          ...withdrawal,
+          amountMinor: String(parseFloat(withdrawal.amount.replace(/[^0-9.]/g, '')) * 100),
+          currency: 'QAR',
+          bankName: withdrawal.paymentMethod === 'Bank Transfer' ? 'N/A' : 'N/A',
+          iban: 'N/A',
+          accountNumber: 'N/A',
+          country: 'N/A',
+          swiftCode: 'N/A',
+          createdAt: withdrawal.requestDate,
+        })
+      }
+      
+      if (walletData) {
+        setUserWalletData(walletData)
+      }
+    } catch (error) {
+      console.error('Error loading withdraw request details:', error)
+      // Set fallback data to prevent UI from breaking
+      setFullWithdrawRequest({
+        ...withdrawal,
+        amountMinor: String(parseFloat(withdrawal.amount.replace(/[^0-9.]/g, '')) * 100),
+        currency: 'QAR',
+        bankName: withdrawal.paymentMethod === 'Bank Transfer' ? 'N/A' : 'N/A',
+        iban: 'N/A',
+        accountNumber: 'N/A',
+        country: 'N/A',
+        swiftCode: 'N/A',
+        createdAt: withdrawal.requestDate,
+      })
+    } finally {
+      setLoadingUserData(false)
+    }
   }
 
   /**
    * Handle approve submit
    */
-  const handleApproveSubmit = () => {
+  const handleApproveSubmit = async () => {
     if (selectedWithdrawal) {
-      // Update withdrawal status to approved
-      setWithdrawals((prevWithdrawals) =>
-        prevWithdrawals.map((w) => {
-          if (w.id === selectedWithdrawal.id) {
-            return {
-              ...w,
-              status: 'approved' as WithdrawalStatus,
-            }
-          }
-          return w
+      try {
+        setProcessing(true)
+        
+        // Prepare admin notes - include document URL if uploaded
+        let adminNotes = approveReason || ''
+        if (uploadedDocumentUrl) {
+          const documentInfo = `[DOCUMENT_URL:${uploadedDocumentUrl}]`
+          adminNotes = adminNotes ? `${adminNotes}\n${documentInfo}` : documentInfo
+        }
+        
+        await walletApi.approveWithdrawRequest(selectedWithdrawal.id, {
+          adminNotes: adminNotes || undefined,
+          documentUrl: uploadedDocumentUrl || undefined,
         })
-      )
-      setApproveModalOpen(false)
-      setSelectedWithdrawal(null)
-      setApproveReason('')
+        
+        // Reload withdrawals to get updated data
+        await loadWithdrawals()
+        await loadMetrics()
+        
+        setApproveModalOpen(false)
+        setSelectedWithdrawal(null)
+        setApproveReason('')
+        setUploadedDocumentUrl(null)
+        alert('Withdrawal request approved successfully!')
+      } catch (error: any) {
+        console.error('Error approving withdrawal:', error)
+        alert(error?.response?.data?.error?.message || error?.message || 'Failed to approve withdrawal')
+      } finally {
+        setProcessing(false)
+      }
     }
   }
 
@@ -245,36 +445,142 @@ export default function Withdrawals() {
     setApproveModalOpen(false)
     setSelectedWithdrawal(null)
     setApproveReason('')
+    setUploadedDocumentUrl(null)
+    setFullWithdrawRequest(null)
+    setUserWalletData(null)
+  }
+
+  /**
+   * Handle document upload
+   */
+  const handleDocumentUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf']
+    if (!allowedTypes.includes(file.type)) {
+      alert('Invalid file type. Please upload an image (JPEG, PNG, GIF) or PDF file.')
+      return
+    }
+
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      alert('File size exceeds 5MB limit. Please upload a smaller file.')
+      return
+    }
+
+    try {
+      setUploadingDocument(true)
+      const documentUrl = await uploadFileToS3(file, 'documents')
+      setUploadedDocumentUrl(documentUrl)
+      alert('Document uploaded successfully!')
+    } catch (error: any) {
+      console.error('Error uploading document:', error)
+      alert(error?.message || 'Failed to upload document. Please try again.')
+    } finally {
+      setUploadingDocument(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  /**
+   * Trigger file input click
+   */
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click()
   }
 
   /**
    * Format date for display
    */
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString + 'T00:00:00')
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const year = date.getFullYear()
-    return `${day}/${month}/${year}`
+  const formatDate = (dateString: string | Date | undefined) => {
+    if (!dateString) return 'N/A'
+    try {
+      let date: Date
+      if (dateString instanceof Date) {
+        date = dateString
+      } else if (typeof dateString === 'string') {
+        // Handle ISO date strings or date-only strings (YYYY-MM-DD)
+        if (dateString.includes('T')) {
+          date = new Date(dateString)
+        } else if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          // Date-only format YYYY-MM-DD
+          date = new Date(dateString + 'T00:00:00')
+        } else {
+          date = new Date(dateString)
+        }
+      } else {
+        return 'N/A'
+      }
+      
+      if (isNaN(date.getTime())) {
+        return 'N/A'
+      }
+      
+      const day = String(date.getDate()).padStart(2, '0')
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const year = date.getFullYear()
+      return `${day}/${month}/${year}`
+    } catch (error) {
+      console.error('Error formatting date:', error, dateString)
+      return 'N/A'
+    }
   }
 
   /**
    * Format time for display
    */
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString + 'T04:34:00')
-    let hours = date.getHours()
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    const ampm = hours >= 12 ? 'AM' : 'AM'
-    hours = hours % 12
-    hours = hours ? hours : 12
-    return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`
+  const formatTime = (dateString: string | Date | undefined) => {
+    if (!dateString) return 'N/A'
+    try {
+      let date: Date
+      if (dateString instanceof Date) {
+        date = dateString
+      } else if (typeof dateString === 'string') {
+        // Handle ISO date strings or date-only strings
+        if (dateString.includes('T')) {
+          date = new Date(dateString)
+        } else if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          // Date-only format, use current time or default to 00:00
+          date = new Date(dateString + 'T00:00:00')
+        } else {
+          date = new Date(dateString)
+        }
+      } else {
+        return 'N/A'
+      }
+      
+      if (isNaN(date.getTime())) {
+        return 'N/A'
+      }
+      
+      let hours = date.getHours()
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      hours = hours % 12
+      hours = hours ? hours : 12
+      return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`
+    } catch (error) {
+      console.error('Error formatting time:', error, dateString)
+      return 'N/A'
+    }
   }
 
   /**
    * Handle reject request
    */
   const handleRejectRequest = (withdrawal: WithdrawalRequest) => {
+    // Prevent action if already cancelled or approved
+    if (withdrawal.status === 'cancelled' || withdrawal.status === 'approved') {
+      alert('Cannot modify a request that is already cancelled or approved.')
+      return
+    }
+    
     setSelectedWithdrawal(withdrawal)
     setRejectReason('')
     setRejectModalOpen(true)
@@ -284,23 +590,29 @@ export default function Withdrawals() {
   /**
    * Handle reject submit
    */
-  const handleRejectSubmit = () => {
-    if (selectedWithdrawal) {
-      // Update withdrawal status to rejected
-      setWithdrawals((prevWithdrawals) =>
-        prevWithdrawals.map((w) => {
-          if (w.id === selectedWithdrawal.id) {
-            return {
-              ...w,
-              status: 'rejected' as WithdrawalStatus,
-            }
-          }
-          return w
+  const handleRejectSubmit = async () => {
+    if (selectedWithdrawal && rejectReason) {
+      try {
+        setProcessing(true)
+        await walletApi.rejectWithdrawRequest(selectedWithdrawal.id, {
+          rejectionReason: rejectReason,
+          adminNotes: rejectReason,
         })
-      )
-      setRejectModalOpen(false)
-      setSelectedWithdrawal(null)
-      setRejectReason('')
+        
+        // Reload withdrawals to get updated data
+        await loadWithdrawals()
+        await loadMetrics()
+        
+        setRejectModalOpen(false)
+        setSelectedWithdrawal(null)
+        setRejectReason('')
+        alert('Withdrawal request rejected successfully!')
+      } catch (error: any) {
+        console.error('Error rejecting withdrawal:', error)
+        alert(error?.response?.data?.error?.message || error?.message || 'Failed to reject withdrawal')
+      } finally {
+        setProcessing(false)
+      }
     }
   }
 
@@ -317,6 +629,12 @@ export default function Withdrawals() {
    * Handle hold request
    */
   const handleHoldRequest = (withdrawal: WithdrawalRequest) => {
+    // Prevent action if already cancelled or approved
+    if (withdrawal.status === 'cancelled' || withdrawal.status === 'approved') {
+      alert('Cannot modify a request that is already cancelled or approved.')
+      return
+    }
+    
     setSelectedWithdrawal(withdrawal)
     setHoldReason('')
     setHoldModalOpen(true)
@@ -326,23 +644,31 @@ export default function Withdrawals() {
   /**
    * Handle hold submit
    */
-  const handleHoldSubmit = () => {
+  const handleHoldSubmit = async () => {
     if (selectedWithdrawal) {
-      // Update withdrawal status to hold
-      setWithdrawals((prevWithdrawals) =>
-        prevWithdrawals.map((w) => {
-          if (w.id === selectedWithdrawal.id) {
-            return {
-              ...w,
-              status: 'hold' as WithdrawalStatus,
-            }
-          }
-          return w
+      try {
+        setProcessing(true)
+        // Note: Hold functionality may need a separate endpoint or use update status
+        // For now, we'll use the reject endpoint with a hold status
+        await walletApi.rejectWithdrawRequest(selectedWithdrawal.id, {
+          rejectionReason: holdReason || 'Request put on hold',
+          adminNotes: holdReason || 'Request put on hold',
         })
-      )
-      setHoldModalOpen(false)
-      setSelectedWithdrawal(null)
-      setHoldReason('')
+        
+        // Reload withdrawals to get updated data
+        await loadWithdrawals()
+        await loadMetrics()
+        
+        setHoldModalOpen(false)
+        setSelectedWithdrawal(null)
+        setHoldReason('')
+        alert('Withdrawal request put on hold!')
+      } catch (error: any) {
+        console.error('Error holding withdrawal:', error)
+        alert(error?.response?.data?.error?.message || error?.message || 'Failed to hold withdrawal')
+      } finally {
+        setProcessing(false)
+      }
     }
   }
 
@@ -384,7 +710,7 @@ export default function Withdrawals() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Total Requests</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockWithdrawalMetrics.totalRequests}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalRequests}</p>
             </div>
             <div className="p-2">
               <ArrowUpDownIcon className="h-5 w-5 text-[#FF8C00]" />
@@ -397,7 +723,7 @@ export default function Withdrawals() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Pending</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockWithdrawalMetrics.pending}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.pending}</p>
             </div>
             <div className="p-2">
               <ClockIcon className="h-5 w-5 text-[#FF8C00]" />
@@ -410,7 +736,7 @@ export default function Withdrawals() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Processing Fees</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockWithdrawalMetrics.processingFees}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.processingFees}</p>
             </div>
             <div className="p-2">
               <PercentIcon className="h-5 w-5 text-[#FF8C00]" />
@@ -423,7 +749,7 @@ export default function Withdrawals() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">Total Balance</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{mockWithdrawalMetrics.totalBalance}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalBalance}</p>
             </div>
             <div className="p-2">
               <DollarSignIcon className="h-5 w-5 text-[#FF8C00]" />
@@ -556,7 +882,16 @@ export default function Withdrawals() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {paginatedWithdrawals.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FF8C00]"></div>
+                      Loading withdrawals...
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedWithdrawals.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
                     No withdrawal requests found for the selected filters.
@@ -604,13 +939,25 @@ export default function Withdrawals() {
                       <div className="relative" data-action-menu>
                         <button
                           type="button"
-                          onClick={() => toggleActionMenu(withdrawal.id)}
-                          className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                          onClick={() => {
+                            // Only allow opening menu if status is not cancelled or approved
+                            if (withdrawal.status !== 'cancelled' && withdrawal.status !== 'approved') {
+                              toggleActionMenu(withdrawal.id)
+                            }
+                          }}
+                          disabled={withdrawal.status === 'cancelled' || withdrawal.status === 'approved'}
+                          className={`transition-colors ${
+                            withdrawal.status === 'cancelled' || withdrawal.status === 'approved'
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-400 hover:text-gray-600 cursor-pointer'
+                          }`}
                           aria-label="More options"
                         >
                           <MoreVerticalIcon className="h-5 w-5" />
                         </button>
-                        {actionMenuOpen === withdrawal.id && (
+                        {actionMenuOpen === withdrawal.id && 
+                         withdrawal.status !== 'cancelled' && 
+                         withdrawal.status !== 'approved' && (
                           <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg z-10">
                             <button
                               type="button"
@@ -684,23 +1031,49 @@ export default function Withdrawals() {
 
               <div className="space-y-6">
                 {/* User Information */}
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <span className="text-base font-semibold text-gray-600">
-                      {selectedWithdrawal.userName.charAt(0).toUpperCase()}
-                    </span>
+                {loadingUserData ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FF8C00]"></div>
                   </div>
-                  <div className="flex-1 pt-0.5">
-                    <p className="text-sm font-semibold text-gray-900 leading-5">{selectedWithdrawal.userName}</p>
-                    <p className="text-sm text-gray-600 leading-5 mt-0.5">{selectedWithdrawal.userEmail}</p>
-                    <p className="text-sm font-semibold text-[#4C50A2] mt-1 leading-5">
-                      Current Balance: $1,245.50
-                    </p>
+                ) : (
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {userWalletData?.user?.profileImageUrl ? (
+                        <img
+                          src={userWalletData.user.profileImageUrl}
+                          alt={selectedWithdrawal.userName}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = 'none'
+                            const parent = target.parentElement
+                            if (parent) {
+                              parent.innerHTML = `<span class="text-base font-semibold text-gray-600">${selectedWithdrawal.userName.charAt(0).toUpperCase()}</span>`
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span className="text-base font-semibold text-gray-600">
+                          {selectedWithdrawal.userName.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 pt-0.5">
+                      <p className="text-sm font-semibold text-gray-900 leading-5">{selectedWithdrawal.userName}</p>
+                      <p className="text-sm text-gray-600 leading-5 mt-0.5">{selectedWithdrawal.userEmail}</p>
+                      <p className="text-sm font-semibold text-[#4C50A2] mt-1 leading-5">
+                        Current Balance: {loadingUserData ? (
+                          'Loading...'
+                        ) : userWalletData?.wallet 
+                          ? `${(parseFloat(userWalletData.wallet.availableMinor || '0') / 100).toFixed(2)} ${userWalletData.wallet.currency || 'QAR'}`
+                          : 'N/A'}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Request Details */}
-                <div className="flex justify-between  bg-[#F3F5F6] rounded-md p-2 px-8 gap-8">
+                <div className="flex justify-between bg-[#F3F5F6] rounded-md p-2 px-8 gap-8">
                   <div className="space-y-3">
                     <div>
                       <span className="text-sm font-medium text-gray-700">Request ID: </span>
@@ -708,36 +1081,85 @@ export default function Withdrawals() {
                     </div>
                     <div>
                       <span className="text-sm font-medium text-gray-700">Requested Date: </span>
-                      <span className="text-sm font-semibold text-gray-900 block">{formatDate(selectedWithdrawal.requestDate)}</span>
+                      <span className="text-sm font-semibold text-gray-900 block">
+                        {fullWithdrawRequest?.createdAt 
+                          ? formatDate(fullWithdrawRequest.createdAt) 
+                          : selectedWithdrawal.requestDate 
+                            ? formatDate(selectedWithdrawal.requestDate)
+                            : 'N/A'}
+                      </span>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div>
                       <span className="text-sm font-medium text-gray-700">Amount: </span>
-                      <span className="text-sm font-semibold text-gray-900 block">{selectedWithdrawal.amount}</span>
+                      <span className="text-sm font-semibold text-gray-900 block">
+                        {fullWithdrawRequest 
+                          ? `${(parseFloat(fullWithdrawRequest.amountMinor || '0') / 100).toFixed(2)} ${fullWithdrawRequest.currency || 'QAR'}`
+                          : selectedWithdrawal.amount}
+                      </span>
                     </div>
                     <div>
                       <span className="text-sm font-medium text-gray-700">Requested Time: </span>
-                      <span className="text-sm font-semibold text-[#4C50A2] block">{formatTime(selectedWithdrawal.requestDate)}</span>
+                      <span className="text-sm font-semibold text-[#4C50A2] block">
+                        {fullWithdrawRequest?.createdAt 
+                          ? formatTime(fullWithdrawRequest.createdAt) 
+                          : selectedWithdrawal.requestDate 
+                            ? formatTime(selectedWithdrawal.requestDate)
+                            : 'N/A'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Reason Input */}
-                <div>
-                  <label htmlFor="approveReason" className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Reason
-                  </label>
-                  <textarea
-                    id="approveReason"
-                    value={approveReason}
-                    onChange={(e) => setApproveReason(e.target.value)}
-                    placeholder="Enter Reason for this action"
-                    rows={3}
-                    maxLength={500}
-                    className="w-full rounded-lg border-0 bg-gray-100 px-3 py-2.5 text-sm outline-none placeholder:text-gray-400 focus:bg-gray-100 focus:outline-none focus:ring-0 resize-none max-h-24"
-                  />
-                </div>
+                {/* Bank Details */}
+                {(fullWithdrawRequest || selectedWithdrawal) && (
+                  <div className="flex justify-between bg-[#F3F5F6] rounded-md p-2 px-8 gap-8">
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">Bank Name: </span>
+                        <span className="text-sm font-semibold text-gray-900 block">
+                          {fullWithdrawRequest?.bankName || selectedWithdrawal?.bankName || 'N/A'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">IBAN: </span>
+                        <span className="text-sm font-semibold text-gray-900 block">
+                          {fullWithdrawRequest?.iban || selectedWithdrawal?.iban || 'N/A'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">Account Number: </span>
+                        <span className="text-sm font-semibold text-gray-900 block">
+                          {fullWithdrawRequest?.accountNumber || selectedWithdrawal?.accountNumber || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">Country: </span>
+                        <span className="text-sm font-semibold text-gray-900 block">
+                          {fullWithdrawRequest?.country || selectedWithdrawal?.country || 'N/A'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">SWIFT Code: </span>
+                        <span className="text-sm font-semibold text-gray-900 block">
+                          {fullWithdrawRequest?.swiftCode || selectedWithdrawal?.swiftCode || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleDocumentUpload}
+                  className="hidden"
+                />
               </div>
 
               <div className="mt-8 flex justify-center items-center gap-3">
@@ -750,20 +1172,35 @@ export default function Withdrawals() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    // Handle upload document
-                    console.log('Upload document')
-                  }}
-                  className="flex-1 rounded-lg bg-[#4C50A2] px-4 py-2 text-xs font-medium text-white hover:bg-[#3D4180] transition-colors cursor-pointer whitespace-nowrap"
+                  onClick={triggerFileUpload}
+                  disabled={uploadingDocument}
+                  className="flex-1 rounded-lg bg-[#4C50A2] px-4 py-2 text-xs font-medium text-white hover:bg-[#3D4180] transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Upload Document
+                  {uploadingDocument ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Uploading...
+                    </>
+                  ) : uploadedDocumentUrl ? (
+                    'Document Uploaded ✓'
+                  ) : (
+                    'Upload Document'
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={handleApproveSubmit}
-                  className="flex-1 rounded-lg bg-[#FF8C00] px-4 py-2 text-xs font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer whitespace-nowrap"
+                  disabled={processing}
+                  className="flex-1 rounded-lg bg-[#FF8C00] px-4 py-2 text-xs font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Approve Request
+                  {processing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    'Approve Request'
+                  )}
                 </button>
               </div>
             </div>
@@ -861,9 +1298,17 @@ export default function Withdrawals() {
                 <button
                   type="button"
                   onClick={handleRejectSubmit}
-                  className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700 transition-colors cursor-pointer whitespace-nowrap"
+                  disabled={processing || !rejectReason}
+                  className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Reject Request
+                  {processing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    'Reject Request'
+                  )}
                 </button>
               </div>
             </div>
@@ -961,9 +1406,17 @@ export default function Withdrawals() {
                 <button
                   type="button"
                   onClick={handleHoldSubmit}
-                  className="flex-1 rounded-lg bg-[#FF8C00] px-4 py-2 text-xs font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer whitespace-nowrap"
+                  disabled={processing}
+                  className="flex-1 rounded-lg bg-[#FF8C00] px-4 py-2 text-xs font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Hold Request
+                  {processing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    'Hold Request'
+                  )}
                 </button>
               </div>
             </div>

@@ -29,6 +29,9 @@ export interface DashboardStats {
   refunds?: {
     pending: number;
   };
+  withdrawals?: {
+    pending: number;
+  };
 }
 
 export interface UserStats {

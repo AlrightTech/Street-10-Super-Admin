@@ -304,15 +304,21 @@ export default function Users() {
         return;
       }
 
-      await usersApi.toggleBlock(apiUserId, !isCurrentlyBlocked);
+      const updatedUser = await usersApi.toggleBlock(apiUserId, !isCurrentlyBlocked);
 
-      // Update local state immediately for better UX
+      // Map API status to frontend status (active, blocked, pending)
+      const mapApiStatusToDisplay = (apiStatus: string) =>
+        apiStatus === "active" ? "active" : apiStatus === "blocked" ? "blocked" : "pending";
+
+      // Update local state immediately for better UX, using API response when unblocking to get correct restored status
       setUsers((prevUsers) =>
         prevUsers.map((u) =>
           u.id === userId
             ? {
                 ...u,
-                status: isCurrentlyBlocked ? "active" : "blocked",
+                status: isCurrentlyBlocked
+                  ? mapApiStatusToDisplay(updatedUser?.status || "active")
+                  : "blocked",
                 accountStatus: isCurrentlyBlocked ? "verified" : "unverified",
               }
             : u

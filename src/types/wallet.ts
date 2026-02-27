@@ -123,7 +123,7 @@ export interface UserWalletMetrics {
 /**
  * Withdrawal request status types
  */
-export type WithdrawalStatus = 'pending' | 'approved' | 'rejected' | 'hold' | 'active'
+export type WithdrawalStatus = 'pending' | 'approved' | 'rejected' | 'hold' | 'active' | 'cancelled'
 
 /**
  * Withdrawal metrics interface
@@ -149,6 +149,10 @@ export interface WithdrawalRequest {
   netAmount: string
   paymentMethod: string
   bankName?: string
+  iban?: string
+  accountNumber?: string
+  country?: string
+  swiftCode?: string
   requestDate: string
   status: WithdrawalStatus
 }

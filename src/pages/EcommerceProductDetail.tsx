@@ -50,10 +50,11 @@ export default function EcommerceProductDetail() {
       
       setLoading(true)
       try {
-        // Fetch product from API
-        const apiProduct = await productsApi.getById(productId)
+        const [apiProduct, perf] = await Promise.all([
+          productsApi.getById(productId),
+          productsApi.getPerformance(productId).catch(() => null),
+        ])
         
-        // Map API product to EcommerceProductDetail format
         const price = parseFloat(apiProduct.priceMinor) / 100
         const categoryName = apiProduct.categories?.[0]?.category?.name || 'Uncategorized'
         const images = apiProduct.media?.map(m => m.url) || []
@@ -77,12 +78,12 @@ export default function EcommerceProductDetail() {
           metaDescription: attributes.metaDescription || apiProduct.description || '',
           videoUrl: attributes.videoUrl,
           performance: {
-            totalViews: 0,
-            totalOrders: 0,
-            revenue: 0,
-            conversionRate: 0,
-            totalSaved: 0,
-            totalShared: 0,
+            totalViews: perf?.totalViews ?? 0,
+            totalOrders: perf?.totalOrders ?? 0,
+            revenue: perf ? perf.revenueMinor / 100 : 0,
+            conversionRate: perf?.conversionRate ?? 0,
+            totalSaved: perf?.totalSaved ?? 0,
+            totalShared: perf?.totalShared ?? 0,
           },
         }
         
@@ -292,11 +293,11 @@ export default function EcommerceProductDetail() {
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-600 w-32">Regular Price:</span>
-                  <span className="text-sm text-gray-500 line-through">${product.regularPrice.toFixed(2)}</span>
+                  <span className="text-sm text-gray-500 line-through">{product.regularPrice.toLocaleString()} QAR</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-600 w-32">Sale Price:</span>
-                  <span className="text-sm font-semibold text-green-600">${product.salePrice.toFixed(2)}</span>
+                  <span className="text-sm font-semibold text-green-600">{product.salePrice.toLocaleString()} QAR</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-600 w-32">Stock Quantity:</span>
@@ -355,11 +356,11 @@ export default function EcommerceProductDetail() {
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-600 w-32">Regular Price:</span>
-                  <span className="text-sm text-gray-500 line-through">${product.regularPrice.toFixed(2)}</span>
+                  <span className="text-sm text-gray-500 line-through">{product.regularPrice.toLocaleString()} QAR</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-600 w-32">Sale Price:</span>
-                  <span className="text-sm font-semibold text-green-600">${product.salePrice.toFixed(2)}</span>
+                  <span className="text-sm font-semibold text-green-600">{product.salePrice.toLocaleString()} QAR</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium text-gray-600 w-32">Stock Quantity:</span>
@@ -412,7 +413,7 @@ export default function EcommerceProductDetail() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Revenue:</span>
-                  <span className="text-sm font-medium text-gray-900">${product.performance.revenue.toLocaleString()}</span>
+                  <span className="text-sm font-medium text-gray-900">{product.performance.revenue.toLocaleString()} QAR</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Conversion Rate:</span>

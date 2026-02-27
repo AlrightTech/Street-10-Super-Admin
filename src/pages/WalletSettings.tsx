@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { walletSettingsApi } from '../services/wallet.api'
 
 /**
  * Toggle Switch Component
@@ -113,6 +114,13 @@ const Dropdown = ({ value, options, onChange }: DropdownProps) => {
  * Wallet Settings page component
  */
 export default function WalletSettings() {
+  // Loading and error states
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
   // General Settings state
   const [generalSettings, setGeneralSettings] = useState({
     minimumWalletBalance: '10',
@@ -136,6 +144,41 @@ export default function WalletSettings() {
   const [exportFormat, setExportFormat] = useState('csv')
   const [includeUserDetails, setIncludeUserDetails] = useState(false)
   const [includeFeeBreakdown, setIncludeFeeBreakdown] = useState(true)
+
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  /**
+   * Load wallet settings from backend
+   */
+  const loadSettings = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const settings = await walletSettingsApi.getSettings()
+
+      // Update state with loaded settings
+      setGeneralSettings({
+        minimumWalletBalance: settings.minimumWalletBalance.toString(),
+        transactionFee: settings.transactionFee.toString(),
+        maximumWithdrawalAmount: settings.maximumWithdrawalAmount.toString(),
+        minimumWithdrawalAmount: settings.minimumWithdrawalAmount.toString(),
+        dailyWithdrawalLimit: settings.dailyWithdrawalLimit.toString(),
+        withdrawalProcessingDays: settings.withdrawalProcessingDays.toString(),
+      })
+      setAutoApproveWithdrawals(settings.autoApproveWithdrawals)
+      setRequireKYCForWithdrawals(settings.requireKYCForWithdrawals)
+      setEmailNotifications(settings.emailNotifications)
+      setSmsNotifications(settings.smsNotifications)
+    } catch (err: any) {
+      console.error('Error loading wallet settings:', err)
+      setError(err?.response?.data?.message || 'Failed to load wallet settings')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Date range options
   const dateRangeOptions: DropdownOption[] = [
@@ -185,100 +228,134 @@ export default function WalletSettings() {
   /**
    * Handle export transactions
    */
-  const handleExportTransactions = () => {
-    // Export logic here
-    const exportData = {
-      dateRange,
-      exportFormat,
-      includeUserDetails,
-      includeFeeBreakdown,
+  const handleExportTransactions = async () => {
+    try {
+      setExporting(true)
+      setError(null)
+
+      // Calculate date range
+      let startDate: Date | undefined
+      let endDate: Date | undefined
+
+      const now = new Date()
+      switch (dateRange) {
+        case 'last-7-days':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          endDate = now
+          break
+        case 'last-30-days':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          endDate = now
+          break
+        case 'last-90-days':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+          endDate = now
+          break
+        case 'custom':
+          // For custom, you might want to add date pickers
+          // For now, use last 30 days as default
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          endDate = now
+          break
+      }
+
+      // Export transactions
+      await walletSettingsApi.exportTransactions({
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString(),
+        includeUserDetails,
+        includeFeeBreakdown,
+        format: (exportFormat === 'xlsx' || exportFormat === 'pdf' ? 'csv' : exportFormat) as 'json' | 'csv', // Backend only supports CSV for now
+      })
+
+      setSuccessMessage('Transactions exported successfully!')
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err: any) {
+      console.error('Error exporting transactions:', err)
+      setError(err?.response?.data?.message || 'Failed to export transactions')
+    } finally {
+      setExporting(false)
     }
-    
-    console.log('Exporting transactions:', exportData)
-    
-    // In a real app, this would trigger an actual export/download
-    const dateRangeLabel = dateRangeOptions.find((opt) => opt.value === dateRange)?.label || 'Selected Range'
-    const format = exportFormat.toUpperCase()
-    
-    // Create a simple CSV/JSON structure for demo
-    const exportContent = `Transaction Export\nDate Range: ${dateRangeLabel}\nFormat: ${format}\nInclude User Details: ${includeUserDetails ? 'Yes' : 'No'}\nInclude Fee Breakdown: ${includeFeeBreakdown ? 'Yes' : 'No'}\n\n[Transaction data would be here...]`
-    
-    // For demo purposes, create a download
-    const blob = new Blob([exportContent], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `transactions_${dateRange}_${new Date().getTime()}.${exportFormat === 'csv' ? 'csv' : exportFormat === 'xlsx' ? 'xlsx' : 'pdf'}`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-    
-    alert(`Exporting transactions in ${format} format for ${dateRangeLabel}`)
   }
 
   /**
    * Handle save settings with validation
    */
-  const handleSaveSettings = () => {
-    // Validate all settings before saving
-    const settings = {
-      generalSettings,
-      autoApproveWithdrawals,
-      requireKYCForWithdrawals,
-      emailNotifications,
-      smsNotifications,
-    }
+  const handleSaveSettings = async () => {
+    try {
+      setSaving(true)
+      setError(null)
+      setSuccessMessage(null)
 
-    // Validate numeric fields
-    const numFields = [
-      'minimumWalletBalance',
-      'transactionFee',
-      'maximumWithdrawalAmount',
-      'minimumWithdrawalAmount',
-      'dailyWithdrawalLimit',
-      'withdrawalProcessingDays',
-    ]
+      // Validate numeric fields
+      const numFields = [
+        'minimumWalletBalance',
+        'transactionFee',
+        'maximumWithdrawalAmount',
+        'minimumWithdrawalAmount',
+        'dailyWithdrawalLimit',
+        'withdrawalProcessingDays',
+      ]
 
-    for (const field of numFields) {
-      const value = parseFloat(generalSettings[field as keyof typeof generalSettings])
-      if (isNaN(value) || value < 0) {
-        alert(`Please enter a valid positive number for ${field.replace(/([A-Z])/g, ' $1').trim()}`)
+      for (const field of numFields) {
+        const value = parseFloat(generalSettings[field as keyof typeof generalSettings])
+        if (isNaN(value) || value < 0) {
+          setError(`Please enter a valid positive number for ${field.replace(/([A-Z])/g, ' $1').trim()}`)
+          setSaving(false)
+          return
+        }
+      }
+
+      // Validate that minimum withdrawal is less than maximum withdrawal
+      const minWithdrawal = parseFloat(generalSettings.minimumWithdrawalAmount)
+      const maxWithdrawal = parseFloat(generalSettings.maximumWithdrawalAmount)
+      if (minWithdrawal >= maxWithdrawal) {
+        setError('Minimum withdrawal amount must be less than maximum withdrawal amount')
+        setSaving(false)
         return
       }
-    }
 
-    // Validate that minimum withdrawal is less than maximum withdrawal
-    const minWithdrawal = parseFloat(generalSettings.minimumWithdrawalAmount)
-    const maxWithdrawal = parseFloat(generalSettings.maximumWithdrawalAmount)
-    if (minWithdrawal >= maxWithdrawal) {
-      alert('Minimum withdrawal amount must be less than maximum withdrawal amount')
-      return
-    }
+      // Validate that minimum wallet balance is reasonable
+      const minWalletBalance = parseFloat(generalSettings.minimumWalletBalance)
+      if (minWalletBalance < 0) {
+        setError('Minimum wallet balance must be a positive number')
+        setSaving(false)
+        return
+      }
 
-    // Validate that minimum wallet balance is reasonable
-    const minWalletBalance = parseFloat(generalSettings.minimumWalletBalance)
-    if (minWalletBalance < 0) {
-      alert('Minimum wallet balance must be a positive number')
-      return
-    }
+      // Validate transaction fee is reasonable (0-100%)
+      const transactionFee = parseFloat(generalSettings.transactionFee)
+      if (transactionFee < 0 || transactionFee > 100) {
+        setError('Transaction fee must be between 0 and 100')
+        setSaving(false)
+        return
+      }
 
-    // Validate transaction fee is reasonable (0-100%)
-    const transactionFee = parseFloat(generalSettings.transactionFee)
-    if (transactionFee < 0 || transactionFee > 100) {
-      alert('Transaction fee must be between 0 and 100')
-      return
-    }
+      // Prepare settings object
+      const settings = {
+        minimumWalletBalance: parseFloat(generalSettings.minimumWalletBalance),
+        transactionFee: parseFloat(generalSettings.transactionFee),
+        maximumWithdrawalAmount: parseFloat(generalSettings.maximumWithdrawalAmount),
+        minimumWithdrawalAmount: parseFloat(generalSettings.minimumWithdrawalAmount),
+        dailyWithdrawalLimit: parseFloat(generalSettings.dailyWithdrawalLimit),
+        withdrawalProcessingDays: parseInt(generalSettings.withdrawalProcessingDays),
+        autoApproveWithdrawals,
+        requireKYCForWithdrawals,
+        emailNotifications,
+        smsNotifications,
+      }
 
-    console.log('Saving settings:', settings)
-    
-    // In a real app, this would save to backend via API call
-    // Example: await saveWalletSettings(settings)
-    
-    // Show success message
-    alert('Settings saved successfully!')
-    
-    // In a real app, you might want to show a toast notification or update UI state
+      // Save to backend
+      await walletSettingsApi.updateSettings(settings)
+
+      setSuccessMessage('Settings saved successfully!')
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err: any) {
+      console.error('Error saving wallet settings:', err)
+      setError(err?.response?.data?.message || 'Failed to save wallet settings')
+    } finally {
+      setSaving(false)
+    }
   }
 
   /**
@@ -304,6 +381,17 @@ export default function WalletSettings() {
     setIncludeFeeBreakdown(true)
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C00]"></div>
+          <p className="mt-4 text-sm text-gray-600">Loading wallet settings...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screenn px-4 py-6 sm:px-6 lg:px-8">
       {/* Page Header */}
@@ -311,6 +399,20 @@ export default function WalletSettings() {
         <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Wallet</h1>
         <p className="mt-1 text-sm text-gray-600">Dashboard • Settings</p>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-4">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-4">
+          <p className="text-sm text-green-800">{successMessage}</p>
+        </div>
+      )}
 
       <div className="space-y-6 max-w-4xl">
         {/* General Settings Section */}
@@ -321,7 +423,7 @@ export default function WalletSettings() {
             {/* Minimum Wallet Balance */}
             <div>
               <label htmlFor="minimumWalletBalance" className="block text-sm font-medium text-gray-700 mb-1">
-                Minimum Wallet Balance ($)
+                Minimum Wallet Balance (QAR)
               </label>
               <input
                 type="number"
@@ -356,7 +458,7 @@ export default function WalletSettings() {
             {/* Maximum Withdrawal Amount */}
             <div>
               <label htmlFor="maximumWithdrawalAmount" className="block text-sm font-medium text-gray-700 mb-1">
-                Maximum Withdrawal Amount ($)
+                Maximum Withdrawal Amount (QAR)
               </label>
               <input
                 type="number"
@@ -373,7 +475,7 @@ export default function WalletSettings() {
             {/* Minimum Withdrawal Amount */}
             <div>
               <label htmlFor="minimumWithdrawalAmount" className="block text-sm font-medium text-gray-700 mb-1">
-                Minimum Withdrawal Amount ($)
+                Minimum Withdrawal Amount (QAR)
               </label>
               <input
                 type="number"
@@ -390,7 +492,7 @@ export default function WalletSettings() {
             {/* Daily Withdrawal Limit */}
             <div>
               <label htmlFor="dailyWithdrawalLimit" className="block text-sm font-medium text-gray-700 mb-1">
-                Daily Withdrawal Limit ($)
+                Daily Withdrawal Limit (QAR)
               </label>
               <input
                 type="number"
@@ -527,9 +629,17 @@ export default function WalletSettings() {
               <button
                 type="button"
                 onClick={handleExportTransactions}
-                className="rounded-lg bg-[#FF8C00] px-4 py-2 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer"
+                disabled={exporting}
+                className="rounded-lg bg-[#FF8C00] px-4 py-2 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Export Transactions
+                {exporting ? (
+                  <>
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Exporting...
+                  </>
+                ) : (
+                  'Export Transactions'
+                )}
               </button>
             </div>
             </div>
@@ -541,16 +651,25 @@ export default function WalletSettings() {
           <button
             type="button"
             onClick={handleCancel}
-            className="flex-1 max-w-[200px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+            disabled={saving}
+            className="flex-1 max-w-[200px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSaveSettings}
-            className="flex-1 max-w-[200px] rounded-lg bg-[#FF8C00] px-4 py-2 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer"
+            disabled={saving}
+            className="flex-1 max-w-[200px] rounded-lg bg-[#FF8C00] px-4 py-2 text-sm font-medium text-white hover:bg-[#E67E00] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Save Settings
+            {saving ? (
+              <>
+                <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Saving...
+              </>
+            ) : (
+              'Save Settings'
+            )}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
 import type { Notification, NotificationModule, NotificationCounts } from '../types/notifications'
 import { mockNotifications } from '../data/mockNotifications'
+import { dashboardApi } from '../services/dashboard.api'
 
 /**
  * Notification context interface
@@ -20,14 +21,18 @@ interface NotificationProviderProps {
   children: ReactNode
 }
 
+const initialCounts: NotificationCounts = { users: 0, vendors: 0, orders: 0, finance: 0, wallet: 0 }
+
 /**
  * Notification Provider Component
- * Manages global notification state using Context API
+ * Manages global notification state and sidebar badge counts from dashboard API
  */
 export function NotificationProvider({ children }: NotificationProviderProps) {
-  // Initialize notifications from mock data
+  // Sidebar badge counts from dashboard API (users=KYC pending, vendors=pending, orders=uncompleted, finance=refunds pending)
+  const [sidebarCounts, setSidebarCounts] = useState<NotificationCounts>(initialCounts)
+
+  // Initialize notifications from mock data (for notification popup if used)
   const [notifications, setNotifications] = useState<Notification[]>(() => {
-    // Load from localStorage if available, otherwise use mock data
     const saved = localStorage.getItem('notifications')
     if (saved) {
       try {
@@ -39,15 +44,32 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     return [...mockNotifications]
   })
 
+  // Fetch dashboard stats for sidebar badge counts
+  const fetchSidebarCounts = useCallback(async () => {
+    try {
+      const stats = await dashboardApi.getDashboard()
+      setSidebarCounts({
+        users: stats.kyc?.pending ?? 0,
+        vendors: stats.vendors?.pending ?? 0,
+        orders: stats.orders?.uncompleted ?? 0,
+        finance: stats.refunds?.pending ?? 0,
+        wallet: stats.withdrawals?.pending ?? 0,
+      })
+    } catch (error) {
+      console.error('Failed to fetch sidebar badge counts:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchSidebarCounts()
+    const interval = setInterval(fetchSidebarCounts, 60000) // refresh every 60s
+    return () => clearInterval(interval)
+  }, [fetchSidebarCounts])
+
   /**
-   * Calculate unread counts for each module
-   * Memoized to prevent unnecessary recalculations
+   * Badge counts: use dashboard-based counts for sidebar (users, vendors, orders, finance)
    */
-  const counts = useMemo<NotificationCounts>(() => {
-    const orders = notifications.filter((n) => n.module === 'orders' && !n.isRead).length
-    const finance = notifications.filter((n) => n.module === 'finance' && !n.isRead).length
-    return { orders, finance }
-  }, [notifications])
+  const counts = useMemo<NotificationCounts>(() => ({ ...sidebarCounts }), [sidebarCounts])
 
   /**
    * Save notifications to localStorage
@@ -91,26 +113,24 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   }, [saveToStorage])
 
   /**
-   * Get unread count for a specific module
+   * Get unread count for a specific module (sidebar badges use API counts)
    */
   const getUnreadCount = useCallback(
     (module: NotificationModule): number => {
-      return notifications.filter((n) => n.module === module && !n.isRead).length
+      return counts[module] ?? 0
     },
-    [notifications]
+    [counts]
   )
 
   /**
-   * Refresh notifications (useful for polling or manual refresh)
-   * In production, this would fetch from API
+   * Refresh notifications and sidebar badge counts
    */
   const refreshNotifications = useCallback(() => {
-    // For now, just reset to initial mock data
-    // In production, this would be an API call
     const refreshed = [...mockNotifications]
     setNotifications(refreshed)
     saveToStorage(refreshed)
-  }, [saveToStorage])
+    fetchSidebarCounts()
+  }, [saveToStorage, fetchSidebarCounts])
 
   const value = useMemo(
     () => ({

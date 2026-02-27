@@ -30,6 +30,7 @@ export interface UserTransaction {
   transactionId: string
   userName: string
   userEmail: string
+  userId?: string
   type: 'credit' | 'debit'
   amount: string
   paymentMethod: string

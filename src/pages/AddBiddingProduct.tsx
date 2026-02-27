@@ -1092,44 +1092,6 @@ export default function AddBiddingProduct() {
           </div>
           </div>
 
-          {/* Additional Details Section */}
-          <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Dimensions */}
-            <div>
-              <label htmlFor="dimensions" className="block text-sm font-medium text-[#888888] mb-2">
-                Dimensions
-              </label>
-              <input
-                id="dimensions"
-                name="dimensions"
-                type="text"
-                placeholder="Enter Dimensions e.g. 40 mm, case"
-                value={formData.dimensions}
-                onChange={handleChange}
-                className="w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm outline-none placeholder:text-gray-400 focus:ring-1 focus:ring-[#F7931E]"
-              />
-            </div>
-
-            {/* Weight */}
-            <div>
-              <label htmlFor="weight" className="block text-sm font-medium text-[#888888] mb-2">
-                Weight
-              </label>
-              <input
-                id="weight"
-                name="weight"
-                type="text"
-                placeholder="Enter Weight"
-                value={formData.weight}
-                onChange={handleChange}
-                className="w-full rounded-lg bg-[#F3F5F6] px-3 py-2.5 text-sm outline-none placeholder:text-gray-400 focus:ring-1 focus:ring-[#F7931E]"
-              />
-            </div>
-          </div>
-          </div>
-
           {/* Error Message */}
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-200 p-4">

@@ -84,7 +84,7 @@ export const translations = {
     
     // Footer
     footerBrand: 'Street10 mazad',
-    footerSocialMessage: 'Join us social platform to stay updated',
+    footerSocialMessage: 'Join our social platform to stay updated',
   },
   ar: {
     // TopBar

@@ -91,7 +91,7 @@ export const mockNotifications: Notification[] = [
 ]
 
 /**
- * Get initial notification counts
+ * Get initial notification counts from mock data (sidebar uses API counts)
  */
 export function getInitialNotificationCounts() {
   const orders = mockNotifications.filter(
@@ -100,7 +100,6 @@ export function getInitialNotificationCounts() {
   const finance = mockNotifications.filter(
     (n) => n.module === 'finance' && !n.isRead
   ).length
-
-  return { orders, finance }
+  return { users: 0, vendors: 0, orders, finance }
 }
 

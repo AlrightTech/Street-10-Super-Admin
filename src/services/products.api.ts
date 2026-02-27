@@ -115,6 +115,19 @@ export const productsApi = {
     return response.data.data.product;
   },
 
+  // Get product performance (orders, revenue)
+  getPerformance: async (id: string): Promise<{
+    totalViews: number;
+    totalOrders: number;
+    revenueMinor: number;
+    conversionRate: number;
+    totalSaved: number;
+    totalShared: number;
+  }> => {
+    const response = await api.get<ApiResponse<{ performance: any }>>(`/products/${id}/performance`);
+    return (response.data.data as any).performance || response.data.data;
+  },
+
   // Create product
   create: async (data: CreateProductData): Promise<Product> => {
     const response = await api.post<ApiResponse<{ product: Product }>>('/products', data);

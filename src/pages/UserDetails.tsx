@@ -277,12 +277,18 @@ export default function UserDetails() {
         return;
       }
 
-      await usersApi.toggleBlock(userUuid, !isCurrentlyBlocked);
+      const updatedUser = await usersApi.toggleBlock(userUuid, !isCurrentlyBlocked);
       
+      // Map API status to display (active, blocked, pending) - use API response when unblocking to restore correct status
+      const mapApiStatusToDisplay = (apiStatus: string) =>
+        apiStatus === "active" ? "active" : apiStatus === "blocked" ? "blocked" : "pending";
+
       // Update local state immediately
       setUser({
         ...user,
-        status: isCurrentlyBlocked ? "active" : "blocked",
+        status: isCurrentlyBlocked
+          ? mapApiStatusToDisplay(updatedUser?.status || "active")
+          : "blocked",
         accountStatus: isCurrentlyBlocked ? "verified" : "unverified",
       });
       

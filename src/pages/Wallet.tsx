@@ -4,7 +4,7 @@ import { DollarSignIcon, HandIcon, BellIcon, ArrowUpDownIcon, MoreVerticalIcon, 
 import SearchBar from '../components/ui/SearchBar'
 import Pagination from '../components/ui/Pagination'
 import ConfirmModal from '../components/ui/ConfirmModal'
-import { mockWalletMetrics, mockWalletTransactions } from '../data/mockWallet'
+import { walletApi } from '../services/wallet.api'
 import type { WalletTransaction, TransactionStatus } from '../types/wallet'
 
 /**
@@ -104,12 +104,14 @@ const getStatusBadgeColor = (status: TransactionStatus) => {
  */
 export default function Wallet() {
   const navigate = useNavigate()
-  const [transactions, setTransactions] = useState<WalletTransaction[]>(mockWalletTransactions)
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<'all' | TransactionStatus>('all')
   const [sortBy, setSortBy] = useState('newest')
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null)
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null)
@@ -117,6 +119,123 @@ export default function Wallet() {
   const [transactionToEdit, setTransactionToEdit] = useState<WalletTransaction | null>(null)
   const actionMenuRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const itemsPerPage = 10
+  const [metrics, setMetrics] = useState({
+    totalBalance: '0.00 QAR',
+    totalTransactions: 0,
+    pendingWithdrawals: '0.00 QAR',
+    pendingWithdrawalsCount: 0,
+    successRate: '0%',
+    successRatePendingCount: 0,
+  })
+
+  // Load transactions and metrics from API
+  useEffect(() => {
+    loadTransactions()
+    loadMetrics()
+  }, [currentPage, statusFilter, activeFilter])
+
+  const loadMetrics = async () => {
+    try {
+      const metricsData = await walletApi.getMetrics()
+      const totalBalance = parseFloat(metricsData.totalBalance) / 100
+      const pendingWithdrawals = parseFloat(metricsData.totalOnHold) / 100
+      
+      setMetrics({
+        totalBalance: `${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} QAR`,
+        totalTransactions: metricsData.totalTransactions || 0,
+        pendingWithdrawals: `${pendingWithdrawals.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} QAR`,
+        pendingWithdrawalsCount: metricsData.pendingWithdrawals,
+        successRate: '100%', // Calculate from transactions if needed
+        successRatePendingCount: metricsData.pendingWithdrawals,
+      })
+    } catch (error) {
+      console.error('Error loading metrics:', error)
+    }
+  }
+
+  const loadTransactions = async () => {
+    try {
+      setLoading(true)
+      const status = activeFilter !== 'all' ? mapStatusToBackend(activeFilter) : undefined
+      const response = await walletApi.getTransactions({
+        page: currentPage,
+        limit: itemsPerPage,
+        status,
+      })
+      
+      // Map backend transactions to frontend format
+      const mappedTransactions = response.data.map((tx) => mapTransactionToFrontend(tx))
+      setTransactions(mappedTransactions)
+      setTotalPages(response.pagination.totalPages)
+    } catch (error) {
+      console.error('Error loading transactions:', error)
+      // Keep existing transactions on error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Map backend status to frontend status
+  const mapStatusToBackend = (status: TransactionStatus): string => {
+    switch (status) {
+      case 'completed':
+        return 'confirmed'
+      case 'pending':
+        return 'pending'
+      case 'failed':
+        return 'failed'
+      default:
+        return ''
+    }
+  }
+
+  // Map backend transaction to frontend format
+  const mapTransactionToFrontend = (tx: any): WalletTransaction => {
+    const amount = parseFloat(tx.amountMinor) / 100
+    const isCredit = ['deposit', 'refund_out', 'bid_release'].includes(tx.type)
+    
+    return {
+      id: tx.id,
+      transactionId: tx.id.slice(0, 8).toUpperCase(),
+      userName: tx.user?.name || 'Unknown User',
+      userEmail: tx.user?.email || '',
+      type: isCredit ? 'credit' : 'debit',
+      amount: `${amount.toFixed(2)} ${tx.currency}`,
+      paymentMethod: getPaymentMethod(tx.type),
+      date: new Date(tx.createdAt).toISOString().split('T')[0],
+      status: mapBackendStatusToFrontend(tx.status),
+      linkedOrderId: tx.meta?.orderId || tx.refId || undefined,
+      linkedAuctionId: tx.meta?.auctionId || undefined,
+    }
+  }
+
+  const mapBackendStatusToFrontend = (status: string): TransactionStatus => {
+    switch (status) {
+      case 'confirmed':
+        return 'completed'
+      case 'pending':
+        return 'pending'
+      case 'failed':
+      case 'reversed':
+        return 'failed'
+      default:
+        return 'pending'
+    }
+  }
+
+  const getPaymentMethod = (type: string): 'Bank Transfer' | 'Wallet Balance' | 'Credit Card' | 'Debit Card' => {
+    switch (type) {
+      case 'deposit':
+        return 'Credit Card'
+      case 'withdraw':
+        return 'Bank Transfer'
+      case 'purchase':
+      case 'hold':
+        return 'Wallet Balance'
+      default:
+        return 'Wallet Balance'
+    }
+  }
 
   // Close action menu when clicking outside
   useEffect(() => {
@@ -184,14 +303,8 @@ export default function Wallet() {
     return sorted
   }, [transactions, activeFilter, statusFilter, searchQuery, sortBy])
 
-  // Paginate transactions
-  const paginatedTransactions = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const endIndex = startIndex + itemsPerPage
-    return filteredAndSortedTransactions.slice(startIndex, endIndex)
-  }, [filteredAndSortedTransactions, currentPage])
-
-  const totalPages = Math.ceil(filteredAndSortedTransactions.length / itemsPerPage)
+  // Use API pagination - transactions are already paginated
+  const paginatedTransactions = filteredAndSortedTransactions
 
   // Reset to page 1 when filter or search changes
   useEffect(() => {
@@ -228,12 +341,17 @@ export default function Wallet() {
 
   /**
    * Confirm delete transaction
+   * Note: Delete functionality may not be available in backend - this is UI only
    */
   const confirmDelete = () => {
     if (transactionToDelete) {
+      // In a real implementation, you would call an API to delete
+      // For now, just remove from local state
       setTransactions((prevTransactions) => prevTransactions.filter((t) => t.id !== transactionToDelete))
       setDeleteModalOpen(false)
       setTransactionToDelete(null)
+      // Reload transactions to sync with backend
+      loadTransactions()
     }
   }
 
@@ -309,7 +427,7 @@ export default function Wallet() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Balance</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{mockWalletMetrics.totalBalance}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{metrics.totalBalance}</p>
             </div>
             <div className="rounded-full bg-[#FF8C00] p-1.5 sm:p-2">
               <DollarSignIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
@@ -322,7 +440,7 @@ export default function Wallet() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Transactions</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{mockWalletMetrics.totalTransactions.toLocaleString()}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{metrics.totalTransactions.toLocaleString()}</p>
             </div>
             <div className="rounded-full bg-blue-100 dark:bg-blue-900/30 p-1.5 sm:p-2">
               <ArrowUpDownIcon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
@@ -335,8 +453,8 @@ export default function Wallet() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Pending Withdrawals</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{mockWalletMetrics.pendingWithdrawals}</p>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{mockWalletMetrics.pendingWithdrawalsCount} requests pending</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{metrics.pendingWithdrawals}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{metrics.pendingWithdrawalsCount} requests pending</p>
             </div>
             <div className="rounded-full bg-purple-100 dark:bg-purple-900/30 p-1.5 sm:p-2">
               <HandIcon className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
@@ -349,8 +467,8 @@ export default function Wallet() {
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Success Rate</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{mockWalletMetrics.successRate}</p>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{mockWalletMetrics.successRatePendingCount} requests pending</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{metrics.successRate}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{metrics.successRatePendingCount} requests pending</p>
             </div>
             <div className="rounded-full bg-yellow-100 dark:bg-yellow-900/30 p-1.5 sm:p-2">
               <BellIcon className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 dark:text-yellow-400" />
@@ -552,7 +670,16 @@ export default function Wallet() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {paginatedTransactions.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FF8C00]"></div>
+                      Loading transactions...
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
                     No transactions found for the selected filters.

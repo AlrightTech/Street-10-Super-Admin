@@ -19,10 +19,18 @@ export interface SocialMediaLink {
   url: string;
 }
 
+export interface FooterFeature {
+  id: string;
+  title: string;
+  link: string;
+}
+
 export interface ContactData {
   phoneNumbers: ContactDetail[];
   email: ContactDetail;
   address: ContactDetail;
+  footerOneFeatures: FooterFeature[];
+  footerTwoFeatures: FooterFeature[];
   socialMediaLinks: SocialMediaLink[];
 }
 
