@@ -60,36 +60,11 @@ export const mockOrderDetails: Record<string, OrderDetails> = {
       estimatedDelivery: '2024-03-18',
     },
     timeline: [
-      {
-        id: '1',
-        status: 'Placed',
-        date: '2024-03-15',
-        time: '14:30:00',
-      },
-      {
-        id: '2',
-        status: 'Payment Confirmed',
-        date: '2024-03-15',
-        time: '14:30:00',
-      },
-      {
-        id: '3',
-        status: 'Processing',
-        date: '2024-03-15',
-        time: '16:20:00',
-      },
-      {
-        id: '4',
-        status: 'Shipped',
-        date: '2024-03-15',
-        time: '16:20:00',
-      },
-      {
-        id: '5',
-        status: 'Delivered',
-        date: '2024-03-15',
-        time: '16:20:00',
-      },
+      { id: '1', status: 'Placed', createdAt: '2024-03-15T14:30:00' },
+      { id: '2', status: 'Payment Confirmed', createdAt: '2024-03-15T14:30:00' },
+      { id: '3', status: 'Processing', createdAt: '2024-03-15T16:20:00' },
+      { id: '4', status: 'Shipped', createdAt: '2024-03-15T16:20:00' },
+      { id: '5', status: 'Delivered', createdAt: '2024-03-15T16:20:00' },
     ],
   },
 }
@@ -151,25 +126,25 @@ function generateOrderDetails(orderId: string): OrderDetails | null {
   
   // Generate timeline based on order status
   const timeline = [
-    { id: '1', status: 'Placed', date: formattedDate, time: '14:30:00' },
-    { id: '2', status: 'Payment Confirmed', date: formattedDate, time: '14:30:00' },
+    { id: '1', status: 'Placed', createdAt: `${formattedDate}T14:30:00` },
+    { id: '2', status: 'Payment Confirmed', createdAt: `${formattedDate}T14:30:00` },
   ]
   
   if (mappedStatus === 'completed' || mappedStatus === 'delivered') {
     timeline.push(
-      { id: '3', status: 'Processing', date: formattedDate, time: '16:20:00' },
-      { id: '4', status: 'Shipped', date: formattedDate, time: '16:20:00' },
-      { id: '5', status: 'Delivered', date: formattedDate, time: '16:20:00' }
+      { id: '3', status: 'Processing', createdAt: `${formattedDate}T16:20:00` },
+      { id: '4', status: 'Shipped', createdAt: `${formattedDate}T16:20:00` },
+      { id: '5', status: 'Delivered', createdAt: `${formattedDate}T16:20:00` }
     )
   } else if (mappedStatus === 'shipped') {
     timeline.push(
-      { id: '3', status: 'Processing', date: formattedDate, time: '16:20:00' },
-      { id: '4', status: 'Shipped', date: formattedDate, time: '16:20:00' }
+      { id: '3', status: 'Processing', createdAt: `${formattedDate}T16:20:00` },
+      { id: '4', status: 'Shipped', createdAt: `${formattedDate}T16:20:00` }
     )
   } else if (mappedStatus === 'processing') {
-    timeline.push({ id: '3', status: 'Processing', date: formattedDate, time: '16:20:00' })
+    timeline.push({ id: '3', status: 'Processing', createdAt: `${formattedDate}T16:20:00` })
   } else if (mappedStatus === 'cancelled') {
-    timeline.push({ id: '3', status: 'Cancelled', date: formattedDate, time: '16:20:00' })
+    timeline.push({ id: '3', status: 'Cancelled', createdAt: `${formattedDate}T16:20:00` })
   }
   
   return {

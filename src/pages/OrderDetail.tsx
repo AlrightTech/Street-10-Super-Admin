@@ -3,7 +3,11 @@ import { useState, useEffect, useRef } from 'react'
 import { ordersApi, type OrderDetails } from '../services/orders.api'
 import { customerNotesApi, type CustomerNote } from '../services/orders.api'
 import type { OrderRecord } from './Orders'
+import { buildOrderDisplayStatus } from './Orders'
 import OrderStatusBadge from '../components/orders/OrderStatusBadge'
+import OrderTimelineCard from '../components/orders/OrderTimelineCard'
+import RefundDetailModal from '../components/orders/RefundDetailModal'
+import type { TimelineEvent } from '../types/orderDetails'
 import { ShoppingBagIcon, CheckCircleIcon, XCircleIcon, RefreshCwIcon, PhoneIcon, MailIcon, CalendarIcon, MapPinIcon, CheckIcon, PlusIcon, UserIcon, DownloadIcon, ChevronDownIcon } from '../components/icons/Icons'
 import api from '../utils/api'
 
@@ -28,6 +32,7 @@ export default function OrderDetail() {
   const [showAddNoteModal, setShowAddNoteModal] = useState(false)
   const [newNoteText, setNewNoteText] = useState('')
   const [isAddingNote, setIsAddingNote] = useState(false)
+  const [selectedRefundEvent, setSelectedRefundEvent] = useState<TimelineEvent | null>(null)
 
   const timeFilterOptions = [
     'All Time',
@@ -76,6 +81,7 @@ export default function OrderDetail() {
           amountFormatted: `${orderData.currency} ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
           paymentMethod: orderData.paymentMethod || 'N/A',
           status: orderData.status as any,
+          displayStatus: buildOrderDisplayStatus(orderData.status, orderData.refundStatus),
           orderDate: new Date(orderData.createdAt).toLocaleDateString('en-GB'),
           orderNumber: orderData.orderNumber,
           orderId: orderData.id,
@@ -108,6 +114,7 @@ export default function OrderDetail() {
               amountFormatted: `${o.currency} ${oTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
               paymentMethod: o.paymentMethod || 'N/A',
               status: o.status as any,
+              displayStatus: buildOrderDisplayStatus(o.status, o.refundStatus),
               orderDate: new Date(o.createdAt).toLocaleDateString('en-GB'),
               orderNumber: o.orderNumber,
               orderId: o.id,
@@ -380,6 +387,29 @@ export default function OrderDetail() {
     return statusMap[status.toLowerCase()] || status
   }
 
+  const getPaymentStatusDisplay = (
+    od: { status?: string; refundStatus?: string | null } | null | undefined
+  ) => {
+    if (!od) {
+      return { label: '—', className: 'bg-gray-100 text-gray-700' }
+    }
+    const rs = String(od.refundStatus || 'none').toLowerCase()
+    if (rs === 'refund_requested') {
+      return { label: 'Refund requested', className: 'bg-orange-100 text-orange-800' }
+    }
+    if (rs === 'partially_refunded') {
+      return { label: 'Partially refunded', className: 'bg-amber-100 text-amber-800' }
+    }
+    if (rs === 'fully_refunded') {
+      return { label: 'Refunded', className: 'bg-blue-100 text-blue-700' }
+    }
+    const st = String(od.status || '').toLowerCase()
+    if (st === 'created') {
+      return { label: 'Pending payment', className: 'bg-yellow-100 text-yellow-800' }
+    }
+    return { label: 'Paid', className: 'bg-green-100 text-green-700' }
+  }
+
   // If on detail route, show order detail view matching reference image
   if (isDetailRoute) {
     // Calculate totals from real order items - define orderItems first
@@ -409,119 +439,16 @@ export default function OrderDetail() {
       }
     })
 
-    // Build order timeline from real order data
-    const buildOrderTimeline = () => {
-      const timeline = []
-      const orderStatus = orderDetails?.status || 'created'
-      const createdAt = orderDetails?.createdAt ? new Date(orderDetails.createdAt) : null
-      const updatedAt = orderDetails?.updatedAt ? new Date(orderDetails.updatedAt) : null
-      
-      // Helper to format date and time
-      const formatDateTime = (date: Date) => {
-        if (!date || isNaN(date.getTime())) return { date: '', time: '' }
-        return {
-          date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-        }
-      }
-      
-      // Order Placed - always completed (createdAt)
-      const orderPlacedDate = createdAt ? formatDateTime(createdAt) : { date: '', time: '' }
-      timeline.push({
-        status: 'Order Placed',
-        date: orderPlacedDate.date,
-        time: orderPlacedDate.time,
-        completed: true,
-        isCurrent: false
-      })
-      
-      // Payment Confirmed - completed if status is 'paid' or later
-      const isPaid = ['paid', 'fulfillment_pending', 'shipped', 'delivered', 'closed'].includes(orderStatus)
-      let paymentDate = { date: '', time: '' }
-      if (isPaid) {
-        // For payment, use updatedAt when status became 'paid', or createdAt if paid at creation
-        if (orderStatus === 'paid' && createdAt && updatedAt) {
-          // If status is 'paid' and times are close, payment happened at creation
-          if (Math.abs(createdAt.getTime() - updatedAt.getTime()) < 60000) {
-            paymentDate = formatDateTime(createdAt)
-          } else {
-            paymentDate = formatDateTime(updatedAt)
-          }
-        } else if (updatedAt) {
-          paymentDate = formatDateTime(updatedAt)
-        } else if (createdAt) {
-          paymentDate = formatDateTime(createdAt)
-        }
-      }
-      timeline.push({
-        status: 'Payment Confirmed',
-        date: paymentDate.date,
-        time: paymentDate.time,
-        completed: isPaid,
-        isCurrent: !isPaid && orderStatus === 'created'
-      })
-      
-      // Processing - completed if status is 'fulfillment_pending' or later
-      const isProcessing = ['fulfillment_pending', 'shipped', 'delivered', 'closed'].includes(orderStatus)
-      // Use updatedAt when status is exactly 'fulfillment_pending', otherwise use updatedAt as approximation
-      let processingDate = { date: '', time: '' }
-      if (isProcessing) {
-        if (orderStatus === 'fulfillment_pending' && updatedAt) {
-          processingDate = formatDateTime(updatedAt)
-        } else if (updatedAt) {
-          // If status moved beyond processing, use updatedAt as approximation
-          processingDate = formatDateTime(updatedAt)
-        }
-      }
-      timeline.push({
-        status: 'Processing',
-        date: processingDate.date,
-        time: processingDate.time,
-        completed: isProcessing,
-        isCurrent: !isProcessing && orderStatus === 'paid'
-      })
-      
-      // Shipped - completed if status is 'shipped' or later
-      const isShipped = ['shipped', 'delivered', 'closed'].includes(orderStatus)
-      // Use updatedAt when status is exactly 'shipped'
-      let shippedDate = { date: '', time: '' }
-      if (isShipped) {
-        if (orderStatus === 'shipped' && updatedAt) {
-          shippedDate = formatDateTime(updatedAt)
-        } else if (updatedAt) {
-          // If delivered, shipped happened before, use updatedAt as approximation
-          shippedDate = formatDateTime(updatedAt)
-        }
-      }
-      timeline.push({
-        status: 'Shipped',
-        date: shippedDate.date,
-        time: shippedDate.time,
-        completed: isShipped,
-        isCurrent: !isShipped && orderStatus === 'fulfillment_pending'
-      })
-      
-      // Delivered - completed if status is 'delivered' or 'closed'
-      const isDelivered = ['delivered', 'closed'].includes(orderStatus)
-      // Use updatedAt when status is 'delivered' or 'closed'
-      let deliveredDate = { date: '', time: '' }
-      if (isDelivered) {
-        if (updatedAt) {
-          deliveredDate = formatDateTime(updatedAt)
-        }
-      }
-      timeline.push({
-        status: 'Delivered',
-        date: deliveredDate.date,
-        time: deliveredDate.time,
-        completed: isDelivered,
-        isCurrent: !isDelivered && orderStatus === 'shipped'
-      })
-      
-      return timeline
-    }
-    
-    const orderTimeline = buildOrderTimeline()
+    // Build unified timeline from backend data (order + refund events)
+    const orderTimeline: TimelineEvent[] =
+      (orderDetails as any)?.timeline?.map((evt: any) => ({
+        id: evt.id,
+        status: evt.statusLabel || evt.statusCode || 'Event',
+        createdAt: evt.createdAt,
+        type: evt.type,
+        statusCode: evt.statusCode,
+        meta: evt.meta,
+      })) || []
 
     // Use actual order number from API
     const formattedOrderId = orderDetails?.orderNumber || order.orderNumber || order.id
@@ -629,12 +556,6 @@ export default function OrderDetail() {
     const handleAddTracking = () => {
       if (orderId) {
         navigate(`/orders/${orderId}/shipping`)
-      }
-    }
-
-    const handleIssueRefund = () => {
-      if (orderId) {
-        navigate(`/orders/${orderId}/refund`)
       }
     }
 
@@ -880,9 +801,14 @@ export default function OrderDetail() {
                 </div>
                 <div className='flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2 sm:items-center'>
                   <p className="text-xs sm:text-sm font-medium text-gray-900">Status</p>
-                  <span className={`inline-flex items-center px-2 sm:px-4 rounded-full text-xs font-medium w-fit ${getStatusBadgeClass(orderDetails?.status || '')}`}>
-                    {formatStatus(orderDetails?.status || '')}
-                  </span>
+                  {(() => {
+                    const pay = getPaymentStatusDisplay(orderDetails)
+                    return (
+                      <span className={`inline-flex items-center px-2 sm:px-4 rounded-full text-xs font-medium w-fit ${pay.className}`}>
+                        {pay.label}
+                      </span>
+                    )
+                  })()}
                 </div>
               </div>
             </div>
@@ -922,43 +848,83 @@ export default function OrderDetail() {
           </div>
         </div>
 
-        {/* Order Timeline Section */}
-        <div>
-          <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">Order Timeline</h2>
-          <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6">
-            <div className="space-y-3 sm:space-y-4">
-            {orderTimeline.map((item, index) => (
-              <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="flex-shrink-0">
-                    {item.completed ? (
-                      <div className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-green-500">
-                        <svg className="h-3 w-3 sm:h-4 sm:w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    ) : item.isCurrent ? (
-                      <div className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-blue-500">
-                        <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-white" />
-                      </div>
-                    ) : (
-                      <div className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full border-2 border-gray-300 bg-white">
-                        <div className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-gray-300" />
-                      </div>
-                    )}
-                  </div>
-                  <p className={`text-xs sm:text-sm md:text-base font-medium ${item.completed || item.isCurrent ? 'text-gray-900' : 'text-gray-400'}`}>
-                    {item.status}
-                  </p>
-                </div>
-                <p className={`text-xs sm:text-sm sm:ml-auto ${item.completed || item.isCurrent ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {item.date && item.time ? `${item.date}, ${item.time}` : 'Pending'}
-                </p>
-              </div>
-            ))}
-            </div>
+        {/* Order Timeline Section (order + refund events, clickable) */}
+        {orderDetails && orderTimeline.length > 0 && (
+          <div>
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">
+              Order Timeline
+            </h2>
+            <OrderTimelineCard
+              timeline={orderTimeline}
+              onEventClick={(event) => {
+                if (event.type === 'refund') {
+                  setSelectedRefundEvent(event)
+                }
+              }}
+            />
+            {selectedRefundEvent &&
+              selectedRefundEvent.meta?.refundRequestId &&
+              orderDetails?.id && (
+                <RefundDetailModal
+                  isOpen={!!selectedRefundEvent}
+                  refundRequestId={selectedRefundEvent.meta.refundRequestId}
+                  onClose={() => setSelectedRefundEvent(null)}
+                  onActionComplete={async () => {
+                    try {
+                      if (!orderId) return
+                      const refreshed = await ordersApi.getById(orderId)
+                      setOrderDetails(refreshed)
+
+                      // Rebuild the lightweight OrderRecord used elsewhere on the page
+                      const total = parseFloat(refreshed.totalMinor as any) / 100
+                      const firstItem = refreshed.items?.[0]
+                      const productName =
+                        firstItem?.product?.title || 'N/A'
+                      const customerName =
+                        (refreshed.user as any)?.name ||
+                        refreshed.user?.email?.split('@')[0] ||
+                        'Unknown'
+                      const customerImageUrl =
+                        (refreshed.user as any)?.profileImageUrl || null
+
+                      const transformedOrder: OrderRecord = {
+                        id: `#${refreshed.orderNumber || refreshed.id.slice(-8)}`,
+                        customerName,
+                        customerEmail: refreshed.user?.email,
+                        customerImageUrl,
+                        product: productName,
+                        productImage:
+                          firstItem?.product?.media?.[0]?.url,
+                        amount: total,
+                        amountFormatted: `${refreshed.currency} ${total.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}`,
+                        paymentMethod: refreshed.paymentMethod || 'N/A',
+                        status: refreshed.status as any,
+                        displayStatus: buildOrderDisplayStatus(
+                          refreshed.status,
+                          refreshed.refundStatus
+                        ),
+                        orderDate: new Date(
+                          refreshed.createdAt,
+                        ).toLocaleDateString('en-GB'),
+                        orderNumber: refreshed.orderNumber,
+                        orderId: refreshed.id,
+                      }
+
+                      setOrder(transformedOrder)
+                    } catch (err) {
+                      console.error(
+                        'Failed to refresh order after refund action',
+                        err,
+                      )
+                    }
+                  }}
+                />
+              )}
           </div>
-        </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
@@ -1021,16 +987,6 @@ export default function OrderDetail() {
               </>
             )}
           </div>
-          <button
-            type="button"
-            onClick={handleIssueRefund}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 sm:py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-red-700 cursor-pointer"
-          >
-            <svg className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>Issue Refund</span>
-          </button>
           <button
             type="button"
             onClick={handleDownloadInvoice}

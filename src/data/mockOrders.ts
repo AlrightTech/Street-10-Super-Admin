@@ -13,6 +13,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-001',
     paymentMethod: 'Credit Card',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '15 Mar 2024',
   },
   {
@@ -24,6 +25,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-002',
     paymentMethod: 'Wallet',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '16 Mar 2024',
   },
   {
@@ -35,6 +37,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-003',
     paymentMethod: 'Credit Card',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '17 Mar 2024',
   },
   {
@@ -46,6 +49,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-004',
     paymentMethod: 'Credit Card',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '18 Mar 2024',
   },
   {
@@ -57,6 +61,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-005',
     paymentMethod: 'Cash on Delivery',
     status: 'inactive',
+    displayStatus: 'Inactive',
     orderDate: '19 Mar 2024',
   },
   {
@@ -68,6 +73,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-006',
     paymentMethod: 'Credit Card',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '20 Mar 2024',
   },
   {
@@ -79,6 +85,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-007',
     paymentMethod: 'Wallet',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '21 Mar 2024',
   },
   {
@@ -90,6 +97,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-008',
     paymentMethod: 'Credit Card',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '22 Mar 2024',
   },
   {
@@ -101,6 +109,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-009',
     paymentMethod: 'Credit Card',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '23 Mar 2024',
   },
   {
@@ -112,6 +121,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-010',
     paymentMethod: 'Wallet',
     status: 'inactive',
+    displayStatus: 'Inactive',
     orderDate: '24 Mar 2024',
   },
   {
@@ -123,6 +133,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-011',
     paymentMethod: 'Credit Card',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '25 Mar 2024',
   },
   {
@@ -134,6 +145,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-012',
     paymentMethod: 'Cash on Delivery',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '26 Mar 2024',
   },
   {
@@ -145,6 +157,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-013',
     paymentMethod: 'Credit Card',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '27 Mar 2024',
   },
   {
@@ -156,6 +169,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-014',
     paymentMethod: 'Wallet',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '28 Mar 2024',
   },
   {
@@ -167,6 +181,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-015',
     paymentMethod: 'Credit Card',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '29 Mar 2024',
   },
   {
@@ -178,6 +193,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-016',
     paymentMethod: 'Credit Card',
     status: 'inactive',
+    displayStatus: 'Inactive',
     orderDate: '30 Mar 2024',
   },
   {
@@ -189,6 +205,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-017',
     paymentMethod: 'Wallet',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '31 Mar 2024',
   },
   {
@@ -200,6 +217,7 @@ export const mockOrders: OrderRecord[] = [
     orderNumber: '#ORD-018',
     paymentMethod: 'Credit Card',
     status: 'active',
+    displayStatus: 'Active',
     orderDate: '01 Apr 2024',
   },
 ]

@@ -140,50 +140,20 @@ export default function EcommerceOrderView() {
               trackingNumber: '',
               estimatedDelivery: '',
             },
-            timeline: [
-              {
-                id: '1',
-                status: 'Order Placed',
-                date: new Date(apiOrder.createdAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                }),
-                time: new Date(apiOrder.createdAt).toLocaleTimeString('en-US', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true,
-                }),
-              },
-              {
-                id: '2',
-                status: 'Payment Confirmed',
-                date: new Date(apiOrder.createdAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                }),
-                time: new Date(new Date(apiOrder.createdAt).getTime() + 2 * 60000).toLocaleTimeString('en-US', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true,
-                }),
-              },
-              {
-                id: '3',
-                status: 'Order Processing',
-                date: new Date(apiOrder.createdAt).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                }),
-                time: new Date(new Date(apiOrder.createdAt).getTime() + 4 * 3600000).toLocaleTimeString('en-US', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true,
-                }),
-              },
-            ],
+            timeline: ((apiOrder as any).timeline || []).map((evt: any) => ({
+              id: evt.id,
+              status: evt.statusLabel || evt.statusCode || 'Event',
+              date: new Date(evt.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              }),
+              time: new Date(evt.createdAt).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+              }),
+            })),
           }
           
           setOrder(transformedOrder)

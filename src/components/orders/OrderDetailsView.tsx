@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import type { OrderRecord } from '../../pages/Orders'
+import { buildOrderDisplayStatus, type OrderRecord } from '../../pages/Orders'
 
 interface OrderDetailsViewProps {
   order: OrderRecord
@@ -419,6 +419,7 @@ export default function OrderDetailsView({ order, onViewOrder }: OrderDetailsVie
                               orderNumber: historyOrder.id,
                               paymentMethod: historyOrder.paymentType,
                               status: historyOrder.status as OrderRecord['status'],
+                              displayStatus: buildOrderDisplayStatus(historyOrder.status),
                               orderDate: historyOrder.date,
                             }
                             onViewOrder?.(tempOrder)

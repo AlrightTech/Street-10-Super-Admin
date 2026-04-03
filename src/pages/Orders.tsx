@@ -22,21 +22,50 @@ export interface OrderRecord {
   amountFormatted: string
   paymentMethod: string
   status: OrderStatus
+  displayStatus: string
+  refundStatus?: string
   orderDate: string
   orderNumber: string
   orderId?: string // UUID for navigation
 }
 
-const TAB_OPTIONS: { key: 'all' | OrderStatus; label: string }[] = [
+/** Label shown in tables/badges; mirrors API order.status + refundStatus. */
+export function buildOrderDisplayStatus(
+  status: string,
+  refundStatus?: string | null
+): string {
+  const statusDisplayMap: Record<string, string> = {
+    created: 'Created',
+    paid: 'Paid',
+    fulfillment_pending: 'Fulfillment Pending',
+    shipped: 'Shipped',
+    delivered: 'Delivered',
+    closed: 'Closed',
+    cancelled: 'Cancelled',
+    active: 'Active',
+    inactive: 'Inactive',
+    completed: 'Completed',
+    processing: 'Processing',
+    pending: 'Pending',
+  }
+  const baseLabel =
+    statusDisplayMap[status] ||
+    status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  const rs = refundStatus
+  if (rs === 'refund_requested') return `${baseLabel} + Refund Requested`
+  if (rs === 'partially_refunded') return `${baseLabel} + Partially Refunded`
+  if (rs === 'fully_refunded') return 'Cancelled + Refunded'
+  return baseLabel
+}
+
+const TAB_OPTIONS: { key: string; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'created', label: 'Created' },
   { key: 'paid', label: 'Paid' },
   { key: 'fulfillment_pending', label: 'Fulfillment Pending' },
   { key: 'shipped', label: 'Shipped' },
-  { key: 'delivered', label: 'Delivered' },
 ]
 
-const STATUS_BADGE_CLASS: Record<'all' | OrderStatus, { active: string; inactive: string }> = {
+const STATUS_BADGE_CLASS: Record<string, { active: string; inactive: string }> = {
   all: {
     active: 'bg-[#4C50A2] text-white',
     inactive: 'bg-[#4C50A2] text-white',
@@ -61,6 +90,14 @@ const STATUS_BADGE_CLASS: Record<'all' | OrderStatus, { active: string; inactive
     active: 'bg-green-100 text-green-800',
     inactive: 'bg-green-100 text-green-800',
   },
+  refund_requested: {
+    active: 'bg-orange-100 text-orange-800',
+    inactive: 'bg-orange-100 text-orange-800',
+  },
+  refunded: {
+    active: 'bg-blue-100 text-blue-800',
+    inactive: 'bg-blue-100 text-blue-800',
+  },
   active: {
     active: 'bg-[#DCF6E5] text-[#118D57]',
     inactive: 'bg-[#DCF6E5] text-[#118D57]',
@@ -83,7 +120,19 @@ const PAGE_SIZE = 6
 
 export default function Orders() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<(typeof TAB_OPTIONS)[number]['key']>('all')
+  const [activeTab, setActiveTab] = useState<string>('all')
+  const [activeFilter, setActiveFilter] = useState<string>('all')
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
+
+  const filterOptions = [
+    { key: 'all', label: 'All Orders' },
+    { key: 'status:created', label: 'Created' },
+    { key: 'status:delivered', label: 'Delivered' },
+    { key: 'status:closed', label: 'Completed' },
+    { key: 'status:cancelled', label: 'Cancelled' },
+    { key: 'refund:refund_requested', label: 'Refund Requested' },
+    { key: 'refund:refunded', label: 'Refunded' },
+  ]
   const [searchValue, setSearchValue] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [viewingOrder, setViewingOrder] = useState<OrderRecord | null>(null)
@@ -91,7 +140,8 @@ export default function Orders() {
   const [orders, setOrders] = useState<OrderRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [totalPages, setTotalPages] = useState(1)
-  const [orderCounts, setOrderCounts] = useState({ all: 0, created: 0, paid: 0, fulfillment_pending: 0, shipped: 0, delivered: 0 })
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [orderCounts, setOrderCounts] = useState({ all: 0, paid: 0, fulfillment_pending: 0, shipped: 0 })
 
   // Load orders from API
   useEffect(() => {
@@ -99,19 +149,20 @@ export default function Orders() {
       setLoading(true)
       
       try {
-        // Map frontend tab to backend status filter
-        let statusFilter: string | undefined
+        const params: Record<string, any> = { page: currentPage, limit: PAGE_SIZE }
         if (activeTab !== 'all') {
-          statusFilter = activeTab
+          params.status = activeTab
+        }
+        if (activeFilter !== 'all') {
+          if (activeFilter.startsWith('status:')) {
+            params.status = activeFilter.replace('status:', '')
+          } else if (activeFilter.startsWith('refund:')) {
+            params.refund_status = activeFilter.replace('refund:', '')
+          }
         }
 
-        const response = await ordersApi.getAll({
-          status: statusFilter,
-          page: currentPage,
-          limit: PAGE_SIZE,
-        })
+        const response = await ordersApi.getAll(params)
 
-        // Transform API orders to OrderRecord format
         const transformedOrders: OrderRecord[] = (response.data || []).map((order: Order) => {
           const total = parseFloat(order.totalMinor) / 100
           const firstItem = order.items?.[0]
@@ -120,16 +171,12 @@ export default function Orders() {
           const customerName = (order.user as any)?.name || order.user?.email?.split('@')[0] || 'Unknown'
           const customerImageUrl = (order.user as any)?.profileImageUrl || null
           
-          // For auction orders, use paymentStage for display status, otherwise use order.status
-          // Store paymentStage in a custom field for the badge component
-          let displayStatus = order.status as OrderStatus
+          let coreStatus = order.status as OrderStatus
           if (order.auctionId && order.paymentStage) {
-            // Map payment stage to display status
-            // Keep order.status as 'created' but show payment stage in UI
-            displayStatus = order.status as OrderStatus
-            // Store paymentStage for badge component to use
             ;(order as any).displayPaymentStage = order.paymentStage
           }
+
+          const compoundLabel = buildOrderDisplayStatus(order.status, order.refundStatus)
           
           return {
             id: `#${order.orderNumber || order.id.slice(-8)}`,
@@ -141,38 +188,27 @@ export default function Orders() {
             amount: total,
             amountFormatted: `${order.currency} ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             paymentMethod: order.paymentMethod || 'N/A',
-            status: displayStatus,
+            status: coreStatus,
+            displayStatus: compoundLabel,
+            refundStatus: order.refundStatus || 'none',
             orderDate: new Date(order.createdAt).toLocaleDateString('en-GB'),
             orderNumber: order.orderNumber,
-            orderId: order.id, // Store actual UUID for navigation
-            userId: order.userId, // Store user ID for customer detail navigation
-            paymentStage: order.paymentStage, // Store for badge component
-            auctionId: order.auctionId, // Store for badge component
-            orderType: (order as any).orderType || 'admin-ecommerce', // Store order type
+            orderId: order.id,
+            userId: order.userId,
+            paymentStage: order.paymentStage,
+            auctionId: order.auctionId,
+            orderType: (order as any).orderType || 'admin-ecommerce',
           } as OrderRecord & { orderId: string; userId?: string; paymentStage?: string; auctionId?: string; orderType?: string }
         })
         
         setOrders(transformedOrders)
         setTotalPages(response.pagination?.totalPages || 1)
-        
-        // Fetch counts for all statuses
-        const allResponse = await ordersApi.getAll({ limit: 1 })
-        const countsResponse = await Promise.all([
-          ordersApi.getAll({ status: 'created', limit: 1 }),
-          ordersApi.getAll({ status: 'paid', limit: 1 }),
-          ordersApi.getAll({ status: 'fulfillment_pending', limit: 1 }),
-          ordersApi.getAll({ status: 'shipped', limit: 1 }),
-          ordersApi.getAll({ status: 'delivered', limit: 1 }),
-        ])
-        
-        setOrderCounts({
-          all: allResponse.pagination?.total || 0,
-          created: countsResponse[0].pagination?.total || 0,
-          paid: countsResponse[1].pagination?.total || 0,
-          fulfillment_pending: countsResponse[2].pagination?.total || 0,
-          shipped: countsResponse[3].pagination?.total || 0,
-          delivered: countsResponse[4].pagination?.total || 0,
-        })
+
+        // Use pagination total from current + "all" request for counts (only 2 requests max)
+        const currentTotal = response.pagination?.total || 0
+        if (activeTab === 'all' && activeFilter === 'all') {
+          setOrderCounts(prev => ({ ...prev, all: currentTotal }))
+        }
       } catch (error) {
         console.error('Error loading orders:', error)
         setOrders([])
@@ -182,7 +218,7 @@ export default function Orders() {
     }
 
     loadOrders()
-  }, [activeTab, currentPage])
+  }, [activeTab, activeFilter, currentPage, refreshKey])
 
   const tabOptionsWithCounts = useMemo(
     () =>
@@ -215,7 +251,15 @@ export default function Orders() {
   }, [filteredOrders])
 
   const handleTabChange = (tabKey: string) => {
-    setActiveTab(tabKey as (typeof TAB_OPTIONS)[number]['key'])
+    setActiveTab(tabKey)
+    setActiveFilter('all')
+    setCurrentPage(1)
+  }
+
+  const handleFilterSelect = (value: string) => {
+    setActiveFilter(value)
+    setActiveTab('all')
+    setShowFilterDropdown(false)
     setCurrentPage(1)
   }
 
@@ -254,37 +298,7 @@ export default function Orders() {
           // Update order status to 'cancelled' (not actually deleting the order)
           await ordersApi.updateStatus(orderId, 'cancelled')
           alert('Order cancelled successfully')
-          // Refresh orders list
-          const response = await ordersApi.getAll({
-            status: activeTab !== 'all' ? activeTab : undefined,
-            page: currentPage,
-            limit: PAGE_SIZE,
-          })
-          const transformedOrders: OrderRecord[] = (response.data || []).map((order: Order) => {
-            const total = parseFloat(order.totalMinor) / 100
-            const firstItem = order.items?.[0]
-            const productName = firstItem?.product?.title || 'N/A'
-            const productImage = firstItem?.product?.media?.[0]?.url || null
-            const customerName = (order.user as any)?.name || order.user?.email?.split('@')[0] || 'Unknown'
-            const customerImageUrl = (order.user as any)?.profileImageUrl || null
-            
-            return {
-              id: `#${order.orderNumber || order.id.slice(-8)}`,
-              customerName: customerName,
-              customerEmail: order.user?.email,
-              customerImageUrl: customerImageUrl,
-              product: productName,
-              productImage: productImage,
-              amount: total,
-              amountFormatted: `${order.currency} ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-              paymentMethod: order.paymentMethod || 'N/A',
-              status: order.status as OrderStatus,
-              orderDate: new Date(order.createdAt).toLocaleDateString('en-GB'),
-              orderNumber: order.orderNumber,
-              orderId: order.id,
-            } as OrderRecord & { orderId: string }
-          })
-          setOrders(transformedOrders)
+          setRefreshKey(k => k + 1)
         } catch (error: any) {
           // Handle error gracefully - check if it's a validation error about status transition
           const errorMessage = error?.response?.data?.message || error?.message || 'Unknown error'
@@ -392,20 +406,40 @@ export default function Orders() {
               onChange={handleSearchChange}
               className="min-w-[220px] sm:min-w-[240px]"
             />
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-gray-600 transition hover:text-gray-900"
-            >
-              <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6l-4.2 5.6a2 2 0 00-.4 1.2v5.6a1 1 0 01-1.447.894L12 16.618l-2.753 1.676A1 1 0 017.8 16.4v-5.6a2 2 0 00-.4-1.2L3.2 5.6A1 1 0 013 4z"
-                />
-              </svg>
-              Filter
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className={`inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  activeFilter !== 'all' ? 'bg-orange-50 text-orange-700 border border-orange-300' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6l-4.2 5.6a2 2 0 00-.4 1.2v5.6a1 1 0 01-1.447.894L12 16.618l-2.753 1.676A1 1 0 017.8 16.4v-5.6a2 2 0 00-.4-1.2L3.2 5.6A1 1 0 013 4z"
+                  />
+                </svg>
+                {activeFilter === 'all' ? 'Filter' : filterOptions.find(o => o.key === activeFilter)?.label || 'Filter'}
+              </button>
+              {showFilterDropdown && (
+                <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                  {filterOptions.map(opt => (
+                    <button
+                      key={opt.key}
+                      onClick={() => handleFilterSelect(opt.key)}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
+                        activeFilter === opt.key ? 'bg-orange-50 text-orange-700 font-medium' : 'text-gray-700'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

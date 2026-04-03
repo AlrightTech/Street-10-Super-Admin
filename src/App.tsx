@@ -16,9 +16,7 @@ const EditUser = lazy(() => import('./pages/EditUser'))
 const Vendors = lazy(() => import('./pages/Vendors'))
 const Orders = lazy(() => import('./pages/Orders'))
 const OrderDetail = lazy(() => import('./pages/OrderDetail'))
-const OrderDetailView = lazy(() => import('./pages/OrderDetailView'))
-const ProcessRefundOrder = lazy(() => import('./pages/ProcessRefundOrder'))
-const StartRefundProcess = lazy(() => import('./pages/StartRefundProcess'))
+// OrderDetailView, ProcessRefundOrder, StartRefundProcess removed (mock/dead pages)
 const Invoice = lazy(() => import('./pages/Invoice'))
 const OrderShipping = lazy(() => import('./pages/OrderShipping'))
 const OrderRefund = lazy(() => import('./pages/OrderRefund'))
@@ -26,7 +24,9 @@ const OrderInvoice = lazy(() => import('./pages/OrderInvoice'))
 const EcommerceOrderView = lazy(() => import('./pages/EcommerceOrderView'))
 const BidDetailPage = lazy(() => import('./pages/BidDetailPage'))
 const ViewKYC = lazy(() => import('./pages/ViewKYC'))
-const RefundRequest = lazy(() => import('./pages/RefundRequest'))
+// RefundRequest removed (mock page using mock data)
+const RefundRequestsList = lazy(() => import('./pages/RefundRequestsList'))
+const RefundRequestDetail = lazy(() => import('./pages/RefundRequestDetail'))
 const EditVendor = lazy(() => import('./pages/EditVendor'))
 const VendorDetail = lazy(() => import('./pages/VendorDetail'))
 const AllVendorProducts = lazy(() => import('./pages/AllVendorProducts'))
@@ -131,10 +131,7 @@ function App() {
             <Route path="/vendors/vendor-request-detail/:id" element={<VendorRequestDetail />} />
 
             <Route path="orders" element={<Orders />} />
-            <Route path="orders/:orderId/view" element={<OrderDetailView />} />
             <Route path="orders/:orderId/detail" element={<OrderDetail />} />
-            <Route path="orders/:orderId/process-refund" element={<ProcessRefundOrder />} />
-            <Route path="orders/:orderId/start-refund-process" element={<StartRefundProcess />} />
             <Route path="orders/:orderId/invoice" element={<Invoice />} />
             <Route path="orders/:orderId/shipping" element={<OrderShipping />} />
             <Route path="orders/:orderId/refund" element={<OrderRefund />} />
@@ -142,7 +139,8 @@ function App() {
             <Route path="orders/:orderId" element={<OrderDetail />} />
             <Route path="biddings/:bidId" element={<BidDetailPage />} />
             <Route path="view-kyc/:id" element={<ViewKYC />} />
-            <Route path="refund-request/:id" element={<RefundRequest />} />
+            <Route path="refund-requests" element={<RefundRequestsList />} />
+            <Route path="refund-requests/:id" element={<RefundRequestDetail />} />
             <Route path="finance" element={<Finance />} />
             <Route path="finance/all-transactions" element={<AllTransactions />} />
             <Route path="finance/vendor/:vendorId" element={<VendorFinanceDetail />} />

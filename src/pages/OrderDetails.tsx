@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react'
 import CustomerInformationCard from '../components/orders/CustomerInformationCard'
 import OrderTimelineCard from '../components/orders/OrderTimelineCard'
 import QuickActionsCard from '../components/orders/QuickActionsCard'
+import RefundDetailModal from '../components/orders/RefundDetailModal'
 import { ordersApi } from '../services/orders.api'
-import type { OrderDetails as OrderDetailsType } from '../types/orderDetails'
+import type { OrderDetails as OrderDetailsType, TimelineEvent } from '../types/orderDetails'
 
 /**
  * Order Details page component
@@ -18,6 +19,7 @@ export default function OrderDetails() {
   const [backendStatus, setBackendStatus] = useState<string>('') // Store backend status separately
   const [statusModalOpen, setStatusModalOpen] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<string>('')
+  const [selectedRefundEvent, setSelectedRefundEvent] = useState<TimelineEvent | null>(null)
   // Auction order data
   const [auctionOrderData, setAuctionOrderData] = useState<{
     auctionId?: string
@@ -262,14 +264,14 @@ export default function OrderDetails() {
               trackingNumber: '',
               estimatedDelivery: '',
             },
-            timeline: [
-              {
-                id: '1',
-                status: 'Order Created',
-                date: new Date(apiOrder.createdAt).toLocaleDateString(),
-                time: new Date(apiOrder.createdAt).toLocaleTimeString(),
-              },
-            ],
+            timeline: ((apiOrder as any).timeline || []).map((evt: any) => ({
+              id: evt.id,
+              status: evt.statusLabel || evt.statusCode || 'Event',
+              createdAt: evt.createdAt,
+              type: evt.type,
+              statusCode: evt.statusCode,
+              meta: evt.meta,
+            })),
           }
           
           setOrder(transformedOrder)
@@ -412,14 +414,14 @@ export default function OrderDetails() {
           trackingNumber: '',
           estimatedDelivery: '',
         },
-        timeline: [
-          {
-            id: '1',
-            status: 'Order Created',
-            date: new Date(updatedOrder.createdAt).toLocaleDateString(),
-            time: new Date(updatedOrder.createdAt).toLocaleTimeString(),
-          },
-        ],
+        timeline: ((updatedOrder as any).timeline || []).map((evt: any) => ({
+          id: evt.id,
+          status: evt.statusLabel || evt.statusCode || 'Event',
+          createdAt: evt.createdAt,
+          type: evt.type,
+          statusCode: evt.statusCode,
+          meta: evt.meta,
+        })),
       }
       
       setOrder(transformedOrder)
@@ -670,20 +672,14 @@ export default function OrderDetails() {
           trackingNumber: '',
           estimatedDelivery: '',
         },
-        timeline: [
-          {
-            id: '1',
-            status: 'Order Created',
-            date: new Date(updatedOrder.createdAt).toLocaleDateString(),
-            time: new Date(updatedOrder.createdAt).toLocaleTimeString(),
-          },
-          {
-            id: '2',
-            status: 'Order Cancelled',
-            date: new Date().toLocaleDateString(),
-            time: new Date().toLocaleTimeString(),
-          },
-        ],
+        timeline: ((updatedOrder as any).timeline || []).map((evt: any) => ({
+          id: evt.id,
+          status: evt.statusLabel || evt.statusCode || 'Event',
+          date: new Date(evt.createdAt).toLocaleDateString(),
+          time: new Date(evt.createdAt).toLocaleTimeString(),
+          type: evt.type,
+          meta: evt.meta,
+        })),
       }
       
       setOrder(transformedOrder)
@@ -926,7 +922,76 @@ export default function OrderDetails() {
             />
 
         {/* Order Timeline Card */}
-        <OrderTimelineCard timeline={order.timeline} />
+        <OrderTimelineCard
+          timeline={order.timeline}
+          onEventClick={(event) => {
+            if (event.type === 'refund') {
+              setSelectedRefundEvent(event)
+            }
+          }}
+        />
+        {selectedRefundEvent && selectedRefundEvent.meta?.refundRequestId && orderUuid && (
+          <RefundDetailModal
+            isOpen={!!selectedRefundEvent}
+            refundRequestId={selectedRefundEvent.meta.refundRequestId}
+            onClose={() => setSelectedRefundEvent(null)}
+            onActionComplete={async () => {
+              const refreshed = await ordersApi.getById(orderUuid)
+              const updated: OrderDetailsType = {
+                id: refreshed.id,
+                orderId: refreshed.orderNumber,
+                date: new Date(refreshed.createdAt).toLocaleDateString(),
+                time: new Date(refreshed.createdAt).toLocaleTimeString(),
+                status: refreshed.status as any,
+                customer: {
+                  id: parseInt(refreshed.user.id.replace(/-/g, '').substring(0, 10), 16) % 1000000,
+                  name: refreshed.user.email.split('@')[0],
+                  email: refreshed.user.email,
+                  phone: (refreshed.user as any).phone || '',
+                  avatar: '',
+                },
+                products: refreshed.items.map((item: any) => ({
+                  id: item.id,
+                  name: item.product.title,
+                  image: item.product.media?.[0]?.url || '',
+                  category: '',
+                  quantity: item.quantity,
+                  price: parseFloat(item.priceMinor?.toString() || '0') / 100,
+                  total: (parseFloat(item.priceMinor?.toString() || '0') / 100) * item.quantity,
+                })),
+                payment: {
+                  method: refreshed.paymentMethod as any,
+                  transactionId: refreshed.id,
+                  status: refreshed.status === 'paid' ? 'completed' : 'pending',
+                  subtotal: parseFloat(refreshed.totalMinor?.toString() || '0') / 100,
+                  discount: parseFloat(refreshed.discountMinor?.toString() || '0') / 100,
+                  tax: 0,
+                  shipping: 0,
+                  total: parseFloat(refreshed.totalMinor?.toString() || '0') / 100,
+                },
+                shipping: {
+                  address: (refreshed.shippingAddress as any)?.street || (refreshed.shippingAddress as any)?.address || '',
+                  city: (refreshed.shippingAddress as any)?.city || '',
+                  state: (refreshed.shippingAddress as any)?.state || '',
+                  postalCode: (refreshed.shippingAddress as any)?.postalCode || '',
+                  country: (refreshed.shippingAddress as any)?.country || '',
+                  method: 'Standard',
+                  trackingNumber: '',
+                  estimatedDelivery: '',
+                },
+                timeline: ((refreshed as any).timeline || []).map((evt: any) => ({
+                  id: evt.id,
+                  status: evt.statusLabel || evt.statusCode || 'Event',
+                  createdAt: evt.createdAt,
+                  type: evt.type,
+                  statusCode: evt.statusCode,
+                  meta: evt.meta,
+                })),
+              }
+              setOrder(updated)
+            }}
+          />
+        )}
           </div>
         </div>
       </div>

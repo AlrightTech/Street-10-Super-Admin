@@ -8,6 +8,7 @@ export interface Order {
   totalMinor: string;
   currency: string;
   status: string;
+  refundStatus?: string;
   paymentMethod: string;
   shippingAddress: any;
   couponCode: string | null;
@@ -51,6 +52,16 @@ export interface Order {
 
 export interface OrderDetails extends Omit<Order, 'vendor' | 'items'> {
   orderType?: 'vendor' | 'superadmin' | 'ecommerce';
+  refundStatus?: string;
+  previousStatus?: string | null;
+  timeline?: Array<{
+    id: string;
+    type?: 'order' | 'refund';
+    statusLabel?: string;
+    statusCode?: string;
+    createdAt: string;
+    meta?: Record<string, any>;
+  }>;
   vendor?: {
     id: string;
     name?: string;
@@ -117,6 +128,7 @@ export interface OrderFilters {
   user_id?: string;
   vendor_id?: string;
   status?: string;
+  refund_status?: string;
   start_date?: string;
   end_date?: string;
   page?: number;

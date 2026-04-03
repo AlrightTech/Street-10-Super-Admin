@@ -170,8 +170,40 @@ export default function VendorDetail() {
         const products: Product[] = productsResult.data || []
 
         // Commission from API (vendor has commissionType + commissionValue)
-        const commissionValue = Number((apiVendor as any).commissionValue ?? 0)
-        const commissionType = (apiVendor as any).commissionType || 'percentage'
+        // Some backends may return commissionValue as string/undefined/NaN-like values.
+        // Avoid rendering `NaN%` by parsing safely and falling back to 0.
+        const rawCommissionValue =
+          (apiVendor as any).commissionValue ??
+          (apiVendor as any).commission_value ??
+          (apiVendor as any).commission ??
+          (apiVendor as any).commissionRate
+
+        const toNumberSafe = (v: any): number => {
+          if (typeof v === "number") return v
+          if (typeof v === "string") return parseFloat(v.replace("%", "").trim())
+          if (v && typeof v === "object") {
+            // Handle common decimal/serialized forms
+            // - Prisma Decimal instances
+            // - { value: "15.00" } or { decimal: "15.00" } or { d: "15.00" }
+            if (typeof v.toString === "function") {
+              const s = v.toString()
+              const n = parseFloat(String(s).replace("%", "").trim())
+              if (Number.isFinite(n)) return n
+            }
+            const candidate =
+              (v.value ?? v.decimal ?? v.d ?? v.amount ?? v.number ?? undefined) as any
+            if (candidate !== undefined) return toNumberSafe(candidate)
+          }
+          return NaN
+        }
+
+        const parsedCommissionValue = toNumberSafe(rawCommissionValue ?? 0)
+        const commissionValue = Number.isFinite(parsedCommissionValue) ? parsedCommissionValue : 0
+
+        const commissionType =
+          (apiVendor as any).commissionType ??
+          (apiVendor as any).commission_type ??
+          'percentage'
         const commissionRateStr =
           commissionType === 'percentage'
             ? `${commissionValue}%`

@@ -113,6 +113,8 @@ export default function OrdersTable({ orders, onActionSelect, onNameClick, empty
                     <TableCell>
                       <OrderStatusBadge 
                         status={order.status} 
+                        displayStatus={order.displayStatus}
+                        refundStatus={(order as any).refundStatus}
                         paymentStage={(order as any).paymentStage}
                         auctionId={(order as any).auctionId}
                       />

@@ -1,11 +1,6 @@
 import type { OrderStatus } from '../../pages/Orders'
 
-interface OrderStatusBadgeProps {
-  status: OrderStatus
-  className?: string
-}
-
-const STATUS_STYLES: Record<OrderStatus, string> = {
+const STATUS_STYLES: Record<string, string> = {
   created: 'bg-yellow-100 text-yellow-800',
   paid: 'bg-[#DCF6E5] text-[#118D57]',
   fulfillment_pending: 'bg-blue-100 text-blue-800',
@@ -17,7 +12,7 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
   inactive: 'bg-[#FFE4DE] text-[#B71D18]',
 }
 
-const STATUS_LABEL: Record<OrderStatus, string> = {
+const STATUS_LABEL: Record<string, string> = {
   created: 'Created',
   paid: 'Paid',
   fulfillment_pending: 'Fulfillment Pending',
@@ -29,7 +24,6 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   inactive: 'Inactive',
 }
 
-// Payment stage labels for auction orders
 const PAYMENT_STAGE_LABEL: Record<string, string> = {
   down_payment_required: 'Down Payment Required',
   final_payment_required: 'Final Payment Required',
@@ -46,15 +40,23 @@ const PAYMENT_STAGE_STYLES: Record<string, string> = {
   settlement_missed: 'bg-[#FFE4DE] text-[#B71D18]',
 }
 
+function getRefundAwareStyle(refundStatus?: string, baseStyle?: string): string {
+  if (refundStatus === 'refund_requested') return 'bg-orange-100 text-orange-800'
+  if (refundStatus === 'partially_refunded') return 'bg-amber-100 text-amber-800'
+  if (refundStatus === 'fully_refunded') return 'bg-blue-100 text-blue-800'
+  return baseStyle || 'bg-gray-100 text-gray-800'
+}
+
 interface OrderStatusBadgeProps {
   status: OrderStatus;
   className?: string;
-  paymentStage?: string; // For auction orders
-  auctionId?: string; // For auction orders
+  displayStatus?: string;
+  refundStatus?: string;
+  paymentStage?: string;
+  auctionId?: string;
 }
 
-export default function OrderStatusBadge({ status, className = '', paymentStage, auctionId }: OrderStatusBadgeProps) {
-  // For auction orders, show payment stage instead of status
+export default function OrderStatusBadge({ status, className = '', displayStatus, refundStatus, paymentStage, auctionId }: OrderStatusBadgeProps) {
   if (auctionId && paymentStage && PAYMENT_STAGE_LABEL[paymentStage]) {
     return (
       <span
@@ -64,14 +66,18 @@ export default function OrderStatusBadge({ status, className = '', paymentStage,
       </span>
     )
   }
-  
+
+  const hasRefundOverlay = refundStatus && refundStatus !== 'none'
+  const style = hasRefundOverlay
+    ? getRefundAwareStyle(refundStatus)
+    : (STATUS_STYLES[status] || 'bg-gray-100 text-gray-800')
+  const label = displayStatus || STATUS_LABEL[status] || status
+
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[status]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium ${style} ${className}`}
     >
-      {STATUS_LABEL[status]}
+      {label}
     </span>
   )
 }
-
-

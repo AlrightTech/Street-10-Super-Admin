@@ -32,12 +32,34 @@ export interface OrderProduct {
 
 /**
  * Order timeline event
+ *
+ * This is a frontend projection of the unified timeline returned from the
+ * backend `getOrderById` response (`order.timeline`), which may contain both
+ * core order events and refund-related events.
  */
 export interface TimelineEvent {
   id: string
+  /**
+   * Human-readable label, e.g. "Order created", "Refund requested".
+   */
   status: string
-  date: string
-  time: string
+  /**
+   * ISO string for the event timestamp.
+   */
+  createdAt: string
+  /**
+   * Optional high-level type of the event: core order lifecycle vs refund.
+   */
+  type?: 'order' | 'refund'
+  /**
+   * Machine-readable status/action code from the backend (e.g. 'created',
+   * 'refund_requested', 'vendor_approved', 'admin_issue').
+   */
+  statusCode?: string
+  /**
+   * Arbitrary metadata passed from backend (refundRequestId, amounts, actors, etc.).
+   */
+  meta?: Record<string, any>
 }
 
 /**
